@@ -49,11 +49,42 @@ For an application, a version is judged by what users have saved or automated:
   the catalog or a new option with the old behaviour as its default.
 - **Patch** (`1.3.1`): fixes only.
 
-Pre-release versions carry a suffix: `1.0.0-rc.1` for a release candidate, `2.0.0-dev` on `main`
-while it develops the next major.
+Pre-release versions carry a suffix: `2.0.0-alpha.1`, `2.0.0-beta.1` and `2.0.0-rc.1` are
+released for testing (see [Beta releases](#beta-releases)); `2.0.0-dev` is the version of `main`
+while it develops 2.0 and is never released. Semantic Versioning orders them
+`dev < alpha < beta < rc <` the release.
+
+After every release, the branch it was made from moves at once, by pull request, to the next
+version with `-dev`: after `v0.1.0`, `main` becomes `0.2.0-dev`; after `v1.2.0`, `release/1.x`
+becomes `1.3.0-dev`. A build from source then never claims to be a version already released.
+
+A version has at most 23 characters, so that the GOO header can hold it; a longer one fails the
+build. The commit a build comes from is not part of the version.
 
 Before 1.0, the `0.x` versions are previews released from `main`. They receive no fixes of their
 own; a fix ships in the next preview.
+
+## Beta releases
+
+A beta release lets users try a version before it is final. It is released like any other
+version (see [Tags and releases](#tags-and-releases)), from a tag with a pre-release suffix, and
+published on GitHub as a pre-release, so GitHub's latest release stays the stable one.
+
+| Suffix | Meaning | Tagged on |
+|---|---|---|
+| `-alpha.N` | features still missing or changing; for early feedback | `main`, for the next major |
+| `-beta.N` | features complete, defects expected | `main` for the next major; `release/N.x` for its next minor |
+| `-rc.N` | ready unless a defect is found | `release/N.x` (see [Cutting a release series](#cutting-a-release-series)) |
+
+Before 1.0, betas of the next preview are tagged on `main`. The numbers restart for every version
+(`2.0.0-beta.1`, `2.0.0-beta.2`, then `2.0.0-rc.1`); a version need not go through every stage.
+
+Betas use the same settings and profile library as the stable version. A beta that changes their
+format, which only a major version may do, says so at the top of its release notes. Packages
+order pre-releases correctly: the `.deb` writes `2.0.0~beta.1`, which Debian sorts before
+`2.0.0`.
+
+Nightly builds are not published (TD-151).
 
 ## Tags and releases
 
@@ -76,8 +107,9 @@ To release a version:
    the download notes and the list of merged pull requests.
 4. The owner installs the draft's packages and runs the application on real hardware, on Windows
    and on Linux, then writes what changed at the top of the notes and publishes the draft.
-   Previews (`0.x`) and release candidates are published as pre-releases, so that GitHub's latest
-   release is always a stable one.
+   Previews (`0.x`) and every version with a suffix (alpha, beta, rc) are published as
+   pre-releases, so that GitHub's latest release is always a stable one.
+5. A pull request moves the branch to the next `-dev` version (see [Versions](#versions)).
 
 GitHub Releases is the only distribution channel for now. The Windows packages are not signed:
 Windows warns before running them, and the release notes say so.

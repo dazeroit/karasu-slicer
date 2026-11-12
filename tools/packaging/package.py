@@ -142,6 +142,16 @@ def version() -> str:
         return tomllib.load(file)["workspace"]["package"]["version"]
 
 
+def deb_version(semver: str) -> str:
+    """The Debian package version of a Semantic Versioning string (TD-151).
+
+    dpkg reads `1.0.0-rc.1` as version 1.0.0, Debian revision rc.1, and orders it after 1.0.0;
+    a tilde sorts before anything, so `1.0.0~rc.1` comes before 1.0.0 as SemVer intends. Build
+    metadata (`+...`) is kept: dpkg orders it after the plain version, which SemVer leaves open.
+    """
+    return semver.replace("-", "~")
+
+
 def epoch() -> int:
     if "SOURCE_DATE_EPOCH" in os.environ:
         return int(os.environ["SOURCE_DATE_EPOCH"])
@@ -293,7 +303,7 @@ def deb(binaries: Path, output: Path, mtime: int) -> None:
     newest = max(glibc(tree["bin/karasu"][0]), glibc(tree["bin/karasu-cli"][0]),
                  key=lambda v: tuple(map(int, v.split("."))))
     control = f"""Package: {NAME}
-Version: {version()}
+Version: {deb_version(version())}
 Architecture: amd64
 Maintainer: karasu-slicer project <karasu-slicer@invalid>
 Installed-Size: {size_kib}

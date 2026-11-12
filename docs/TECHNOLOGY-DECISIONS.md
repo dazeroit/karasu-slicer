@@ -5689,6 +5689,36 @@ costs money before anyone has asked for the software.
 **Tests:** the workflow's pull request run builds every package from the branch; the artifacts
 are installed by hand before the first tag.
 
+## TD-151 — Beta releases and version constraints
+
+**Status:** decided by the owner on 2026-11-12.
+
+**Decision:**
+1. Experimental versions are beta releases: tags `vX.Y.Z-alpha.N`, `-beta.N` and `-rc.N`, built and
+   drafted by the release workflow like any release and published as pre-releases
+   ([RELEASE-PROCESS.md](RELEASE-PROCESS.md#beta-releases)). Alphas and betas of the next major
+   are tagged on `main`, betas of a series' next minor and release candidates on `release/N.x`.
+   They use the stable version's settings and profile library.
+2. After every release the branch moves at once to the next version with `-dev`, so that builds
+   from source never carry a released version.
+3. A version has at most 23 characters: the GOO header keeps it in a 24-byte field with its
+   terminating zero (Photon Workshop in 32 bytes). A compile-time assertion in
+   `karasu_core::print_job` fails the build for a longer version, instead of every GOO export
+   failing at run time.
+4. The `.deb` carries the version with `~` in place of `-` (`1.0.0~rc.1`): dpkg reads a hyphen as
+   the start of a Debian revision and would order `1.0.0-rc.1` after `1.0.0`, so the final
+   release would not upgrade a release candidate. File names keep the Semantic Versioning form.
+5. Nightly builds are not published for now (owner): publishing one every night in this
+   repository would crowd its releases and notify its watchers every night, and the owner does
+   not want a separate repository. If they come, they need a short version
+   (`0.2.0-nightly.20261112` fits; the commit goes elsewhere), portable packages only, and their
+   own settings and profile folders, so that they cannot change a stable installation's data.
+
+**Tests:** the GOO version field holds 23 characters and refuses 24, and the longest planned
+pre-release forms fit; a 31-character version fails the build (checked by hand);
+`tools/packaging/test_package.py`, run by CI, checks the Debian versions and that `dpkg` orders
+alpha, beta, rc, release, patch, `-dev` and the next release as Semantic Versioning does.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

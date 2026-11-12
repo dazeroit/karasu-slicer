@@ -18,6 +18,16 @@ pub(crate) mod pp1_scene;
 pub(crate) mod sl1;
 pub(crate) mod zip;
 
+/// The longest application version the machine files can carry: the GOO header keeps it in a
+/// 24-byte field with its terminating zero, Photon Workshop in 32 bytes (TD-151).
+pub(crate) const MAX_VERSION_LEN: usize = 23;
+// A longer version, such as a pre-release suffix with a commit hash, fails the build instead of
+// every GOO export.
+const _: () = assert!(
+    env!("CARGO_PKG_VERSION").len() <= MAX_VERSION_LEN,
+    "the version in Cargo.toml must be at most 23 characters to fit the GOO header"
+);
+
 /// Current reference job and manifest semantic version.
 pub const JOB_SCHEMA_VERSION: u32 = 1;
 /// Complete settings replacement at an explicitly named layer.

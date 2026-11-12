@@ -64,6 +64,8 @@ jobs:
           node-version: 24
       - name: CLA script tests
         run: node --test .github/scripts/cla.test.js
+      - name: Packaging script tests
+        run: python3 -m unittest discover -s tools/packaging -p 'test_*.py' -v
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Tests
