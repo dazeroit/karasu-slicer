@@ -1,0 +1,144 @@
+# Continuous integration (TD-149): the README's checks on Linux and Windows for every pull request
+# into main or a release branch, and for every push to them. The jobs' names, Linux and Windows,
+# are the checks the repository's rules require.
+#
+# Security: pull_request runs with a read-only token and without secrets, so the pull request's
+# code can run here. Only GitHub's own actions are used, pinned to commits. Pull requests only read
+# the cache; pushes to main and release branches write it.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, 'release/**']
+  push:
+    branches: [main, 'release/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # Without debug information the build fits the runners' disks and links faster; the checks and
+  # the tests' debug assertions are unchanged.
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the stable toolchain
+        id: toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup default stable
+          echo "rustc=$(rustc --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Restore the Cargo cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-linux-${{ steps.toolchain.outputs.rustc }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-linux-${{ steps.toolchain.outputs.rustc }}-
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Install Node.js for the CLA script's tests
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: CLA script tests
+        run: node --test .github/scripts/cla.test.js
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --locked
+      - name: Build
+        run: cargo build --workspace --locked
+      - name: Documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo doc --workspace --no-deps --locked --document-private-items
+          cargo doc --workspace --no-deps --locked
+      - name: Keep only the dependencies' artifacts
+        if: github.event_name != 'pull_request' && steps.cache.outputs.cache-hit != 'true'
+        run: |
+          cargo clean --locked -p karasu-app -p karasu-cli -p karasu-core -p karasu-project -p reference-fixtures
+          rm -rf target/doc
+      - name: Save the Cargo cache
+        if: github.event_name != 'pull_request' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Keep the repository's line endings
+        run: git config --global core.autocrlf false
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the stable toolchain
+        id: toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup default stable
+          echo "rustc=$(rustc --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Restore the Cargo cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-windows-${{ steps.toolchain.outputs.rustc }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-windows-${{ steps.toolchain.outputs.rustc }}-
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --locked
+      - name: Build
+        run: cargo build --workspace --locked
+      - name: Keep only the dependencies' artifacts
+        if: github.event_name != 'pull_request' && steps.cache.outputs.cache-hit != 'true'
+        run: cargo clean --locked -p karasu-app -p karasu-cli -p karasu-core -p karasu-project -p reference-fixtures
+      - name: Save the Cargo cache
+        if: github.event_name != 'pull_request' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.cache.outputs.cache-primary-key }}

@@ -65,7 +65,14 @@ fn mm_per_min(speed_mm_s: f64) -> f64 {
 
 /// Karasu's version as `0xMMmmpp00`.
 fn writer_version() -> u32 {
-    let mut parts = env!("CARGO_PKG_VERSION")
+    packed_version(env!("CARGO_PKG_VERSION"))
+}
+
+/// A Semantic Versioning string as `0xMMmmpp00`: the pre-release and build suffixes (`-rc.1`,
+/// `+abc`) are left out, a part that is not a number counts as 0 and each part is limited to 255.
+fn packed_version(version: &str) -> u32 {
+    let core = version.split(['-', '+']).next().unwrap_or("");
+    let mut parts = core
         .split('.')
         .map(|p| p.parse::<u32>().unwrap_or(0).min(255));
     let (major, minor, patch) = (
@@ -335,4 +342,19 @@ pub(super) fn layer_records(
 /// The stationary time one layer contributes: exposure and waits, in seconds.
 pub(super) fn stationary_s(s: &WireSettings) -> f64 {
     s.exposure_s + s.wait_before_exposure_s + s.wait_after_exposure_s + s.wait_after_lift_s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::packed_version;
+
+    #[test]
+    fn the_writer_version_packs_only_the_numeric_version() {
+        assert_eq!(packed_version("1.2.3"), 0x0102_0300);
+        assert_eq!(packed_version("1.2.3-rc.1"), 0x0102_0300);
+        assert_eq!(packed_version("2.0.0-dev"), 0x0200_0000);
+        assert_eq!(packed_version("0.1.0+build.7"), 0x0001_0000);
+        assert_eq!(packed_version("300.0.1"), 0xff00_0100);
+        assert_eq!(packed_version("1.x"), 0x0100_0000);
+    }
 }

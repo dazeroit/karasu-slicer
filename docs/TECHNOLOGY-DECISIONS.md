@@ -5594,6 +5594,56 @@ branch (the first acceptance creates the file); create a fine-grained token for 
 alone with Contents read and write; add it to karasu-slicer as the Actions secret
 `CLA_SIGNATURES_TOKEN`; optionally require the **CLA** check on `main`.
 
+## TD-149 — Branches, versions and releases
+
+**Status:** decided by the owner on 2026-11-12.
+
+**Context:** until now every change went straight to `main`. karasu-slicer is a desktop
+application: users keep a version installed and need its defects fixed without taking a new major
+version with unfinished work. The project has one maintainer, and each maintained line costs every
+fix twice and a native Windows validation per release.
+
+**Decision:** [RELEASE-PROCESS.md](RELEASE-PROCESS.md) describes the process; in short:
+1. `main` develops the next major version. Every change, the owner's included, enters it from a
+   short topic branch through a pull request that passes CI and the CLA check and is
+   squash-merged. The owner may bypass the rules in an emergency.
+2. A release branch `release/N.x` per major version is created when N.0 is frozen, from release
+   candidates `vN.0.0-rc.K` to `vN.0.0`; `main` then moves to `(N+1).0.0-dev`. The branch receives
+   fixes (patch versions) and additions that change no file format, command line or default
+   behaviour, such as catalog printers and resins (minor versions).
+3. Fixes go to `main` first and are carried to the release branch with `git cherry-pick -x`.
+4. Semantic Versioning, judged by what users saved or automated: a major version breaks files,
+   the library, the command line, or removes a printer or an output format. Annotated tags
+   `vX.Y.Z` are never moved. Before 1.0, `0.x` previews are tagged on `main` and receive no fixes
+   of their own.
+5. The latest series receives every fix; the previous one critical and security fixes for three
+   months after the next major version.
+6. GitHub rulesets enforce it: no deletion or force push of `main` and `release/*`, linear
+   history, pull requests only, squash merge only, the checks **Linux**, **Windows** and **CLA**
+   on an up-to-date branch; only the owner creates `v*` tags, which are never updated or deleted.
+
+**Implementation:** `.github/workflows/ci.yml` runs the README's checks on pull requests and pushes
+to `main` and `release/*`: on Linux formatting, Clippy, tests, the build, both documentation
+builds and the CLA script's tests; on Windows (MSVC) Clippy, tests and the build. It uses only
+GitHub's own actions pinned to commits (`actions/checkout` v7.0.1, `actions/cache` v6.1.0,
+`actions/setup-node` v7.1.0) and installs the stable toolchain with `rustup`; it runs with a
+read-only token and no secrets. Pushes to `main` and `release/*` save the Cargo registry and the
+dependencies' build artifacts in the cache; pull requests only read it. The CTB writer version
+packs only the numeric part of the version, so a pre-release suffix such as `-rc.1` does not
+change it.
+
+**Alternatives:** one release branch per minor version, with minor versions released from `main`,
+brings features to users sooner but multiplies the branches to maintain. A single `main` cannot
+fix a released version without shipping unfinished work. A permanent `develop` branch beside
+`main` adds a merge step that gives one maintainer nothing.
+
+**Consequences:** CI on GitHub's Windows runners executes the tests natively on every pull
+request, but does not replace the complete native Windows validation and a run on real hardware
+before a release. Agents work on topic branches and never push to `main` or `release/*`.
+
+**Tests:** the CTB writer version of `1.2.3`, `1.2.3-rc.1` and `2.0.0-dev`, and its limit of 255
+per part.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are
