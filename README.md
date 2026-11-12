@@ -126,9 +126,14 @@ permanent rules. In short:
 - Every project artifact is written in English (translation catalogs excepted).
 - Geometry and slicing are native Rust; C/C++ geometry kernels and FFI wrappers around them are
   not used, and `unsafe` code is forbidden.
-- Commercial applications are behavioural references only; their code is never copied.
+- Clean room: other programs, commercial or open source, are behavioural references only; their
+  code is never read or copied.
 - Dependencies need a recorded review before they are added.
 - Each change comes with its tests and passes the checks above.
+
+## Security
+
+Report vulnerabilities privately, as [SECURITY.md](SECURITY.md) describes, not in public issues.
 
 ## Licence
 

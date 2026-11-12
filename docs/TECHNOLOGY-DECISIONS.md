@@ -5558,6 +5558,42 @@ printer's resins passes the accessibility check.
 programs only for observed behaviour and published facts; the catalog's extensions of the
 Photon Mono M5 and M5s are left without a source until an official one confirms them.
 
+## TD-148 — Accepting the CLA in pull requests
+
+**Status:** decided by the owner on 2026-11-12.
+
+**Decision:** contributors accept the [CLA](../CLA.md) by posting a fixed sentence as a comment
+in their pull request ([CONTRIBUTING.md](../CONTRIBUTING.md)); a check named **CLA** stays failed
+until every author of the pull request's commits has accepted it. Acceptances are recorded in the
+private repository `dazeroit/karasu-slicer-cla` (`signatures/cla-v1.json`): GitHub login and id,
+the name and e-mail address of the author's commits, the CLA's version and blob identity, the pull
+request, the comment and its date. The owner's account and bots need no acceptance. A merged pull
+request is locked, so that the comments recording acceptances stay as they were.
+
+**Implementation:** `.github/workflows/cla.yml` runs `.github/scripts/cla.js` through
+`actions/github-script`, both GitHub's own actions pinned to commits (`actions/checkout` v7.0.1,
+`actions/github-script` v9.0.0). The workflow runs on `pull_request_target` and pull request
+comments, always from the default branch; it never checks out or runs the pull request's code and
+reads it only through the API. It writes the acceptances with the `CLA_SIGNATURES_TOKEN` secret, a
+fine-grained token limited to the private repository's contents.
+
+**Alternatives:** the hosted CLA Assistant keeps the acceptances in its own service and the text
+in a Gist to keep identical to `CLA.md`; its GitHub Action edition was archived in 2026 and gets
+no security fixes, while it would run on every pull request with a write token. The earlier rule,
+a sentence with name and e-mail address in the pull request's description, was not checked.
+
+**Tests:** `node --test .github/scripts/cla.test.js` (Node 24) against an in-memory GitHub: an
+author who has not accepted fails the check and is asked to; the exact sentence records the author
+once and passes it; nobody else can accept for an author, and no other sentence counts; every
+author must accept; the owner and bots need nothing; a commit without a GitHub account fails it;
+`recheck` records nothing; a merged pull request is locked and a closed one is not; a missing
+token is an error, never a pass; comments on issues are ignored.
+
+**Setup (owner):** create the private repository `dazeroit/karasu-slicer-cla` with a `main`
+branch (the first acceptance creates the file); create a fine-grained token for that repository
+alone with Contents read and write; add it to karasu-slicer as the Actions secret
+`CLA_SIGNATURES_TOKEN`; optionally require the **CLA** check on `main`.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

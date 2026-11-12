@@ -1,0 +1,48 @@
+# Contributor Licence Agreement check (TD-148): every author of a pull request's commits must
+# accept CLA.md by posting the acceptance sentence as a comment; see .github/scripts/cla.js.
+#
+# Security: pull_request_target runs this workflow from the default branch with a write token, so
+# it never checks out or runs the pull request's code; it only reads the pull request through the
+# API. The CLA_SIGNATURES_TOKEN secret is a fine-grained token limited to the private
+# dazeroit/karasu-slicer-cla repository (Contents: read and write). Actions are pinned to commits.
+name: CLA
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: cla-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  cla:
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request &&
+       (contains(github.event.comment.body, 'Contributor Licence Agreement') ||
+        contains(github.event.comment.body, 'recheck')))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the CLA script from the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Check the authors' acceptance
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CLA_SIGNATURES_TOKEN: ${{ secrets.CLA_SIGNATURES_TOKEN }}
+        with:
+          script: |
+            const cla = require('./.github/scripts/cla.js')
+            await cla({ github, context, core, getOctokit, token: process.env.CLA_SIGNATURES_TOKEN })

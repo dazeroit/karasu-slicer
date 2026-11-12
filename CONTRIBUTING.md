@@ -22,11 +22,17 @@ gives the project's owner the right to distribute it under the AGPL and also und
 licences, such as a commercial licence, so that the project can be offered to those who cannot
 use the AGPL.
 
-To agree, add this line, with your name and e-mail address, to the description of your first
-pull request:
+To agree, post this comment in your pull request, exactly:
 
 > I have read the karasu-slicer Contributor Licence Agreement (CLA.md, version 1) and I agree to
-> its terms for all my contributions to karasu-slicer. Name <e-mail>
+> its terms for all my contributions to karasu-slicer.
+
+Every author of the pull request's commits posts it once; it then covers all their later
+contributions. A check named **CLA** on the pull request stays failed until every author has
+agreed; post `recheck` to run it again. Write your commits with an e-mail address registered with
+your GitHub account, so that the check can tell who wrote them. Your agreement is recorded with
+your GitHub account, the name and e-mail address of your commits, the pull request and the
+comment, in a private repository that only the owner can read.
 
 karasu-slicer is developed in clean room ([AGENTS.md](AGENTS.md#clean-room-development)): a
 contribution is your own work, written from observed behaviour, published specifications and
