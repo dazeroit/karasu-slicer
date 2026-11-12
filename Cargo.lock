@@ -1535,7 +1535,7 @@ dependencies = [
 
 [[package]]
 name = "karasu-app"
-version = "0.1.0"
+version = "0.2.0-dev"
 dependencies = [
  "eframe",
  "fluent-bundle",
@@ -1553,7 +1553,7 @@ dependencies = [
 
 [[package]]
 name = "karasu-cli"
-version = "0.1.0"
+version = "0.2.0-dev"
 dependencies = [
  "ctrlc",
  "karasu-core",
@@ -1563,7 +1563,7 @@ dependencies = [
 
 [[package]]
 name = "karasu-core"
-version = "0.1.0"
+version = "0.2.0-dev"
 dependencies = [
  "miniz_oxide 0.9.1",
  "quick-xml 0.42.0",
@@ -1573,7 +1573,7 @@ dependencies = [
 
 [[package]]
 name = "karasu-project"
-version = "0.1.0"
+version = "0.2.0-dev"
 dependencies = [
  "karasu-core",
  "log",
@@ -2568,7 +2568,7 @@ dependencies = [
 
 [[package]]
 name = "reference-fixtures"
-version = "0.1.0"
+version = "0.2.0-dev"
 
 [[package]]
 name = "renderdoc-sys"

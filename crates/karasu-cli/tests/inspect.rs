@@ -503,7 +503,10 @@ fn help_default_and_both_version_aliases_preserve_the_existing_contract() {
     assert!(help.contains("Usage: karasu-cli [OPTIONS]"));
     assert!(help.contains("inspect --assume-mm <path>"));
     let version = success(&run(["--version"]));
-    assert!(version.starts_with("karasu-slicer 0.1.0\nCopyright (C) 2026 Ivan Maruca\n"));
+    assert!(version.starts_with(&format!(
+        "karasu-slicer {}\nCopyright (C) 2026 Ivan Maruca\n",
+        env!("CARGO_PKG_VERSION")
+    )));
     assert!(version.contains("License AGPL-3.0-or-later"));
     assert!(version.contains("NO WARRANTY"));
     assert_eq!(success(&run(["-V"])), success(&run(["--version"])));
