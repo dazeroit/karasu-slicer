@@ -1,0 +1,88 @@
+name: Bug report
+description: Something in karasu-slicer does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. One problem per report, please; search the
+        [open issues](https://github.com/dazeroit/karasu-slicer/issues) first.
+
+        **Security vulnerabilities do not belong here:** report them privately, as
+        [SECURITY.md](https://github.com/dazeroit/karasu-slicer/blob/main/SECURITY.md) describes.
+  - type: input
+    id: version
+    attributes:
+      label: karasu-slicer version
+      description: Help > About karasu-slicer, or `karasu-cli --version`.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System details
+      description: The operating system's version (and the distribution on Linux) and the graphics card.
+      placeholder: Windows 11 24H2, AMD Radeon RX 9070 XT
+  - type: input
+    id: printer
+    attributes:
+      label: Printer and file format
+      description: If the problem concerns a printer or the file written for it.
+      placeholder: Anycubic Photon Mono M5s, .pwmx
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, step by step, from opening karasu-slicer.
+      placeholder: |
+        1. Open the model ...
+        2. Hollow it with a 2 mm wall ...
+        3. Slice and export ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: The messages karasu-slicer showed, and screenshots if they help.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostic report
+      description: >-
+        In karasu-slicer: Windows > Log > Save a diagnostic report ("Hide my home folder" leaves
+        your user name out of the paths). Attach the file here.
+  - type: textarea
+    id: files
+    attributes:
+      label: Files that show the problem
+      description: >-
+        If you can, attach the model, the project (.karasu) or the printer file (compress it into
+        a .zip if GitHub refuses it). Share only files you have the right to share.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I searched the open issues and this problem is not reported yet.
+          required: true

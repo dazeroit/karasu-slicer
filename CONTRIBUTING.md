@@ -10,6 +10,15 @@ Thank you for considering a contribution to karasu-slicer.
 - Run the checks listed in the [README](README.md#checks-before-a-change) before you send a
   change.
 
+## Reporting problems and asking for features
+
+Open an issue with one of the forms: **Bug report** asks for the version, the system, the steps
+and a diagnostic report (in karasu-slicer: Windows > Log > Save a diagnostic report); **Feature
+request** asks what you are trying to do and what karasu-slicer should do. One problem or request
+per issue. Vulnerabilities are reported privately instead ([SECURITY.md](SECURITY.md)).
+Questions and help belong on the [Discord server](https://discord.gg/A7wygpqGw); a bug confirmed
+there is reported here as an issue.
+
 ## Branches and pull requests
 
 Branches, versions and releases follow [docs/RELEASE-PROCESS.md](docs/RELEASE-PROCESS.md). In

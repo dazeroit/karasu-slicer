@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://discord.gg/A7wygpqGw
+    about: Ask on the karasu-slicer Discord server; confirmed bugs come back here as issues.
+  - name: Security vulnerability
+    url: https://github.com/dazeroit/karasu-slicer/security/advisories/new
+    about: Report it privately, never in a public issue (SECURITY.md).
