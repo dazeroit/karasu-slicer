@@ -1,3 +1,15 @@
+<p align="center">
+  <img src="assets/ui/images/splash.png" alt="karasu-slicer" width="720">
+</p>
+
+<p align="center">
+  <a href="https://github.com/dazeroit/karasu-slicer/actions/workflows/ci.yml"><img src="https://github.com/dazeroit/karasu-slicer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="Licence: AGPL-3.0-or-later"></a>
+  <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-informational" alt="Platforms: Windows and Linux">
+  <img src="https://img.shields.io/badge/made%20with-Rust-dea584?logo=rust" alt="Made with Rust">
+  <a href="https://discord.gg/A7wygpqGw"><img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&amp;logoColor=white" alt="Discord: join the server"></a>
+</p>
+
 # karasu-slicer
 
 karasu-slicer is an independent, cross-platform slicer for MSLA/LCD resin 3D printers, written in
@@ -12,6 +24,14 @@ geometric correctness, numerical robustness, deterministic output and memory saf
   reference images.
 - **Printers:** the built-in catalog below, and custom printers described by their panel and
   file format.
+
+<p align="center">
+  <img src="docs/images/supports-screenshot.png" alt="The karasu-slicer window: a miniature on the plate of an Anycubic Photon P1, held by automatic supports, with the Supports tools and the Automatic panel open" width="900">
+  <br>
+  <sub>Automatic supports on a miniature. Model:
+  <a href="https://www.printables.com/model/1746548-female-barbarian-warrior-miniature-fantasy-tableto">Female Barbarian Warrior Miniature</a>
+  (Printables, <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>).</sub>
+</p>
 
 The software is under active development and has not been released yet; see
 [ROADMAP.md](ROADMAP.md) for the milestones and their status.
