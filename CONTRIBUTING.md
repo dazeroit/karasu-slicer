@@ -13,9 +13,11 @@ Thank you for considering a contribution to karasu-slicer.
 ## Reporting problems and asking for features
 
 Open an issue with one of the forms: **Bug report** asks for the version, the system, the steps
-and a diagnostic report (in karasu-slicer: Windows > Log > Save a diagnostic report); **Feature
-request** asks what you are trying to do and what karasu-slicer should do. One problem or request
-per issue. Vulnerabilities are reported privately instead ([SECURITY.md](SECURITY.md)).
+and a diagnostic report (in karasu-slicer: Windows > Log > Save a diagnostic report); **Printer
+report** asks how karasu-slicer's files worked on a printer of the catalog, whether they worked or
+not, and how to check the image's orientation; **Feature request** asks what you are trying to do
+and what karasu-slicer should do. One problem, printer or request per issue. Vulnerabilities are
+reported privately instead ([SECURITY.md](SECURITY.md)).
 Questions and help belong on the [Discord server](https://discord.gg/A7wygpqGw); a bug confirmed
 there is reported here as an issue.
 
