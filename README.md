@@ -131,6 +131,12 @@ Pull requests run these checks on Linux and Windows (`.github/workflows/ci.yml`)
 - [docs/research/](docs/research/): research records.
 - [ROADMAP.md](ROADMAP.md): milestones and status.
 
+## Help and community
+
+Ask questions and talk with other users on the [Discord server](https://discord.gg/A7wygpqGw).
+Report bugs and request features with the
+[issue forms](https://github.com/dazeroit/karasu-slicer/issues/new/choose).
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md): contributions are accepted under the project's

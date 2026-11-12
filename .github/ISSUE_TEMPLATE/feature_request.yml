@@ -1,0 +1,34 @@
+name: Feature request
+description: Something karasu-slicer could do, or do better.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One request per issue, please; search the
+        [open issues](https://github.com/dazeroit/karasu-slicer/issues) first. karasu-slicer is
+        developed in clean room: describe what you would like it to do, as a user sees it. Another
+        program's behaviour is a welcome example; its code is never a source.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task or the problem the feature would solve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like karasu-slicer to do
+    validations:
+      required: true
+  - type: input
+    id: printer
+    attributes:
+      label: Printer
+      description: If the request concerns a printer, its maker and model.
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: How you work around it today, examples, pictures.
