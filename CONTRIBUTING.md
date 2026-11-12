@@ -16,6 +16,8 @@ Open an issue with one of the forms: **Bug report** asks for the version, the sy
 and a diagnostic report (in karasu-slicer: Windows > Log > Save a diagnostic report); **Feature
 request** asks what you are trying to do and what karasu-slicer should do. One problem or request
 per issue. Vulnerabilities are reported privately instead ([SECURITY.md](SECURITY.md)).
+Questions and help belong on the [Discord server](https://discord.gg/A7wygpqGw); a bug confirmed
+there is reported here as an issue.
 
 ## Branches and pull requests
 
