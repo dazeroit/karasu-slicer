@@ -128,7 +128,8 @@ def write(target: str, output: Path) -> None:
             if apache is None:
                 raise SystemExit("no Apache-2.0 text found among the packages")
             lines += ["-" * 78, "The Apache License, Version 2.0", "-" * 78, apache, ""]
-    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # Always LF, also under Python for Windows: package.py turns the lines into CRLF itself.
+    output.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(f"{output.name}: {len(packages)} crates, {len(texts)} distinct texts, {len(missing)} without files")
 
 

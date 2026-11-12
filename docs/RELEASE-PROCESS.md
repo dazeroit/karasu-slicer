@@ -60,13 +60,27 @@ own; a fix ships in the next preview.
 - Every release has an annotated tag `vX.Y.Z` (`v1.0.0-rc.1` for a release candidate) on the
   commit that sets that version. Tags of 1.0 and later are on release branches; preview tags are
   on `main`.
-- Tags are never moved or deleted. A wrong release is followed by a new one.
-- The release on GitHub carries the packages built from the tagged commit
-  ([tools/packaging](../tools/packaging/README.md)) and the release notes.
+- Tags are never moved or deleted. A wrong release, or a draft that fails its trial, is followed by
+  a new version.
 
-Before a tag is created, the tagged commit has passed the checks on Linux, CI on both systems, the
-complete native Windows validation ([tools/windows-native](../tools/windows-native/README.md))
-and a run of the packaged application on real hardware.
+To release a version:
+
+1. The commit that sets the version has passed CI on both systems and the complete native Windows
+   validation ([tools/windows-native](../tools/windows-native/README.md)).
+2. The owner creates the annotated tag and pushes it:
+   `git tag -a vX.Y.Z -m "karasu-slicer X.Y.Z"`, then `git push origin vX.Y.Z`.
+3. The tag starts `.github/workflows/release.yml` ([TD-150](TECHNOLOGY-DECISIONS.md#td-150--release-builds-and-distribution)).
+   It checks that the tag matches the version in `Cargo.toml`, builds the packages of
+   [tools/packaging](../tools/packaging/README.md) from the tagged commit on GitHub's runners,
+   writes `SHA256SUMS`, attests the files' build provenance and opens a draft release with them,
+   the download notes and the list of merged pull requests.
+4. The owner installs the draft's packages and runs the application on real hardware, on Windows
+   and on Linux, then writes what changed at the top of the notes and publishes the draft.
+   Previews (`0.x`) and release candidates are published as pre-releases, so that GitHub's latest
+   release is always a stable one.
+
+GitHub Releases is the only distribution channel for now. The Windows packages are not signed:
+Windows warns before running them, and the release notes say so.
 
 ## Cutting a release series
 
