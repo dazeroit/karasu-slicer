@@ -106,8 +106,8 @@ pub(super) fn header(format: MachineFormat, job: &WireJob) -> Result<CtbLayout, 
     let mut out = vec![0; 112];
     set_u32(&mut out, 0, if v45 { MAGIC_V4 } else { 0x12fd_0086 });
     set_u32(&mut out, 4, version);
-    for i in 0..3 {
-        set_f32(&mut out, 8 + i * 4, job.build_mm[i])?;
+    for (i, &size) in job.build_mm.iter().enumerate() {
+        set_f32(&mut out, 8 + i * 4, size)?;
     }
     set_f32(&mut out, 32, job.layer_height_mm)?;
     set_f32(&mut out, 36, normal.exposure_s)?;

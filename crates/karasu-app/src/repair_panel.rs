@@ -611,10 +611,7 @@ impl RepairPanel {
         ui.add_space(4.0);
         // The defects: of the mesh as it will be sliced, or of the model as imported meanwhile.
         let (diagnosis, as_imported, close_holes) = Self::diagnosis(workspace, preparation, index);
-        let findings: Vec<Finding> = diagnosis
-            .as_ref()
-            .map(Diagnosis::findings)
-            .unwrap_or_default();
+        let findings: Vec<Finding> = diagnosis.as_ref().map_or_default(Diagnosis::findings);
         egui::CollapsingHeader::new(tr!("repair-defects", count = findings.len()))
             .id_salt("repair-defects")
             .default_open(true)

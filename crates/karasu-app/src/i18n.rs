@@ -117,7 +117,7 @@ fn bundle(locale: &str) -> Result<FluentBundle<FluentResource>, String> {
 /// Parse `source` (named `name` in errors).
 fn resource(name: &str, source: String) -> Result<FluentResource, String> {
     FluentResource::try_new(source).map_err(|(_, errors)| {
-        let first = errors.first().map(ToString::to_string).unwrap_or_default();
+        let first = errors.first().map_or_default(ToString::to_string);
         format!("{name}: {} syntax error(s), first: {first}", errors.len())
     })
 }

@@ -448,8 +448,7 @@ impl SupportsUi {
         let wrong = scene.map_or_else(Vec::new, |s| {
             let ids: Vec<u64> = workspace
                 .supports(index)
-                .map(|d| d.braces.iter().map(|b| b.id).collect())
-                .unwrap_or_default();
+                .map_or_default(|d| d.braces.iter().map(|b| b.id).collect());
             errors(s.findings())
                 .into_iter()
                 .filter(|id| ids.contains(id))

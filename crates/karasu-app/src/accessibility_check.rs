@@ -45,8 +45,7 @@ fn frame(
     let nodes = output
         .platform_output
         .accesskit_update
-        .map(|update| update.nodes)
-        .unwrap_or_default();
+        .map_or_default(|update| update.nodes);
     (nodes, focused)
 }
 
@@ -77,18 +76,15 @@ fn egui_own(ctx: &egui::Context) -> std::collections::HashSet<u64> {
 
 /// A node as a failure names it: its role, text and place.
 fn describe(node: &accesskit::Node) -> String {
-    let place = node
-        .bounds()
-        .map(|r| {
-            format!(
-                " at ({:.0}, {:.0}) {:.0}×{:.0}",
-                r.x0,
-                r.y0,
-                r.x1 - r.x0,
-                r.y1 - r.y0
-            )
-        })
-        .unwrap_or_default();
+    let place = node.bounds().map_or_default(|r| {
+        format!(
+            " at ({:.0}, {:.0}) {:.0}×{:.0}",
+            r.x0,
+            r.y0,
+            r.x1 - r.x0,
+            r.y1 - r.y0
+        )
+    });
     format!(
         "{:?} value {:?}{place}",
         node.role(),

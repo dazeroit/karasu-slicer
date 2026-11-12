@@ -688,8 +688,9 @@ impl Bvh {
             }
             if node.count > 0 {
                 let start = node.start_or_right as usize;
-                for slot in start..start + node.count as usize {
-                    let d = point_triangle_distance_sq(p, &self.triangles[slot]);
+                let leaf = &self.triangles[start..start + node.count as usize];
+                for (slot, triangle) in (start..).zip(leaf) {
+                    let d = point_triangle_distance_sq(p, triangle);
                     // Exact ties break on the lower slot so the result is order independent.
                     #[allow(clippy::float_cmp)]
                     let tie = d == best && slot < best_slot;

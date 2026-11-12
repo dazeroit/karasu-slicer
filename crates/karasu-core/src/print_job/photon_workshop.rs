@@ -306,8 +306,8 @@ pub(super) fn header(
         // Two words observed as 16 and 15 in reference files; their meaning is not established.
         push_u32(&mut out, 16);
         push_u32(&mut out, 15);
-        for k in 0..3 {
-            push_f32(&mut out, job.build_mm[k])?;
+        for &size in &job.build_mm {
+            push_f32(&mut out, size)?;
         }
         push_u32(&mut out, version);
         push_u32(&mut out, 0);
@@ -321,8 +321,8 @@ pub(super) fn header(
             for k in 0..10u32 {
                 push_u32(&mut out, u32::from(k == 8));
             }
-            for k in 0..2 {
-                let n = u16::try_from(job.resolution[k])
+            for &pixels in &job.resolution {
+                let n = u16::try_from(pixels)
                     .map_err(|_| CodecError::Limit("revision 518 resolution"))?;
                 out.extend(n.to_le_bytes());
             }

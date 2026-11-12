@@ -173,8 +173,7 @@ pub fn exposures(workspace: &Workspace) -> Vec<(f64, f64)> {
             .map(|&(nm, s)| (to_mm(nm), s))
             .collect(),
         None => calibration(workspace)
-            .map(|c| vec![(c.layer_height_mm, c.normal.exposure_s)])
-            .unwrap_or_default(),
+            .map_or_default(|c| vec![(c.layer_height_mm, c.normal.exposure_s)]),
     }
 }
 

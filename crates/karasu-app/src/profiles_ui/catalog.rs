@@ -177,8 +177,7 @@ fn default_resins(library: &Library, id: &str) -> Vec<String> {
     library
         .catalog()
         .standard_resin_for(id)
-        .map(|m| vec![m.profile.id.clone()])
-        .unwrap_or_default()
+        .map_or_default(|m| vec![m.profile.id.clone()])
 }
 
 /// Choose every resin `offered`, or none.
@@ -737,8 +736,7 @@ impl AddResin {
         let name = library
             .catalog()
             .material(&id)
-            .map(|m| m.profile.name.clone())
-            .unwrap_or_default();
+            .map_or_default(|m| m.profile.name.clone());
         let from = if self.official(library, &id) {
             None
         } else {

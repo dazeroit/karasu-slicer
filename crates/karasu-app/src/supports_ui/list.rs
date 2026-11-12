@@ -88,9 +88,8 @@ fn row(
     selected: Option<u64>,
     id: u64,
 ) -> Row {
-    let findings: Vec<&SupportFinding> = scene
-        .map(|s| s.findings().iter().filter(|f| f.entity == id).collect())
-        .unwrap_or_default();
+    let findings: Vec<&SupportFinding> =
+        scene.map_or_default(|s| s.findings().iter().filter(|f| f.entity == id).collect());
     let error = findings.iter().find(|f| f.severity == Severity::Error);
     let accepted = findings.iter().any(|f| f.severity == Severity::Accepted);
     let interior = scene

@@ -573,8 +573,8 @@ impl MachineEncoder {
         let mut out = vec![0; 112];
         set_u32(&mut out, 0, if ctb { 0x12fd_0086 } else { 0x12fd_0019 });
         set_u32(&mut out, 4, if ctb { 2 } else { 1 });
-        for i in 0..3 {
-            set_f32(&mut out, 8 + i * 4, self.job.build_mm[i])?;
+        for (i, &size) in self.job.build_mm.iter().enumerate() {
+            set_f32(&mut out, 8 + i * 4, size)?;
         }
         set_f32(&mut out, 32, self.job.layer_height_mm)?;
         set_f32(&mut out, 36, self.job.normal.exposure_s)?;

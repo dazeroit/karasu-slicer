@@ -57,10 +57,7 @@ fn stems(document: &SupportDocument, scene: &SupportScene) -> Vec<Stem> {
                 _ => None,
             };
             Stem {
-                shaft: scene
-                    .shaft_path(s.id)
-                    .map(<[[f64; 3]]>::to_vec)
-                    .unwrap_or_default(),
+                shaft: scene.shaft_path(s.id).map_or_default(<[[f64; 3]]>::to_vec),
                 shaft_mm: s.parameters.shaft_diameter_mm,
                 // A mini support is too thin to merge with trunks.
                 free: !matches!(s.base, BaseSpec::Support { .. })
@@ -176,8 +173,7 @@ impl SupportsUi {
                 Ok(merged) => {
                     let ids = workspace
                         .supports(object)
-                        .map(|d| d.supports.iter().map(|s| s.id).collect())
-                        .unwrap_or_default();
+                        .map_or_default(|d| d.supports.iter().map(|s| s.id).collect());
                     merging.done = Some((merged, ids));
                     merging.receiver = None;
                     true

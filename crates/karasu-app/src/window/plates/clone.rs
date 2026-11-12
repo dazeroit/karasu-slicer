@@ -114,8 +114,7 @@ impl MainWindow {
                 let name = plates
                     .iter()
                     .find(|p| p.id() == id)
-                    .map(|p| p.content().name.clone())
-                    .unwrap_or_default();
+                    .map_or_default(|p| p.content().name.clone());
                 let name = tr!("plates-overview-name", number = number, name = name);
                 if id == shown {
                     tr!("clone-plate-shown", plate = name)
