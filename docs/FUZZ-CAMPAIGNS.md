@@ -359,12 +359,13 @@ and command versions, and exits 2 with `BLOCKED` when prerequisites are absent. 
 must already be listed by rustup, preventing implicit installation by `cargo +...`. It preserves
 the first campaign record rather than overwriting a prior result. It is WSL/Linux tooling.
 
-The resumed campaign executed this command form for each target, using resolved absolute paths and
-`nightly-x86_64-unknown-linux-gnu`. `campaign.json` retains the exact argument arrays:
+The resumed campaign executed this command form for each target, using resolved absolute paths
+(`$checkout` is the repository's checkout) and `nightly-x86_64-unknown-linux-gnu`. `campaign.json`
+retains the exact argument arrays:
 
 ```bash
 cargo +INSTALLED_NIGHTLY fuzz run TARGET \
-  --fuzz-dir /develop/dazero/karasu-slicer/fuzz \
+  --fuzz-dir "$checkout/fuzz" \
   --target-dir "$run_dir/target" --sanitizer address --debug-assertions \
   "$run_dir/corpus/TARGET" "$run_dir/seeds/TARGET" -- \
   -max_len=65536 -timeout=3 -rss_limit_mb=1024 -malloc_limit_mb=256 \
