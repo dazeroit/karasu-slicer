@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-14k-abs-like-resin",
+    "name": "SUNLU 14K ABS-Like Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "abs_like",
+    "density_g_per_ml": 1.1214,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

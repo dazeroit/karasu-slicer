@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-standard-resin",
+    "name": "Anycubic Standard Resin",
+    "revision": 2,
+    "vendor": "anycubic",
+    "kind": "standard",
+    "density_g_per_ml": 1.13,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

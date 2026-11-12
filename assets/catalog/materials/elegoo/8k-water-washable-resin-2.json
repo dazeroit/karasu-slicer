@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-8k-water-washable-resin-2",
+    "name": "ELEGOO 8K Water-Washable Resin V2.0",
+    "revision": 1,
+    "vendor": "elegoo",
+    "kind": "water_washable",
+    "density_g_per_ml": 1.05,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

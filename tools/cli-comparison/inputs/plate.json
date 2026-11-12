@@ -1,0 +1,5 @@
+{"format":"karasu-plate","version":1,"spacing_mm":3,"objects":[
+ {"name":"cube","model":"../../../fixtures/reference/stl/fx-01-cube.stl","units":"mm","drop":true,"copies":2},
+ {"name":"cavity","model":"../../../fixtures/reference/stl/fx-07-internal-cavity.stl","units":"mm","rotate_deg":[0,0,30],"drop":true},
+ {"name":"fixed","model":"../../../fixtures/reference/stl/fx-01-cube.stl","units":"mm","translate_mm":[20,15,0],"arrange":false,
+  "hollow":{"wall_mm":2,"drain_holes":[{"entry_mm":[20,15,25],"direction":[0,0,-1],"length_mm":8,"diameter_mm":3}]}}]}

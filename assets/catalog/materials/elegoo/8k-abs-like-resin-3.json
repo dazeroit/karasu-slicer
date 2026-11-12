@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-8k-abs-like-resin-3",
+    "name": "ELEGOO 8K ABS-Like Resin V3.0",
+    "revision": 1,
+    "vendor": "elegoo",
+    "kind": "abs_like",
+    "density_g_per_ml": 1.05,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

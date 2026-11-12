@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-water-wash-abs-like-resin-3",
+    "name": "Anycubic Water-Wash ABS-Like Resin 3.0",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "water_washable",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

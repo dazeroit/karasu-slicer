@@ -1,0 +1,38 @@
+{
+  "kind": "printer",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-photon",
+    "name": "Photon",
+    "revision": 1,
+    "build_size_mm": [
+      120.32,
+      67.68,
+      155.0
+    ],
+    "resolution_px": [
+      2560,
+      1440
+    ],
+    "origin_xy_mm": [
+      0.0,
+      0.0
+    ],
+    "swap_xy": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "format_ids": [
+      "photon-v1-firmware-motion",
+      "anycubic-pws-v1"
+    ],
+    "limits": {
+      "min_layer_height_mm": 0.01,
+      "max_layer_height_mm": 0.2,
+      "max_exposure_s": 300.0,
+      "max_speed_mm_s": 20.0,
+      "max_lift_mm": 20.0
+    },
+    "vendor": "anycubic",
+    "model": "Anycubic Photon"
+  }
+}

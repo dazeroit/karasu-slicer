@@ -1,0 +1,49 @@
+{
+  "kind": "printer",
+  "profile": {
+    "schema_version": 1,
+    "id": "p4k",
+    "name": "p4k",
+    "revision": 1,
+    "build_size_mm": [
+      130.56,
+      82.62,
+      160.0
+    ],
+    "resolution_px": [
+      3840,
+      2400
+    ],
+    "origin_xy_mm": [
+      0.0,
+      0.0
+    ],
+    "swap_xy": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "format_ids": [
+      "ctb-v2-plain",
+      "ctb-v3-plain",
+      "ctb-v4-plain",
+      "ctb-v5-plain",
+      "goo-v3",
+      "anycubic-pp1-v3",
+      "photon-v1-firmware-motion",
+      "anycubic-pws-v1",
+      "anycubic-pwmx-v1",
+      "anycubic-pmsq-v515",
+      "anycubic-pwma-v516",
+      "anycubic-pm5-v517",
+      "anycubic-pm5s-v518",
+      "prusa-sl1-firmware-motion",
+      "prusa-sl1s-firmware-motion"
+    ],
+    "limits": {
+      "min_layer_height_mm": 0.01,
+      "max_layer_height_mm": 0.3,
+      "max_exposure_s": 120.0,
+      "max_speed_mm_s": 100.0,
+      "max_lift_mm": 20.0
+    }
+  }
+}

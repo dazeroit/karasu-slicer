@@ -1,0 +1,4 @@
+{"format":"karasu-layers","version":1,
+ "ranges":[{"from_mm":0,"height_mm":0.05},
+  {"from_mm":5,"adaptive":{"min_height_mm":0.02,"max_height_mm":0.1,"max_deviation_mm":0.02}}],
+ "exposures":[{"height_mm":0.02,"exposure_s":1.2},{"height_mm":0.1,"exposure_s":3.5}]}

@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-abs-like-resin-pro-2",
+    "name": "Anycubic ABS-Like Resin Pro 2",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "abs_like",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

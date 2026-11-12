@@ -1,0 +1,64 @@
+{
+  "kind": "print_setting",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-photon-mono-m5-anycubic-abs-like-resin-pro-2",
+    "name": "Normal 0.05 mm",
+    "revision": 1,
+    "printer_id": "anycubic-photon-mono-m5",
+    "resin_id": "anycubic-abs-like-resin-pro-2",
+    "film": null,
+    "status": "official",
+    "source": "Anycubic's resin settings table (A8)",
+    "based_on": null,
+    "settings": {
+      "layer_height_mm": 0.05,
+      "bottom_layer_count": 5,
+      "transition_layer_count": 0,
+      "bottom": {
+        "exposure_s": 25.0,
+        "wait_before_exposure_s": 0.5,
+        "wait_after_exposure_s": 0.0,
+        "wait_after_lift_s": 0.0,
+        "pwm": 255,
+        "lift": [
+          {
+            "distance_mm": 8.0,
+            "speed_mm_s": 5.0
+          }
+        ],
+        "retract": [
+          {
+            "distance_mm": 8.0,
+            "speed_mm_s": 6.0
+          }
+        ]
+      },
+      "normal": {
+        "exposure_s": 2.8,
+        "wait_before_exposure_s": 0.5,
+        "wait_after_exposure_s": 0.0,
+        "wait_after_lift_s": 0.0,
+        "pwm": 255,
+        "lift": [
+          {
+            "distance_mm": 8.0,
+            "speed_mm_s": 5.0
+          }
+        ],
+        "retract": [
+          {
+            "distance_mm": 8.0,
+            "speed_mm_s": 6.0
+          }
+        ]
+      }
+    },
+    "image": {
+      "antialias": 1,
+      "min_gray": 0,
+      "xy_compensation_px": 0,
+      "bottom_xy_compensation_px": null
+    }
+  }
+}

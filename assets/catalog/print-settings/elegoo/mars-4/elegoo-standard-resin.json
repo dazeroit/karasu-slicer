@@ -1,0 +1,80 @@
+{
+  "kind": "print_setting",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-mars-4-elegoo-standard-resin",
+    "name": "Normal 0.05 mm",
+    "revision": 1,
+    "printer_id": "elegoo-mars-4",
+    "resin_id": "elegoo-standard-resin",
+    "film": null,
+    "status": "starting_point",
+    "source": "ELEGOO's settings table (E2), the middles of its ranges, and the manual's bottom layers (E3)",
+    "based_on": null,
+    "settings": {
+      "layer_height_mm": 0.05,
+      "bottom_layer_count": 2,
+      "transition_layer_count": 0,
+      "bottom": {
+        "exposure_s": 27.5,
+        "wait_before_exposure_s": 0.5,
+        "wait_after_exposure_s": 0.0,
+        "wait_after_lift_s": 0.0,
+        "pwm": 255,
+        "lift": [
+          {
+            "distance_mm": 2.0,
+            "speed_mm_s": 1.25
+          },
+          {
+            "distance_mm": 3.0,
+            "speed_mm_s": 3.833333
+          }
+        ],
+        "retract": [
+          {
+            "distance_mm": 3.0,
+            "speed_mm_s": 3.833333
+          },
+          {
+            "distance_mm": 2.0,
+            "speed_mm_s": 1.25
+          }
+        ]
+      },
+      "normal": {
+        "exposure_s": 2.75,
+        "wait_before_exposure_s": 0.5,
+        "wait_after_exposure_s": 0.0,
+        "wait_after_lift_s": 0.0,
+        "pwm": 255,
+        "lift": [
+          {
+            "distance_mm": 2.0,
+            "speed_mm_s": 1.25
+          },
+          {
+            "distance_mm": 3.0,
+            "speed_mm_s": 3.833333
+          }
+        ],
+        "retract": [
+          {
+            "distance_mm": 3.0,
+            "speed_mm_s": 3.833333
+          },
+          {
+            "distance_mm": 2.0,
+            "speed_mm_s": 1.25
+          }
+        ]
+      }
+    },
+    "image": {
+      "antialias": 1,
+      "min_gray": 0,
+      "xy_compensation_px": 0,
+      "bottom_xy_compensation_px": null
+    }
+  }
+}

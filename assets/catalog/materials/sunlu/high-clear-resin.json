@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-high-clear-resin",
+    "name": "SUNLU High Clear Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "clear",
+    "density_g_per_ml": 1.1214,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

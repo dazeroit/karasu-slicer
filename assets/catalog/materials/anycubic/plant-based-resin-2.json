@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-plant-based-resin-2",
+    "name": "Anycubic Plant-Based UV Resin 2.0",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "plant_based",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

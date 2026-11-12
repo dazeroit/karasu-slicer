@@ -1,0 +1,37 @@
+{
+  "kind": "printer",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-photon-ultra",
+    "name": "Photon Ultra",
+    "revision": 1,
+    "build_size_mm": [
+      102.4,
+      57.6,
+      165.0
+    ],
+    "resolution_px": [
+      1280,
+      720
+    ],
+    "origin_xy_mm": [
+      0.0,
+      0.0
+    ],
+    "swap_xy": false,
+    "mirror_x": false,
+    "mirror_y": false,
+    "format_ids": [
+      "anycubic-dlp-v515"
+    ],
+    "limits": {
+      "min_layer_height_mm": 0.01,
+      "max_layer_height_mm": 0.2,
+      "max_exposure_s": 300.0,
+      "max_speed_mm_s": 20.0,
+      "max_lift_mm": 20.0
+    },
+    "vendor": "anycubic",
+    "model": "Anycubic Photon Ultra"
+  }
+}

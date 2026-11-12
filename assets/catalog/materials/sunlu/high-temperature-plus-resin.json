@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-high-temperature-plus-resin",
+    "name": "SUNLU High Temperature Plus Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "other",
+    "density_g_per_ml": 1.235,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

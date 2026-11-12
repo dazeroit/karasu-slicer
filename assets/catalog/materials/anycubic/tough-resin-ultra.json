@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-tough-resin-ultra",
+    "name": "Anycubic Tough Resin Ultra",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "tough",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

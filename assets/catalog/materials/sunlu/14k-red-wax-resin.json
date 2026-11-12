@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-14k-red-wax-resin",
+    "name": "SUNLU 14K Red Wax Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "other",
+    "density_g_per_ml": 1.13,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

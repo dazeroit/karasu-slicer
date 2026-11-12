@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-14k-texture-resin",
+    "name": "Anycubic 14K Texture Resin",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "other",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "kind": "resin",
+  "profile": {
+    "schema_version": 1,
+    "id": "r",
+    "name": "Resin",
+    "revision": 1,
+    "density_g_per_ml": 1.1,
+    "cost_per_liter": 30.0,
+    "currency": "EUR",
+    "calibrations": [
+      {
+        "printer_id": "p4k",
+        "settings": {
+          "layer_height_mm": 0.05,
+          "bottom_layer_count": 4,
+          "transition_layer_count": 3,
+          "bottom": {
+            "exposure_s": 25.0,
+            "wait_before_exposure_s": 0.0,
+            "wait_after_exposure_s": 0.0,
+            "wait_after_lift_s": 0.0,
+            "pwm": 255,
+            "lift": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ],
+            "retract": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ]
+          },
+          "normal": {
+            "exposure_s": 2.5,
+            "wait_before_exposure_s": 0.0,
+            "wait_after_exposure_s": 0.0,
+            "wait_after_lift_s": 0.0,
+            "pwm": 255,
+            "lift": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ],
+            "retract": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "printer_id": "pbig",
+        "settings": {
+          "layer_height_mm": 0.05,
+          "bottom_layer_count": 4,
+          "transition_layer_count": 3,
+          "bottom": {
+            "exposure_s": 25.0,
+            "wait_before_exposure_s": 0.0,
+            "wait_after_exposure_s": 0.0,
+            "wait_after_lift_s": 0.0,
+            "pwm": 255,
+            "lift": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ],
+            "retract": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ]
+          },
+          "normal": {
+            "exposure_s": 2.5,
+            "wait_before_exposure_s": 0.0,
+            "wait_after_exposure_s": 0.0,
+            "wait_after_lift_s": 0.0,
+            "pwm": 255,
+            "lift": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ],
+            "retract": [
+              {
+                "distance_mm": 5.0,
+                "speed_mm_s": 2.0
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

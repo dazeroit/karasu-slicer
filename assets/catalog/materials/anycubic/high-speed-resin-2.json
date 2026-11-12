@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-high-speed-resin-2",
+    "name": "Anycubic High Speed Resin 2.0",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "standard",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

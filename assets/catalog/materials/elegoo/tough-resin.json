@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-tough-resin",
+    "name": "ELEGOO Tough Resin",
+    "revision": 1,
+    "vendor": "elegoo",
+    "kind": "tough",
+    "density_g_per_ml": 1.05,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

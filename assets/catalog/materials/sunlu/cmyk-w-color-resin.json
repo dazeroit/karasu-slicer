@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-cmyk-w-color-resin",
+    "name": "SUNLU CMYK+W Color Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "abs_like",
+    "density_g_per_ml": 1.1137,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

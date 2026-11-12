@@ -1,0 +1,18 @@
+[package]
+name = "karasu-core"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Reusable domain and processing core for karasu-slicer"
+
+[dependencies]
+miniz_oxide = "=0.9.1"
+quick-xml = "=0.42.0"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.150", features = ["float_roundtrip"] }
+
+[lints]
+workspace = true
+

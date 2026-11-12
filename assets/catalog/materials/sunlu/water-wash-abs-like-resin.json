@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-water-wash-abs-like-resin",
+    "name": "SUNLU Water-Wash ABS-Like Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "water_washable",
+    "density_g_per_ml": 1.12,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

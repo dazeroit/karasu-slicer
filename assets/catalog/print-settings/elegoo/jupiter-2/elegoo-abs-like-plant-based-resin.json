@@ -1,0 +1,80 @@
+{
+  "kind": "print_setting",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-jupiter-2-elegoo-abs-like-plant-based-resin",
+    "name": "Normal 0.05 mm",
+    "revision": 1,
+    "printer_id": "elegoo-jupiter-2",
+    "resin_id": "elegoo-abs-like-plant-based-resin",
+    "film": null,
+    "status": "starting_point",
+    "source": "ELEGOO's settings table (E2), the middles of its ranges, and the manual's bottom layers (E3)",
+    "based_on": null,
+    "settings": {
+      "layer_height_mm": 0.05,
+      "bottom_layer_count": 4,
+      "transition_layer_count": 0,
+      "bottom": {
+        "exposure_s": 32.5,
+        "wait_before_exposure_s": 1.0,
+        "wait_after_exposure_s": 0.0,
+        "wait_after_lift_s": 0.0,
+        "pwm": 255,
+        "lift": [
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 1.0
+          },
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 6.5
+          }
+        ],
+        "retract": [
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 6.5
+          },
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 1.0
+          }
+        ]
+      },
+      "normal": {
+        "exposure_s": 3.25,
+        "wait_before_exposure_s": 1.0,
+        "wait_after_exposure_s": 0.0,
+        "wait_after_lift_s": 0.0,
+        "pwm": 255,
+        "lift": [
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 1.0
+          },
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 6.5
+          }
+        ],
+        "retract": [
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 6.5
+          },
+          {
+            "distance_mm": 4.5,
+            "speed_mm_s": 1.0
+          }
+        ]
+      }
+    },
+    "image": {
+      "antialias": 1,
+      "min_gray": 0,
+      "xy_compensation_px": 0,
+      "bottom_xy_compensation_px": null
+    }
+  }
+}

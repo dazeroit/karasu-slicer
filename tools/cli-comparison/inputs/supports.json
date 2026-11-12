@@ -1,0 +1,4 @@
+{"format":"karasu-supports","version":1,"supports":[
+ {"id":1,"tip":{"point":[60,36,4]},"base":{"vertical":true}},
+ {"id":2,"tip":{"point":[70.5,46,4]},"base":{"vertical":true},"parameters":{"contact_shape":"sphere"}},
+ {"id":3,"tip":{"point":[60,46,4]},"base":{"vertical":true}}]}

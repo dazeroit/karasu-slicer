@@ -1,0 +1,37 @@
+{
+  "kind": "printer",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-saturn-3",
+    "name": "Saturn 3",
+    "revision": 2,
+    "build_size_mm": [
+      218.88,
+      122.88,
+      250.0
+    ],
+    "resolution_px": [
+      11520,
+      5120
+    ],
+    "origin_xy_mm": [
+      0.0,
+      0.0
+    ],
+    "swap_xy": false,
+    "mirror_x": true,
+    "mirror_y": true,
+    "format_ids": [
+      "goo-v3"
+    ],
+    "limits": {
+      "min_layer_height_mm": 0.01,
+      "max_layer_height_mm": 0.2,
+      "max_exposure_s": 300.0,
+      "max_speed_mm_s": 20.0,
+      "max_lift_mm": 20.0
+    },
+    "vendor": "elegoo",
+    "model": "Elegoo Saturn 3"
+  }
+}

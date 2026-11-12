@@ -1,0 +1,324 @@
+# Anycubic's resin settings page (A8) as saved, SHA-256 6612ccc586fbad00bae00f94408fa05a3ce17fac9a312e670989d5e61a6a0725; extracted by tools/assets/extract_resin_tables.py
+printer	resin	layer	exposure	light_off	bottom_exposure	bottom_layers	lift	lift_speed	retract_speed	antialias
+anycubic-photon-p1	Standard Resin	0.05 mm	2 s	2 s	20 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	16K Standard Resin-Orange Red	0.05 mm	2.8 s	2 s	30 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	16K Standard Resin-Other Colors	0.05 mm	2.5 s	2 s	20 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	Standard Resin V2	0.05 mm	2 s	2 s	20 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	Water Wash Resin 2.0	0.05 mm	2 s	2 s	30 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	ABS-Like Resin Pro 2	0.05 mm	2 s	2 s	25 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	ABS-Like Resin 2.0	0.05 mm	2 s	2 s	25 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	ABS-Like Resin 3.0	0.05 mm	2 s	2 s	25 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	Water Wash ABS-Like Resin 3.0	0.05 mm	2 s	2 s	25 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	14K Texture Resin	0.05 mm	2 s	2 s	25 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	DLP Craftman Resin	0.05 mm	2.1 s	2 s	35 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	BJD Wear-Resistant Resin	0.05 mm	2.2 s	2 s	30 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	High Speed Resin 2.0	0.05 mm	1.1 s	2 s	15 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	Tough Resin 2.0	0.05 mm	2.1 s	2 s	15 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	Tough Resin Ultra	0.05 mm	2 s	2 s	23 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	Plant Based Resin 2.0	0.05 mm	2 s	2 s	20 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-p1	High Clear Resin	0.05 mm	4.4 s	2 s	30 s	1	5 mm	3 mm/s	3 mm/s	4
+anycubic-photon-mono-4	Standard Resin	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	16K Standard Resin-Orange Red	0.05 mm	2.5 s	0.5 s	60 s	8	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	16K Standard Resin-Other Colors	0.05 mm	2.5 s	0.5 s	45 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	Standard Resin V2	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	Water Wash Resin 2.0	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	ABS-Like Resin Pro 2	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	ABS-Like Resin 2.0	0.05 mm	2.8 s	1 s	32 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	ABS-Like Resin 3.0	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	Water Wash ABS-Like Resin 3.0	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	14K Texture Resin	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	DLP Craftman Resin	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	BJD Wear-Resistant Resin	0.05 mm	2.5 s	0.5 s	35 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	High Speed Resin 2.0	0.1 mm	2.2 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	Tough Resin 2.0	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	Tough Resin Ultra	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	Plant Based Resin 2.0	0.05 mm	2.8 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-4	High Clear Resin	0.05 mm	4.5 s	1 s	30 s	5	6 mm	4 mm/s	4 mm/s	1
+anycubic-photon-mono-m5s-pro	Standard Resin	0.05mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	Plant-Based Resin	0.05mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	DLP Craftsman Resin	0.05mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	UV Tough Resin	0.05mm	3s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	Water-Wash Resin+	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	Standard Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-m5s-pro	High Clear Resin	0.05mm	4s	0.5s	35s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	ABS-Like Resin V2	0.05mm	3.6s	0.5s	35s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	High Speed Resin	0.05mm	1.9s	0.5s	10s	5	3mm	20mm/s	20mm/s	1
+anycubic-photon-mono-m5s-pro	Standard Resin V2	0.1mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	ABS-Like Resin Pro 2	0.05mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	Tough Resin 2.0	0.05mm	3.6s	1s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	Tough Resin Ultra	0.05mm	3.6s	1s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	ABS-Like Resin Pro	0.05mm	3.6s	0.5s	35s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	ABS-Like Resin+	0.05mm	3.6s	0.5s	35s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s-pro	Plant-Based Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-m5s	Standard Resin	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	Plant-Based Resin	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	DLP Craftsman Resin	0.05mm	3s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	UV Tough Resin	0.05mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	Water-Wash Resin+	0.05mm	3.6s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	Standard Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-m5s	High Clear Resin	0.05mm	5s	0.5s	35s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	ABS-Like Resin V2	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	High Speed Resin	0.05mm	1.7s	0.5s	10s	3	3mm	20mm/s	20mm/s	1
+anycubic-photon-mono-m5s	Standard Resin V2	0.1mm	2.8s	0.5s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5s	ABS-Like Resin Pro 2	0.05mm	2.8s	0.5s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5s	Tough Resin 2.0	0.05mm	2.8s	1s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5s	Tough Resin Ultra	0.05mm	2.8s	1s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5s	ABS-Like Resin Pro	0.05mm	3s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	ABS-Like Resin+	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5s	Plant-Based Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-m5	Standard Resin	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	Plant-Based Resin	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	DLP Craftsman Resin	0.05mm	3s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	UV Tough Resin	0.05mm	3s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	Water-Wash Resin+	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	Standard Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-m5	High Clear Resin	0.05mm	5s	0.5s	35s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	ABS-Like Resin V2	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	High Speed Resin	0.05mm	/	/	/	/	/	/	/	/
+anycubic-photon-mono-m5	Standard Resin V2	/	2.8s	0.5s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5	ABS-Like Resin Pro 2	0.05mm	2.8s	0.5s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5	Tough Resin 2.0	0.05mm	2.8s	1s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5	Tough Resin Ultra	0.05mm	2.8s	1s	25s	5	8mm	5mm/s	6mm/s	1
+anycubic-photon-mono-m5	ABS-Like Resin Pro	0.05mm	3s	0.5s	30s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	ABS-Like Resin+	0.05mm	2.8s	0.5s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-mono-m5	Plant-Based Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-m3-max	Standard Resin	0.05mm	3s	2.5s	50s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	Plant-Based Resin	0.05mm	3s	2.5s	50s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	DLP Craftsman Resin	0.05mm	2s	2.5s	35s	6	8mm	3mm/s	4mm/s	1
+anycubic-photon-m3-max	UV Tough Resin	0.05mm	3s	2.5s	50s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	Water-Wash Resin+	0.05mm	3s	2.5s	50s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	Standard Resin+	0.05mm	3s	2.5s	50s	6	10mm	10mm/s	2mm/s	1
+anycubic-photon-m3-max	High Clear Resin	0.05mm	4.5s	2.5s	30s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	ABS-Like Resin V2	0.05mm	3s	2s	30s	6	10mm	4mm/s	4mm/s	1
+anycubic-photon-m3-max	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-m3-max	Standard Resin V2	0.05mm	3s	2.5s	35s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	ABS-Like Resin Pro 2	0.05mm	3s	2.5s	35s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	Tough Resin 2.0	0.05mm	3s	2s	35s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	Tough Resin Ultra	0.05mm	3s	2s	35s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	ABS-Like Resin Pro	0.05mm	3s	2.5s	30s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-m3-max	ABS-Like Resin+	0.05mm	3s	2.5s	50s	6	10mm	10mm/s	2mm/s	1
+anycubic-photon-m3-max	Plant-Based Resin+	0.05mm	3s	2.5s	35s	6	10mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	Standard Resin	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	Plant-Based Resin	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	DLP Craftsman Resin	0.05mm	2s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	UV Tough Resin	0.05mm	3s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	Water-Wash Resin+	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	Standard Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-x-6ks	High Clear Resin	0.05mm	4	0.5s	25s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	ABS-Like Resin V2	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-x-6ks	Standard Resin V2	0.05mm	2.5s	0.5s	20s	5	8mm	3mm/s	4mm/s	1
+anycubic-photon-mono-x-6ks	ABS-Like Resin Pro 2	0.05mm	2.5s	0.5s	20s	5	8mm	3mm/s	4mm/s	1
+anycubic-photon-mono-x-6ks	Tough Resin 2.0	0.05mm	2.5s	0.5s	20s	5	8mm	3mm/s	4mm/s	1
+anycubic-photon-mono-x-6ks	Tough Resin Ultra	0.05mm	2.5s	0.5s	20s	5	8mm	3mm/s	4mm/s	1
+anycubic-photon-mono-x-6ks	ABS-Like Resin Pro	0.05mm	3s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	ABS-Like Resin+	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6ks	Plant-Based Resin+	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-x2	Standard Resin	0.05mm	2.5s	0.5s	25s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	Plant-Based Resin	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	DLP Craftsman Resin	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	UV Tough Resin	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	Water-Wash Resin+	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	Standard Resin+	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	High Clear Resin	0.05mm	4	0.5s	25s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	ABS-Like Resin V2	0.05mm	2.5s	0.5s	25s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-x2	Standard Resin V2	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	ABS-Like Resin Pro 2	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	Tough Resin 2.0	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	Tough Resin Ultra	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	ABS-Like Resin Pro	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	ABS-Like Resin+	0.05mm	2.5s	1s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x2	Plant-Based Resin+	0.05mm	2.5s	0.5s	20s	5	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-2	Standard Resin	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	Plant-Based Resin	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	DLP Craftsman Resin	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	UV Tough Resin	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	Water-Wash Resin+	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	Standard Resin+	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	High Clear Resin	0.05mm	4.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	ABS-Like Resin V2	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-2	Standard Resin V2	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	ABS-Like Resin Pro 2	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	Tough Resin 2.0	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	Tough Resin Ultra	0.05mm	2.5s	1s	25s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	ABS-Like Resin Pro	0.05mm	3s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	ABS-Like Resin+	0.05mm	2.5s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-2	Plant-Based Resin+	0.05mm	3s	1s	25s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-d2	Standard Resin	0.05mm	2.8s	1s	30s	6	5mm	3mm/s	3mm/s	16
+anycubic-photon-d2	Plant-Based Resin	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	16
+anycubic-photon-d2	DLP Craftsman Resin	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	16
+anycubic-photon-d2	UV Tough Resin	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	1
+anycubic-photon-d2	Water-Wash Resin+	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	16
+anycubic-photon-d2	Standard Resin+	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	16
+anycubic-photon-d2	High Clear Resin	0.05mm	4.5s	1s	35s	4	5mm	2mm/s	3mm/s	4
+anycubic-photon-d2	ABS-Like Resin V2	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-d2	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-d2	Standard Resin V2	0.05mm	2.5s	1s	28s	6	5mm	2mm/s	2mm/s	16
+anycubic-photon-d2	ABS-Like Resin Pro 2	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	2mm/s	16
+anycubic-photon-d2	Tough Resin 2.0	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	16
+anycubic-photon-d2	Tough Resin Ultra	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-d2	ABS-Like Resin Pro	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	16
+anycubic-photon-d2	ABS-Like Resin+	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	16
+anycubic-photon-d2	Plant-Based Resin+	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	16
+anycubic-photon-m3-plus	Standard Resin	0.05mm	2.8s	1s	30s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-m3-plus	Plant-Based Resin	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	1
+anycubic-photon-m3-plus	DLP Craftsman Resin	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	1
+anycubic-photon-m3-plus	UV Tough Resin	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	1
+anycubic-photon-m3-plus	Water-Wash Resin+	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	1
+anycubic-photon-m3-plus	Standard Resin+	0.05mm	2.5s	1s	28s	5	5mm	3mm/s	3mm/s	1
+anycubic-photon-m3-plus	High Clear Resin	0.05mm	4.5s	1s	35s	4	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3-plus	ABS-Like Resin V2	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3-plus	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-m3-plus	Standard Resin V2	0.05mm	2.5s	1s	28s	6	5mm	2mm/s	2mm/s	1
+anycubic-photon-m3-plus	ABS-Like Resin Pro 2	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	2mm/s	1
+anycubic-photon-m3-plus	Tough Resin 2.0	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3-plus	Tough Resin Ultra	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3-plus	ABS-Like Resin Pro	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3-plus	ABS-Like Resin+	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3-plus	Plant-Based Resin+	0.05mm	2.5s	1s	28s	5	5mm	2mm/s	3mm/s	1
+anycubic-photon-m3	Standard Resin	0.05mm	2s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	Plant-Based Resin	0.05mm	3s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	DLP Craftsman Resin	0.05mm	2s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	UV Tough Resin	0.05mm	3s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	Water-Wash Resin+	0.05mm	2s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	Standard Resin+	0.05mm	2s	0.5s	23s	4	6mm	6mm/s	3mm/s	1
+anycubic-photon-m3	High Clear Resin	0.05mm	2s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	ABS-Like Resin V2	0.05mm	2s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-m3	Standard Resin V2	0.05mm	2s	0.5s	25s	5	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	ABS-Like Resin Pro 2	0.05mm	2s	0.5s	25s	5	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	Tough Resin 2.0	0.05mm	2s	1s	25s	5	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	Tough Resin Ultra	0.05mm	2s	1s	25s	5	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	ABS-Like Resin Pro	0.05mm	2s	0.5s	23s	4	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3	ABS-Like Resin+	0.05mm	2s	0.5s	23s	4	6mm	6mm/s	3mm/s	1
+anycubic-photon-m3	Plant-Based Resin+	0.05mm	2s	0.5s	23s	6	6mm	3mm/s	4mm/s	1
+anycubic-photon-m3-premium	Standard Resin	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	Plant-Based Resin	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	DLP Craftsman Resin	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	UV Tough Resin	0.05mm	2.5s	1s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	Water-Wash Resin+	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	Standard Resin+	0.05mm	2.5s	1s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	High Clear Resin	0.05mm	4s	0.5s	25s	3	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	ABS-Like Resin V2	0.05mm	2.5s	0.5s	25s	3	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-m3-premium	Standard Resin V2	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	ABS-Like Resin Pro 2	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	Tough Resin 2.0	0.05mm	2.5s	1s	30s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	Tough Resin Ultra	0.05mm	2.5s	1s	25s	5	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	ABS-Like Resin Pro	0.05mm	2.5s	1s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	ABS-Like Resin+	0.05mm	2.5s	1s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-m3-premium	Plant-Based Resin+	0.05mm	2.5s	0.5s	25s	2	8mm	6mm/s	6mm/s	1
+anycubic-photon-ultra	Standard Resin	0.05mm	2s	1s	35s	4	5mm	2mm/s	2mm/s	4
+anycubic-photon-ultra	Plant-Based Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-ultra	DLP Craftsman Resin	0.05mm	2s	1s	35s	4	6mm	5mm/s	2mm/s	4
+anycubic-photon-ultra	UV Tough Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-ultra	Water-Wash Resin+	0.05mm	2s	1s	35s	4	5mm	2mm/s	2mm/s	1
+anycubic-photon-ultra	Standard Resin+	0.05mm	2s	1s	35s	4	5mm	5mm/s	2mm/s	4
+anycubic-photon-ultra	High Clear Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-ultra	ABS-Like Resin V2	0.05mm	2s	1s	35s	4	5mm	2mm/s	2mm/s	1
+anycubic-photon-ultra	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-ultra	Standard Resin V2	0.05mm	2s	1s	35s	5	5mm	2mm/s	2mm/s	4
+anycubic-photon-ultra	ABS-Like Resin Pro 2	0.05mm	2s	1s	35s	5	5mm	2mm/s	2mm/s	4
+anycubic-photon-ultra	Tough Resin 2.0	0.05mm	2s	1s	35s	5	5mm	2mm/s	2mm/s	4
+anycubic-photon-ultra	Tough Resin Ultra	0.05mm	2s	1s	35s	5	5mm	2mm/s	2mm/s	1
+anycubic-photon-ultra	ABS-Like Resin Pro	0.05mm	2s	1s	35s	4	5mm	2mm/s	2mm/s	4
+anycubic-photon-ultra	ABS-Like Resin+	0.05mm	2s	1s	35s	4	5mm	5mm/s	2mm/s	4
+anycubic-photon-ultra	Plant-Based Resin+	0.05mm	2s	1s	35s	6	5mm	2mm/s	2mm/s	4
+anycubic-photon-mono-x	Standard Resin	0.05mm	2s	0.5s	28s	4	8mm	2mm/s	3mm/s	4
+anycubic-photon-mono-x	Plant-Based Resin	0.05mm	2s	0.5s	28s	4	8mm	2mm/s	3mm/s	/
+anycubic-photon-mono-x	DLP Craftsman Resin	0.05mm	2s	0.5s	30s	8	8mm	4mm/s	4mm/s	4
+anycubic-photon-mono-x	UV Tough Resin	0.05mm	2s	0.5s	28s	4	8mm	2mm/s	3mm/s	/
+anycubic-photon-mono-x	Water-Wash Resin+	0.05mm	2s	0.5s	28s	4	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x	Standard Resin+	0.05mm	2s	0.5s	28s	4	8mm	8mm/s	2mm/s	4
+anycubic-photon-mono-x	High Clear Resin	0.05mm	4s	0.5s	28s	4	8mm	2mm/s	3mm/s	/
+anycubic-photon-mono-x	ABS-Like Resin V2	0.05mm	2s	0.5s	28s	4	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-x	Standard Resin V2	0.05mm	2s	0.5s	28s	5	8mm	2mm/s	3mm/s	4
+anycubic-photon-mono-x	ABS-Like Resin Pro 2	0.05mm	2s	0.5s	28s	4	8mm	4mm/s	4mm/s	4
+anycubic-photon-mono-x	Tough Resin 2.0	0.05mm	2s	1s	28s	5	8mm	4mm/s	4mm/s	4
+anycubic-photon-mono-x	Tough Resin Ultra	0.05mm	2s	1s	28s	6	8mm	4mm/s	4mm/s	1
+anycubic-photon-mono-x	ABS-Like Resin Pro	0.05mm	2s	0.5s	28s	4	8mm	2mm/s	3mm/s	4
+anycubic-photon-mono-x	ABS-Like Resin+	0.05mm	2s	0.5s	28s	4	8mm	8mm/s	2mm/s	4
+anycubic-photon-mono-x	Plant-Based Resin+	0.05mm	2s	0.5s	30s	6	8mm	5mm/s	3mm/s	4
+anycubic-photon-mono-4k	Standard Resin	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	Plant-Based Resin	0.05mm	2.3s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	DLP Craftsman Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-4k	UV Tough Resin	0.05mm	2.3s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	Water-Wash Resin+	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	Standard Resin+	0.05mm	2s	0.5s	40s	1	6mm	6mm/s	4mm/s	1
+anycubic-photon-mono-4k	High Clear Resin	0.05mm	4s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	ABS-Like Resin V2	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-4k	Standard Resin V2	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	ABS-Like Resin Pro 2	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	Tough Resin 2.0	0.05mm	2s	1s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	Tough Resin Ultra	0.05mm	2s	1s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	ABS-Like Resin Pro	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-4k	ABS-Like Resin+	0.05mm	2s	0.5s	40s	1	6mm	6mm/s	4mm/s	1
+anycubic-photon-mono-4k	Plant-Based Resin+	0.05mm	2s	0.5s	40s	1	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono-x-6k	Standard Resin	0.05mm	2s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	Plant-Based Resin	0.05mm	2.3s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	DLP Craftsman Resin	0.05mm	2.5s	0.5s	40s	8	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	UV Tough Resin	0.05mm	2s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	Water-Wash Resin+	0.05mm	2s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	Standard Resin+	0.05mm	2s	0.5s	23s	6	8mm	8mm	2mm	1
+anycubic-photon-mono-x-6k	High Clear Resin	0.05mm	4s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	ABS-Like Resin V2	0.05mm	2s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-x-6k	Standard Resin V2	0.05mm	2s	0.5s	25s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	ABS-Like Resin Pro 2	0.05mm	2s	0.5s	25s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	Tough Resin 2.0	0.05mm	2s	1s	28s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	Tough Resin Ultra	0.05mm	2s	1s	28s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	ABS-Like Resin Pro	0.05mm	2s	0.5s	23s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-x-6k	ABS-Like Resin+	0.05mm	2s	0.5s	23s	6	8mm	2mm/s	2mm/s	1
+anycubic-photon-mono-x-6k	Plant-Based Resin+	0.05mm	2s	0.5s	25s	6	8mm	2mm/s	3mm/s	1
+anycubic-photon-mono-sq	Standard Resin	0.05mm	2.3s	0.5s	23s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-mono-sq	Plant-Based Resin	0.05mm	2.3s	0.5s	23s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-mono-sq	DLP Craftsman Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	UV Tough Resin	0.05mm	2.3s	0.5s	23s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-mono-sq	Water-Wash Resin+	0.05mm	2.3s	0.5s	23s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-mono-sq	Standard Resin+	0.05mm	2.3s	0.5s	23s	6	5mm	5mm/s	5mm/s	1
+anycubic-photon-mono-sq	High Clear Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	ABS-Like Resin V2	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	Standard Resin V2	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	ABS-Like Resin Pro 2	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	Tough Resin 2.0	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	Tough Resin Ultra	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono-sq	ABS-Like Resin Pro	0.05mm	2.3s	0.5s	23s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-mono-sq	ABS-Like Resin+	0.05mm	2.3s	0.5s	23s	6	5mm	5mm/s	3mm/s	1
+anycubic-photon-mono-sq	Plant-Based Resin+	0.05mm	2.5s	0.5s	23s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-mono	Standard Resin	0.05mm	2s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	Plant-Based Resin	0.05mm	2s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	DLP Craftsman Resin	0.05mm	2.5s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	UV Tough Resin	0.05mm	2s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	Water-Wash Resin+	0.05mm	2s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	Standard Resin+	0.05mm	2.5s	0.5s	40s	6	6mm	6mm/s	4mm/s	1
+anycubic-photon-mono	High Clear Resin	0.05mm	4s	0.5s	40s	6	6mm	4mm/s	6mm/s	1/
+anycubic-photon-mono	ABS-Like Resin V2	0.05mm	2.5s	0.5s	40s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-mono	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-mono	Standard Resin V2	0.05mm	2s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	ABS-Like Resin Pro 2	0.05mm	2s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	Tough Resin 2.0	0.05mm	2.5s	1s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	Tough Resin Ultra	0.05mm	2.5s	1s	40s	5	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	ABS-Like Resin Pro	0.05mm	2.5s	0.5s	40s	6	6mm	4mm/s	6mm/s	1
+anycubic-photon-mono	ABS-Like Resin+	0.05mm	2.5s	0.5s	40s	6	6mm	6mm/s	4mm/s	1
+anycubic-photon-mono	Plant-Based Resin+	0.05mm	2.5s	0.5s	40s	6	6mm	6mm/s	4mm/s	1
+anycubic-photon-s	Standard Resin	0.05mm	8s	1s	60s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-s	Plant-Based Resin	0.05mm	8s	1s	60s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-s	DLP Craftsman Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-s	UV Tough Resin	0.05mm	8s	1s	60s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-s	Water-Wash Resin+	0.05mm	8s	1s	60s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-s	Standard Resin+	0.05mm	9s	1s	60s	6	6mm	6mm/s	3mm/s	1
+anycubic-photon-s	High Clear Resin	/	12s	1s	60s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-s	ABS-Like Resin V2	/	8s	1s	60s	6	6mm	3mm/s	3mm/s	1
+anycubic-photon-s	High Speed Resin	/	/	/	/	/	/	/	/	/
+anycubic-photon-s	Standard Resin V2	/	/	/	/	/	/	/	/	/
+anycubic-photon-s	ABS-Like Resin Pro 2	/	/	/	/	/	/	/	/	/
+anycubic-photon-s	Tough Resin 2.0	/	/	/	/	/	/	/	/	/
+anycubic-photon-s	Tough Resin Ultra	/	/	/	/	/	/	/	/	/
+anycubic-photon-s	ABS-Like Resin Pro	0.05mm	9s	1s	60s	6	5mm	3mm/s	3mm/s	1
+anycubic-photon-s	ABS-Like Resin+	0.05mm	9s	1s	60s	6	5mm	6mm/s	3mm/s	1
+anycubic-photon-s	Plant-Based Resin+	0.05mm	9s	1s	60s	6	5mm	3mm/s	3mm/s	1

@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-dental-castable-resin",
+    "name": "ELEGOO Dental Castable UV Resin",
+    "revision": 1,
+    "vendor": "elegoo",
+    "kind": "castable",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

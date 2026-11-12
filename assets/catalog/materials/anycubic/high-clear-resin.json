@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "anycubic-high-clear-resin",
+    "name": "Anycubic High Clear Resin",
+    "revision": 1,
+    "vendor": "anycubic",
+    "kind": "clear",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

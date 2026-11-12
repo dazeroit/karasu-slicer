@@ -1,0 +1,15 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "sunlu-standard-resin",
+    "name": "SUNLU Standard Resin",
+    "revision": 1,
+    "vendor": "sunlu",
+    "kind": "standard",
+    "density_g_per_ml": null,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null
+  }
+}

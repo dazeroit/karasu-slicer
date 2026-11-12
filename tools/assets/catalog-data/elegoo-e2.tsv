@@ -1,0 +1,1632 @@
+# ELEGOO's settings spreadsheet (E2), SHA-256 7f67e7dc1c540981e9f9927bb54d7185c5deb0086e97fac51013e8dac5e97472; extracted by tools/assets/extract_resin_tables.py
+row	printer	resin	colour	bottom_exposure_s	exposure_s	layer_mm	lift_mm	lift_mm_min	retract_mm_min	rest_s
+120	elegoo-jupiter-2	Standard Resin 1.0	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+121	elegoo-jupiter-2	Standard Resin 1.0	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+122	elegoo-jupiter-2	Standard Resin 1.0	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+123	elegoo-jupiter-2	Standard Resin 1.0	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+124	elegoo-jupiter-2	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+125	elegoo-jupiter-2	Standard Resin 1.0	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+126	elegoo-jupiter-2	Standard Resin 1.0	Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+127	elegoo-jupiter-2	Standard Resin 1.0	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+128	elegoo-jupiter-2	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+129	elegoo-jupiter-2	Standard Resin 1.0	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+130	elegoo-jupiter-2	Standard Resin 2.0	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+131	elegoo-jupiter-2	Standard Resin 2.0	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+132	elegoo-jupiter-2	Standard Resin 2.0	Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+133	elegoo-jupiter-2	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+134	elegoo-jupiter-2	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+135	elegoo-jupiter-2	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+136	elegoo-jupiter-2	ABS-Like Resin 1.0	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+137	elegoo-jupiter-2	ABS-Like Resin 1.0	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+138	elegoo-jupiter-2	ABS-Like Resin 1.0	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+139	elegoo-jupiter-2	ABS-Like Resin 1.0	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+140	elegoo-jupiter-2	ABS-Like Resin 1.0	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+141	elegoo-jupiter-2	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	4.5+4.5	60+390	390+60	1
+142	elegoo-jupiter-2	ABS-Like Resin 1.0	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+143	elegoo-jupiter-2	ABS-Like Resin 1.0	Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+144	elegoo-jupiter-2	ABS-Like Resin 1.0	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+145	elegoo-jupiter-2	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+146	elegoo-jupiter-2	ABS-Like Resin 1.0	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+147	elegoo-jupiter-2	ABS-Like Resin 1.0	Mint Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+148	elegoo-jupiter-2	ABS-Like Resin 1.0	Smoky Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+149	elegoo-jupiter-2	ABS-Like Resin 2.0	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+150	elegoo-jupiter-2	ABS-Like Resin 3.0	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+151	elegoo-jupiter-2	ABS-Like Resin 3.0	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+152	elegoo-jupiter-2	ABS-Like Resin 3.0	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+153	elegoo-jupiter-2	ABS-Like Resin 3.0	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+154	elegoo-jupiter-2	ABS-Like Resin 3.0	Translucent	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+155	elegoo-jupiter-2	ABS-Like Resin 3.0	Mint Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+156	elegoo-jupiter-2	ABS-Like Resin 3.0	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+157	elegoo-jupiter-2	ABS-Like Resin 3.0	Smoky Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+158	elegoo-jupiter-2	ABS-Like Resin 3.0	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+159	elegoo-jupiter-2	ABS-Like Resin 3.0	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+160	elegoo-jupiter-2	ABS-Like Resin 3.0	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+161	elegoo-jupiter-2	ABS-Like Resin 3.0	Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+162	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+163	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+164	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+165	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+166	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Translucent	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+167	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Mint Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+168	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+169	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Smoky Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+170	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+171	elegoo-jupiter-2	ABS-Like Resin 3.0 +	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+172	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+173	elegoo-jupiter-2	ABS-Like Resin 3.0 +	Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+174	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+175	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+176	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+177	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+178	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+179	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+180	elegoo-jupiter-2	ABS-Like Resin 3.0 Pro	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+181	elegoo-jupiter-2	Water Washable Resin	Ceramic Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+182	elegoo-jupiter-2	Water Washable Resin	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+183	elegoo-jupiter-2	Water Washable Resin	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+184	elegoo-jupiter-2	Water Washable Resin	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+185	elegoo-jupiter-2	Water Washable Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+186	elegoo-jupiter-2	Water Washable Resin	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+187	elegoo-jupiter-2	Water Washable Resin	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+188	elegoo-jupiter-2	Water Washable Resin	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+189	elegoo-jupiter-2	Water Washable Resin	Mint Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+190	elegoo-jupiter-2	Water Washable Resin	Smoky Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+191	elegoo-jupiter-2	Water Washable 2.0 Resin	Ceramic Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+192	elegoo-jupiter-2	Water Washable 2.0 Resin	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+193	elegoo-jupiter-2	Water Washable 2.0 Resin	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+194	elegoo-jupiter-2	Water Washable 2.0 Resin	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+195	elegoo-jupiter-2	Water Washable 2.0 Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+196	elegoo-jupiter-2	Water Washable 2.0 Resin	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+197	elegoo-jupiter-2	Water Washable 2.0 Resin	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+198	elegoo-jupiter-2	Water Washable 2.0 Resin	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+199	elegoo-jupiter-2	Water Washable 2.0 Resin	Mint Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+200	elegoo-jupiter-2	Water Washable 2.0 Resin	Smoky Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+201	elegoo-jupiter-2	Water Washable 2.0 Resin	Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+202	elegoo-jupiter-2	Water Washable ABS-Like Resin	Ceramic Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+203	elegoo-jupiter-2	Water Washable ABS-Like Resin	White	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+204	elegoo-jupiter-2	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+205	elegoo-jupiter-2	Water Washable ABS-Like Resin	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+206	elegoo-jupiter-2	Water Washable ABS-Like Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+207	elegoo-jupiter-2	Water Washable ABS-Like Resin	Smoky Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+208	elegoo-jupiter-2	Water Washable ABS-Like Resin	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+209	elegoo-jupiter-2	Water Washable ABS-Like Resin	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+210	elegoo-jupiter-2	Water Washable ABS-Like Resin	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+211	elegoo-jupiter-2	Water Washable ABS-Like Resin	Mint Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+212	elegoo-jupiter-2	Water Washable ABS-Like Resin	Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+213	elegoo-jupiter-2	Standard Plant-based Photopolymer Resin	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+214	elegoo-jupiter-2	Standard Plant-based Photopolymer Resin	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+215	elegoo-jupiter-2	Standard Plant-based Photopolymer Resin	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+216	elegoo-jupiter-2	Standard Plant-based Photopolymer Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+217	elegoo-jupiter-2	Standard Plant-based Photopolymer Resin	Translucent	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+218	elegoo-jupiter-2	ABS-Like Plant-based Photopolymer Resin	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+219	elegoo-jupiter-2	ABS-Like Plant-based Photopolymer Resin	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+220	elegoo-jupiter-2	ABS-Like Plant-based Photopolymer Resin	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+221	elegoo-jupiter-2	ABS-Like Plant-based Photopolymer Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+222	elegoo-jupiter-2	8K Water Washable Photopolymer Resin	Space Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+223	elegoo-jupiter-2	8K Water Washable Photopolymer Resin	Vanilla	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+224	elegoo-jupiter-2	8K Water Washable Photopolymer Resin	White Smoke	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+225	elegoo-jupiter-2	8K Standard Photopolymer Resin	Space Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+226	elegoo-jupiter-2	8K Standard Photopolymer Resin	Red Clay	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+227	elegoo-jupiter-2	8K Standard Photopolymer Resin	Vanilla	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+228	elegoo-jupiter-2	8K Standard Photopolymer Resin	White Smoke	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+229	elegoo-jupiter-2	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+230	elegoo-jupiter-2	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+231	elegoo-jupiter-2	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+232	elegoo-jupiter-2	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+233	elegoo-jupiter-2	8K Water Washable 2.0 Photopolymer Resin	Space Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+234	elegoo-jupiter-2	8K Water Washable 2.0 Photopolymer Resin	Vanilla	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+235	elegoo-jupiter-2	8K Water Washable 2.0 Photopolymer Resin	White Smoke	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+236	elegoo-jupiter-2	8K Water Washable 2.0 Photopolymer Resin	Red Clay	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+237	elegoo-jupiter-2	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+238	elegoo-jupiter-2	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+239	elegoo-jupiter-2	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+240	elegoo-jupiter-2	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+241	elegoo-jupiter-2	ABS-Like Ultra Resin	Grey	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+242	elegoo-jupiter-2	ABS-Like Ultra Resin	White	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+243	elegoo-jupiter-2	ABS-Like Ultra Resin	Black	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+244	elegoo-jupiter-2	ABS-Like Ultra Resin	Beige	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+245	elegoo-jupiter-2	ABS-Like Ultra Resin	Yellow	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+246	elegoo-jupiter-2	ABS-Like Ultra Resin	Clear Blue	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+247	elegoo-jupiter-2	ABS-Like Ultra Resin	Clear Red	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+248	elegoo-jupiter-2	ABS-Like Ultra Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+249	elegoo-jupiter-2	ABS-Like Ultra Resin	Neon-Pumpkin	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+250	elegoo-jupiter-2	ABS-Like Ultra Resin	Neon-Lemon	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+251	elegoo-jupiter-2	ABS-Like Ultra Resin	Neon-Lime	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+252	elegoo-jupiter-2	ABS-Like Ultra Resin	Neon-Peach	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+253	elegoo-jupiter-2	Tough Resin 1.0	Grey	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+254	elegoo-jupiter-2	Tough Resin 1.0	Black	35-40	3.5-4	0.05	4.5+4.5	60+390	390+60	1
+255	elegoo-jupiter-2	Thermochromic Resin	Grey To Purple	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+256	elegoo-jupiter-2	Dental Castable UV Resin	Clear Green	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+257	elegoo-jupiter-2	Dental Orthodontic UV Resin	Orange	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+258	elegoo-jupiter-2	Dental Model UV Resin	Orange	30-35	3-3.5	0.05	4.5+4.5	60+390	390+60	1
+259	elegoo-jupiter-se	Standard Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+260	elegoo-jupiter-se	Standard Resin 1.0	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+261	elegoo-jupiter-se	Standard Resin 1.0	Clear Red	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+262	elegoo-jupiter-se	Standard Resin 1.0	Clear Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+263	elegoo-jupiter-se	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+264	elegoo-jupiter-se	Standard Resin 1.0	Clear Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+265	elegoo-jupiter-se	Standard Resin 1.0	Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+266	elegoo-jupiter-se	Standard Resin 1.0	Yellow	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+267	elegoo-jupiter-se	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+268	elegoo-jupiter-se	Standard Resin 1.0	Beige	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+269	elegoo-jupiter-se	Standard Resin 2.0	White	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+270	elegoo-jupiter-se	Standard Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+271	elegoo-jupiter-se	Standard Resin 2.0	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+272	elegoo-jupiter-se	Standard Resin 2.0	Orchid	30-35	3.5-4	0.05	3+4	85+300	300+70	1
+273	elegoo-jupiter-se	Standard Resin 2.0	Slate Blue	30-35	3.5-4	0.05	3+4	85+300	300+70	1
+274	elegoo-jupiter-se	Standard Resin 2.0	Medium Slate Blue	30-35	3.5-4	0.05	3+4	85+300	300+70	1
+275	elegoo-jupiter-se	ABS-Like Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+276	elegoo-jupiter-se	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+277	elegoo-jupiter-se	ABS-Like Resin 1.0	White	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+278	elegoo-jupiter-se	ABS-Like Resin 1.0	Clear Red	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+279	elegoo-jupiter-se	ABS-Like Resin 1.0	Clear Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+280	elegoo-jupiter-se	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	3+4	85+300	300+70	1
+281	elegoo-jupiter-se	ABS-Like Resin 1.0	Clear Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+282	elegoo-jupiter-se	ABS-Like Resin 1.0	Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+283	elegoo-jupiter-se	ABS-Like Resin 1.0	Yellow	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+284	elegoo-jupiter-se	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+285	elegoo-jupiter-se	ABS-Like Resin 1.0	Beige	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+286	elegoo-jupiter-se	ABS-Like Resin 1.0	Mint Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+287	elegoo-jupiter-se	ABS-Like Resin 1.0	Smoky Black	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+288	elegoo-jupiter-se	ABS-Like Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+289	elegoo-jupiter-se	ABS-Like Resin 3.0	Grey	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+290	elegoo-jupiter-se	ABS-Like Resin 3.0	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+291	elegoo-jupiter-se	ABS-Like Resin 3.0	Clear Red	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+292	elegoo-jupiter-se	ABS-Like Resin 3.0	Clear Green	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+293	elegoo-jupiter-se	ABS-Like Resin 3.0	Translucent	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+294	elegoo-jupiter-se	ABS-Like Resin 3.0	Mint Green	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+295	elegoo-jupiter-se	ABS-Like Resin 3.0	Yellow	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+296	elegoo-jupiter-se	ABS-Like Resin 3.0	Smoky Black	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+297	elegoo-jupiter-se	ABS-Like Resin 3.0	Beige	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+298	elegoo-jupiter-se	ABS-Like Resin 3.0	White	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+299	elegoo-jupiter-se	ABS-Like Resin 3.0	Clear Blue	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+300	elegoo-jupiter-se	ABS-Like Resin 3.0	Blue	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+301	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Grey	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+302	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+303	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Clear Red	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+304	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Clear Green	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+305	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Translucent	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+306	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Mint Green	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+307	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Yellow	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+308	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Smoky Black	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+309	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Beige	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+310	elegoo-jupiter-se	ABS-Like Resin 3.0 +	White	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+311	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Clear Blue	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+312	elegoo-jupiter-se	ABS-Like Resin 3.0 +	Blue	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+313	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+314	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+315	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+316	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+317	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+318	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+319	elegoo-jupiter-se	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	3+4	85+300	300+70	1
+320	elegoo-jupiter-se	Water Washable Resin	Ceramic Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+321	elegoo-jupiter-se	Water Washable Resin	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+322	elegoo-jupiter-se	Water Washable Resin	White	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+323	elegoo-jupiter-se	Water Washable Resin	Clear Red	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+324	elegoo-jupiter-se	Water Washable Resin	Clear Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+325	elegoo-jupiter-se	Water Washable Resin	Clear Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+326	elegoo-jupiter-se	Water Washable Resin	Yellow	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+327	elegoo-jupiter-se	Water Washable Resin	Beige	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+328	elegoo-jupiter-se	Water Washable Resin	Mint Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+329	elegoo-jupiter-se	Water Washable Resin	Smoky Black	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+330	elegoo-jupiter-se	Water Washable 2.0 Resin	Ceramic Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+331	elegoo-jupiter-se	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+332	elegoo-jupiter-se	Water Washable 2.0 Resin	White	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+333	elegoo-jupiter-se	Water Washable 2.0 Resin	Clear Red	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+334	elegoo-jupiter-se	Water Washable 2.0 Resin	Clear Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+335	elegoo-jupiter-se	Water Washable 2.0 Resin	Clear Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+336	elegoo-jupiter-se	Water Washable 2.0 Resin	Yellow	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+337	elegoo-jupiter-se	Water Washable 2.0 Resin	Beige	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+338	elegoo-jupiter-se	Water Washable 2.0 Resin	Mint Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+339	elegoo-jupiter-se	Water Washable 2.0 Resin	Smoky Black	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+340	elegoo-jupiter-se	Water Washable 2.0 Resin	Blue	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+341	elegoo-jupiter-se	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+342	elegoo-jupiter-se	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+343	elegoo-jupiter-se	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+344	elegoo-jupiter-se	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+345	elegoo-jupiter-se	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+346	elegoo-jupiter-se	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+347	elegoo-jupiter-se	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+348	elegoo-jupiter-se	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+349	elegoo-jupiter-se	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+350	elegoo-jupiter-se	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+351	elegoo-jupiter-se	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	3+4	85+300	300+70	1
+352	elegoo-jupiter-se	Standard Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+353	elegoo-jupiter-se	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+354	elegoo-jupiter-se	Standard Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+355	elegoo-jupiter-se	Standard Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+356	elegoo-jupiter-se	Standard Plant-based Photopolymer Resin	Translucent	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+357	elegoo-jupiter-se	ABS-Like Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+358	elegoo-jupiter-se	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+359	elegoo-jupiter-se	ABS-Like Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+360	elegoo-jupiter-se	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	3+4	85+300	300+70	1
+361	elegoo-jupiter-se	ABS-Like Ultra Resin	Grey	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+362	elegoo-jupiter-se	ABS-Like Ultra Resin	White	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+363	elegoo-jupiter-se	ABS-Like Ultra Resin	Black	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+364	elegoo-jupiter-se	ABS-Like Ultra Resin	Beige	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+365	elegoo-jupiter-se	ABS-Like Ultra Resin	Yellow	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+366	elegoo-jupiter-se	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+367	elegoo-jupiter-se	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+368	elegoo-jupiter-se	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+369	elegoo-jupiter-se	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+370	elegoo-jupiter-se	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+371	elegoo-jupiter-se	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+372	elegoo-jupiter-se	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+373	elegoo-jupiter-se	Tough Resin 1.0	Grey	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+374	elegoo-jupiter-se	Tough Resin 1.0	Black	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+375	elegoo-jupiter-se	Thermochromic Resin	Grey To Purple	30-35	3-3.5	0.05	3+4	85+300	300+70	1
+376	elegoo-jupiter-se	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	3+4	85+300	300+70	1
+377	elegoo-jupiter-se	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	85+300	300+70	1
+378	elegoo-jupiter-se	Dental Model UV Resin	Orange	25-35	2.5-3	0.05	3+4	85+300	300+70	1
+613	elegoo-mars-4	Standard Resin 1.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+614	elegoo-mars-4	Standard Resin 1.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+615	elegoo-mars-4	Standard Resin 1.0	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+616	elegoo-mars-4	Standard Resin 1.0	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+617	elegoo-mars-4	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+618	elegoo-mars-4	Standard Resin 1.0	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+619	elegoo-mars-4	Standard Resin 1.0	Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+620	elegoo-mars-4	Standard Resin 1.0	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+621	elegoo-mars-4	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+622	elegoo-mars-4	Standard Resin 1.0	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+623	elegoo-mars-4	Standard Resin 2.0	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+624	elegoo-mars-4	Standard Resin 2.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+625	elegoo-mars-4	Standard Resin 2.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+626	elegoo-mars-4	Standard Resin 2.0	Orchid	30-35	3.5-4	0.05	2+3	75+230	230+75	0.5
+627	elegoo-mars-4	Standard Resin 2.0	Slate Blue	30-35	3.5-4	0.05	2+3	75+230	230+75	0.5
+628	elegoo-mars-4	Standard Resin 2.0	Medium Slate Blue	30-35	3.5-4	0.05	2+3	75+230	230+75	0.5
+629	elegoo-mars-4	ABS-Like Resin 1.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+630	elegoo-mars-4	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+631	elegoo-mars-4	ABS-Like Resin 1.0	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+632	elegoo-mars-4	ABS-Like Resin 1.0	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+633	elegoo-mars-4	ABS-Like Resin 1.0	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+634	elegoo-mars-4	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	2+3	75+230	230+75	0.5
+635	elegoo-mars-4	ABS-Like Resin 1.0	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+636	elegoo-mars-4	ABS-Like Resin 1.0	Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+637	elegoo-mars-4	ABS-Like Resin 1.0	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+638	elegoo-mars-4	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+639	elegoo-mars-4	ABS-Like Resin 1.0	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+640	elegoo-mars-4	ABS-Like Resin 1.0	Mint Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+641	elegoo-mars-4	ABS-Like Resin 1.0	Smoky Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+642	elegoo-mars-4	ABS-Like Resin 2.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+643	elegoo-mars-4	ABS-Like Resin 3.0	Grey	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+644	elegoo-mars-4	ABS-Like Resin 3.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+645	elegoo-mars-4	ABS-Like Resin 3.0	Clear Red	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+646	elegoo-mars-4	ABS-Like Resin 3.0	Clear Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+647	elegoo-mars-4	ABS-Like Resin 3.0	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+648	elegoo-mars-4	ABS-Like Resin 3.0	Mint Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+649	elegoo-mars-4	ABS-Like Resin 3.0	Yellow	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+650	elegoo-mars-4	ABS-Like Resin 3.0	Smoky Black	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+651	elegoo-mars-4	ABS-Like Resin 3.0	Beige	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+652	elegoo-mars-4	ABS-Like Resin 3.0	White	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+653	elegoo-mars-4	ABS-Like Resin 3.0	Clear Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+654	elegoo-mars-4	ABS-Like Resin 3.0	Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+655	elegoo-mars-4	ABS-Like Resin 3.0 +	Grey	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+656	elegoo-mars-4	ABS-Like Resin 3.0 +	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+657	elegoo-mars-4	ABS-Like Resin 3.0 +	Clear Red	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+658	elegoo-mars-4	ABS-Like Resin 3.0 +	Clear Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+659	elegoo-mars-4	ABS-Like Resin 3.0 +	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+660	elegoo-mars-4	ABS-Like Resin 3.0 +	Mint Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+661	elegoo-mars-4	ABS-Like Resin 3.0 +	Yellow	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+662	elegoo-mars-4	ABS-Like Resin 3.0 +	Smoky Black	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+663	elegoo-mars-4	ABS-Like Resin 3.0 +	Beige	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+664	elegoo-mars-4	ABS-Like Resin 3.0 +	White	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+665	elegoo-mars-4	ABS-Like Resin 3.0 +	Clear Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+666	elegoo-mars-4	ABS-Like Resin 3.0 +	Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+667	elegoo-mars-4	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+668	elegoo-mars-4	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+669	elegoo-mars-4	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+670	elegoo-mars-4	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+671	elegoo-mars-4	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+672	elegoo-mars-4	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+673	elegoo-mars-4	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+674	elegoo-mars-4	Water Washable Resin	Ceramic Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+675	elegoo-mars-4	Water Washable Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+676	elegoo-mars-4	Water Washable Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+677	elegoo-mars-4	Water Washable Resin	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+678	elegoo-mars-4	Water Washable Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+679	elegoo-mars-4	Water Washable Resin	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+680	elegoo-mars-4	Water Washable Resin	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+681	elegoo-mars-4	Water Washable Resin	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+682	elegoo-mars-4	Water Washable Resin	Mint Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+683	elegoo-mars-4	Water Washable Resin	Smoky Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+684	elegoo-mars-4	Water Washable 2.0 Resin	Ceramic Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+685	elegoo-mars-4	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+686	elegoo-mars-4	Water Washable 2.0 Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+687	elegoo-mars-4	Water Washable 2.0 Resin	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+688	elegoo-mars-4	Water Washable 2.0 Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+689	elegoo-mars-4	Water Washable 2.0 Resin	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+690	elegoo-mars-4	Water Washable 2.0 Resin	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+691	elegoo-mars-4	Water Washable 2.0 Resin	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+692	elegoo-mars-4	Water Washable 2.0 Resin	Mint Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+693	elegoo-mars-4	Water Washable 2.0 Resin	Smoky Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+694	elegoo-mars-4	Water Washable 2.0 Resin	Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+695	elegoo-mars-4	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+696	elegoo-mars-4	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+697	elegoo-mars-4	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+698	elegoo-mars-4	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+699	elegoo-mars-4	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+700	elegoo-mars-4	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+701	elegoo-mars-4	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+702	elegoo-mars-4	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+703	elegoo-mars-4	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+704	elegoo-mars-4	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+705	elegoo-mars-4	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+706	elegoo-mars-4	Standard Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+707	elegoo-mars-4	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+708	elegoo-mars-4	Standard Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+709	elegoo-mars-4	Standard Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+710	elegoo-mars-4	Standard Plant-based Photopolymer Resin	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+711	elegoo-mars-4	ABS-Like Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+712	elegoo-mars-4	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+713	elegoo-mars-4	ABS-Like Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+714	elegoo-mars-4	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+715	elegoo-mars-4	8K Water Washable Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+716	elegoo-mars-4	8K Water Washable Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+717	elegoo-mars-4	8K Water Washable Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+718	elegoo-mars-4	8K Standard Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+719	elegoo-mars-4	8K Standard Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+720	elegoo-mars-4	8K Standard Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+721	elegoo-mars-4	8K Standard Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+722	elegoo-mars-4	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+723	elegoo-mars-4	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+724	elegoo-mars-4	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+725	elegoo-mars-4	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+726	elegoo-mars-4	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+727	elegoo-mars-4	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+728	elegoo-mars-4	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+729	elegoo-mars-4	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+730	elegoo-mars-4	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+731	elegoo-mars-4	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+732	elegoo-mars-4	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+733	elegoo-mars-4	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+734	elegoo-mars-4	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+735	elegoo-mars-4	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+736	elegoo-mars-4	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+737	elegoo-mars-4	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+738	elegoo-mars-4	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+739	elegoo-mars-4	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+740	elegoo-mars-4	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+741	elegoo-mars-4	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+742	elegoo-mars-4	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+743	elegoo-mars-4	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+744	elegoo-mars-4	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+745	elegoo-mars-4	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+746	elegoo-mars-4	Tough Resin 1.0	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+747	elegoo-mars-4	Tough Resin 1.0	Black	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+748	elegoo-mars-4	Thermochromic Resin	Grey To Purple	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+749	elegoo-mars-4	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	2+3	75+230	230+75	0.5
+750	elegoo-mars-4	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+751	elegoo-mars-4	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+752	elegoo-mars-4-max	Standard Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+753	elegoo-mars-4-max	Standard Resin 1.0	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+754	elegoo-mars-4-max	Standard Resin 1.0	Clear Red	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+755	elegoo-mars-4-max	Standard Resin 1.0	Clear Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+756	elegoo-mars-4-max	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+757	elegoo-mars-4-max	Standard Resin 1.0	Clear Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+758	elegoo-mars-4-max	Standard Resin 1.0	Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+759	elegoo-mars-4-max	Standard Resin 1.0	Yellow	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+760	elegoo-mars-4-max	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+761	elegoo-mars-4-max	Standard Resin 1.0	Beige	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+762	elegoo-mars-4-max	Standard Resin 2.0	White	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+763	elegoo-mars-4-max	Standard Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+764	elegoo-mars-4-max	Standard Resin 2.0	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+765	elegoo-mars-4-max	Standard Resin 2.0	Orchid	30-35	3.5-4	0.05	3+4	75+230	230+75	1
+766	elegoo-mars-4-max	Standard Resin 2.0	Slate Blue	30-35	3.5-4	0.05	3+4	75+230	230+75	1
+767	elegoo-mars-4-max	Standard Resin 2.0	Medium Slate Blue	30-35	3.5-4	0.05	3+4	75+230	230+75	1
+768	elegoo-mars-4-max	ABS-Like Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+769	elegoo-mars-4-max	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+770	elegoo-mars-4-max	ABS-Like Resin 1.0	White	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+771	elegoo-mars-4-max	ABS-Like Resin 1.0	Clear Red	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+772	elegoo-mars-4-max	ABS-Like Resin 1.0	Clear Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+773	elegoo-mars-4-max	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	3+4	75+230	230+75	1
+774	elegoo-mars-4-max	ABS-Like Resin 1.0	Clear Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+775	elegoo-mars-4-max	ABS-Like Resin 1.0	Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+776	elegoo-mars-4-max	ABS-Like Resin 1.0	Yellow	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+777	elegoo-mars-4-max	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+778	elegoo-mars-4-max	ABS-Like Resin 1.0	Beige	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+779	elegoo-mars-4-max	ABS-Like Resin 1.0	Mint Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+780	elegoo-mars-4-max	ABS-Like Resin 1.0	Smoky Black	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+781	elegoo-mars-4-max	ABS-Like Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+782	elegoo-mars-4-max	ABS-Like Resin 3.0	Grey	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+783	elegoo-mars-4-max	ABS-Like Resin 3.0	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+784	elegoo-mars-4-max	ABS-Like Resin 3.0	Clear Red	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+785	elegoo-mars-4-max	ABS-Like Resin 3.0	Clear Green	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+786	elegoo-mars-4-max	ABS-Like Resin 3.0	Translucent	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+787	elegoo-mars-4-max	ABS-Like Resin 3.0	Mint Green	30-35	2.8-3.2	0.05	3+4	75+230	230+75	1
+788	elegoo-mars-4-max	ABS-Like Resin 3.0	Yellow	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+789	elegoo-mars-4-max	ABS-Like Resin 3.0	Smoky Black	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+790	elegoo-mars-4-max	ABS-Like Resin 3.0	Beige	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+791	elegoo-mars-4-max	ABS-Like Resin 3.0	White	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+792	elegoo-mars-4-max	ABS-Like Resin 3.0	Clear Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+793	elegoo-mars-4-max	ABS-Like Resin 3.0	Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+794	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Grey	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+795	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+796	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Clear Red	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+797	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Clear Green	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+798	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Translucent	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+799	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Mint Green	30-35	2.8-3.2	0.05	3+4	75+230	230+75	1
+800	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Yellow	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+801	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Smoky Black	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+802	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Beige	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+803	elegoo-mars-4-max	ABS-Like Resin 3.0 +	White	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+804	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Clear Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+805	elegoo-mars-4-max	ABS-Like Resin 3.0 +	Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+806	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	2+3	75+230	230+75	1
+807	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	1
+808	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	2+3	75+230	230+75	1
+809	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	1
+810	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	1
+811	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	1
+812	elegoo-mars-4-max	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	2+3	75+230	230+75	1
+813	elegoo-mars-4-max	Water Washable Resin	Ceramic Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+814	elegoo-mars-4-max	Water Washable Resin	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+815	elegoo-mars-4-max	Water Washable Resin	White	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+816	elegoo-mars-4-max	Water Washable Resin	Clear Red	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+817	elegoo-mars-4-max	Water Washable Resin	Clear Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+818	elegoo-mars-4-max	Water Washable Resin	Clear Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+819	elegoo-mars-4-max	Water Washable Resin	Yellow	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+820	elegoo-mars-4-max	Water Washable Resin	Beige	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+821	elegoo-mars-4-max	Water Washable Resin	Mint Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+822	elegoo-mars-4-max	Water Washable Resin	Smoky Black	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+823	elegoo-mars-4-max	Water Washable 2.0 Resin	Ceramic Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+824	elegoo-mars-4-max	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+825	elegoo-mars-4-max	Water Washable 2.0 Resin	White	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+826	elegoo-mars-4-max	Water Washable 2.0 Resin	Clear Red	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+827	elegoo-mars-4-max	Water Washable 2.0 Resin	Clear Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+828	elegoo-mars-4-max	Water Washable 2.0 Resin	Clear Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+829	elegoo-mars-4-max	Water Washable 2.0 Resin	Yellow	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+830	elegoo-mars-4-max	Water Washable 2.0 Resin	Beige	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+831	elegoo-mars-4-max	Water Washable 2.0 Resin	Mint Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+832	elegoo-mars-4-max	Water Washable 2.0 Resin	Smoky Black	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+833	elegoo-mars-4-max	Water Washable 2.0 Resin	Blue	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+834	elegoo-mars-4-max	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+835	elegoo-mars-4-max	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+836	elegoo-mars-4-max	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+837	elegoo-mars-4-max	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+838	elegoo-mars-4-max	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+839	elegoo-mars-4-max	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+840	elegoo-mars-4-max	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+841	elegoo-mars-4-max	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+842	elegoo-mars-4-max	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+843	elegoo-mars-4-max	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+844	elegoo-mars-4-max	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	1
+845	elegoo-mars-4-max	Standard Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+846	elegoo-mars-4-max	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+847	elegoo-mars-4-max	Standard Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+848	elegoo-mars-4-max	Standard Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+849	elegoo-mars-4-max	Standard Plant-based Photopolymer Resin	Translucent	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+850	elegoo-mars-4-max	ABS-Like Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+851	elegoo-mars-4-max	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	1
+852	elegoo-mars-4-max	ABS-Like Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+853	elegoo-mars-4-max	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	3+4	75+230	230+75	1
+854	elegoo-mars-4-max	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+855	elegoo-mars-4-max	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+856	elegoo-mars-4-max	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+857	elegoo-mars-4-max	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+858	elegoo-mars-4-max	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+859	elegoo-mars-4-max	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+860	elegoo-mars-4-max	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+861	elegoo-mars-4-max	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+862	elegoo-mars-4-max	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+863	elegoo-mars-4-max	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+864	elegoo-mars-4-max	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+865	elegoo-mars-4-max	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+866	elegoo-mars-4-max	Tough Resin 1.0	Grey	30-35	2.5-3	0.05	3+4	75+230	230+75	1
+867	elegoo-mars-4-max	Tough Resin 1.0	Black	30-35	2.5-3	0.05	3+4	75+230	230+75	1
+868	elegoo-mars-4-max	Thermochromic Resin	Grey To Purple	30-35	2.5-3	0.05	3+4	75+230	230+75	1
+869	elegoo-mars-4-max	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	3+4	75+230	230+75	1
+870	elegoo-mars-4-max	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+871	elegoo-mars-4-max	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	75+230	230+75	1
+1246	elegoo-mars-4-ultra	Standard Resin 1.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1247	elegoo-mars-4-ultra	Standard Resin 1.0	Black	25-30	3-3.5	0.05	2+3	75+230	230+75	0.5
+1248	elegoo-mars-4-ultra	Standard Resin 1.0	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1249	elegoo-mars-4-ultra	Standard Resin 1.0	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1250	elegoo-mars-4-ultra	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1251	elegoo-mars-4-ultra	Standard Resin 1.0	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1252	elegoo-mars-4-ultra	Standard Resin 1.0	Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1253	elegoo-mars-4-ultra	Standard Resin 1.0	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1254	elegoo-mars-4-ultra	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1255	elegoo-mars-4-ultra	Standard Resin 1.0	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1256	elegoo-mars-4-ultra	Standard Resin 2.0	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1257	elegoo-mars-4-ultra	Standard Resin 2.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1258	elegoo-mars-4-ultra	Standard Resin 2.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1259	elegoo-mars-4-ultra	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	2+3	75+230	230+75	0.5
+1260	elegoo-mars-4-ultra	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	2+3	75+230	230+75	0.5
+1261	elegoo-mars-4-ultra	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	2+3	75+230	230+75	0.5
+1262	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1263	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1264	elegoo-mars-4-ultra	ABS-Like Resin 1.0	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1265	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1266	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1267	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	2+3	75+230	230+75	0.5
+1268	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1269	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1270	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1271	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1272	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1273	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Mint Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1274	elegoo-mars-4-ultra	ABS-Like Resin 1.0	Smoky Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1275	elegoo-mars-4-ultra	ABS-Like Resin 2.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1276	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Grey	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1277	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1278	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Clear Red	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1279	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Clear Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1280	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Translucent	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1281	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Mint Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1282	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Yellow	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1283	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Smoky Black	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1284	elegoo-mars-4-ultra	ABS-Like Resin 3.0	White	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1285	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Clear Blue	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1286	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Blue	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1287	elegoo-mars-4-ultra	ABS-Like Resin 3.0	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1288	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Grey	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1289	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1290	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Clear Red	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1291	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Clear Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1292	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Translucent	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1293	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Mint Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1294	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Yellow	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1295	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Smoky Black	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1296	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	White	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1297	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Clear Blue	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1298	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Blue	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1299	elegoo-mars-4-ultra	ABS-Like Resin 3.0 +	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1300	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1301	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1302	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1303	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1304	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1305	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1306	elegoo-mars-4-ultra	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1307	elegoo-mars-4-ultra	Water Washable Resin	Ceramic Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1308	elegoo-mars-4-ultra	Water Washable Resin	Black	25-30	3-3.5	0.05	2+3	75+230	230+75	0.5
+1309	elegoo-mars-4-ultra	Water Washable Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1310	elegoo-mars-4-ultra	Water Washable Resin	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1311	elegoo-mars-4-ultra	Water Washable Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1312	elegoo-mars-4-ultra	Water Washable Resin	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1313	elegoo-mars-4-ultra	Water Washable Resin	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1314	elegoo-mars-4-ultra	Water Washable Resin	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1315	elegoo-mars-4-ultra	Water Washable Resin	Mint Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1316	elegoo-mars-4-ultra	Water Washable Resin	Smoky Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1317	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Ceramic Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1318	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Black	25-30	3-3.5	0.05	2+3	75+230	230+75	0.5
+1319	elegoo-mars-4-ultra	Water Washable 2.0 Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1320	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Clear Red	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1321	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1322	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Clear Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1323	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Yellow	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1324	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Beige	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1325	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Mint Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1326	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Smoky Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1327	elegoo-mars-4-ultra	Water Washable 2.0 Resin	Blue	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1328	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1329	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1330	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1331	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1332	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1333	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1334	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1335	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1336	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1337	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1338	elegoo-mars-4-ultra	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1339	elegoo-mars-4-ultra	Standard Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1340	elegoo-mars-4-ultra	Standard Plant-based Photopolymer Resin	Black	25-30	3-3.5	0.05	2+3	75+230	230+75	0.5
+1341	elegoo-mars-4-ultra	Standard Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1342	elegoo-mars-4-ultra	Standard Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1343	elegoo-mars-4-ultra	Standard Plant-based Photopolymer Resin	Translucent	25-30	3-3.5	0.05	2+3	75+230	230+75	0.5
+1344	elegoo-mars-4-ultra	ABS-Like Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1345	elegoo-mars-4-ultra	ABS-Like Plant-based Photopolymer Resin	Black	25-30	3-3.5	0.05	2+3	75+230	230+75	0.5
+1346	elegoo-mars-4-ultra	ABS-Like Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1347	elegoo-mars-4-ultra	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1348	elegoo-mars-4-ultra	8K Water Washable Photopolymer Resin	Space Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1349	elegoo-mars-4-ultra	8K Water Washable Photopolymer Resin	Vanilla	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1350	elegoo-mars-4-ultra	8K Water Washable Photopolymer Resin	White Smoke	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1351	elegoo-mars-4-ultra	8K Standard Photopolymer Resin	Space Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1352	elegoo-mars-4-ultra	8K Standard Photopolymer Resin	Red Clay	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1353	elegoo-mars-4-ultra	8K Standard Photopolymer Resin	Vanilla	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1354	elegoo-mars-4-ultra	8K Standard Photopolymer Resin	White Smoke	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1355	elegoo-mars-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1356	elegoo-mars-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1357	elegoo-mars-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1358	elegoo-mars-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1359	elegoo-mars-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1360	elegoo-mars-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1361	elegoo-mars-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1362	elegoo-mars-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1363	elegoo-mars-4-ultra	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1364	elegoo-mars-4-ultra	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1365	elegoo-mars-4-ultra	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1366	elegoo-mars-4-ultra	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1367	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1368	elegoo-mars-4-ultra	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1369	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1370	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1371	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1372	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1373	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1374	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1375	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1376	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1377	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1378	elegoo-mars-4-ultra	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1379	elegoo-mars-4-ultra	Tough Resin 1.0	Grey	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1380	elegoo-mars-4-ultra	Tough Resin 1.0	Black	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1381	elegoo-mars-4-ultra	Thermochromic Resin	Grey To Purple	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1382	elegoo-mars-4-ultra	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	2+3	75+230	230+75	0.5
+1383	elegoo-mars-4-ultra	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1384	elegoo-mars-4-ultra	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1385	elegoo-mars-5	Standard Resin 1.0	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1386	elegoo-mars-5	Standard Resin 1.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1387	elegoo-mars-5	Standard Resin 1.0	Clear Red	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1388	elegoo-mars-5	Standard Resin 1.0	Clear Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1389	elegoo-mars-5	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1390	elegoo-mars-5	Standard Resin 1.0	Clear Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1391	elegoo-mars-5	Standard Resin 1.0	Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1392	elegoo-mars-5	Standard Resin 1.0	Yellow	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1393	elegoo-mars-5	Standard Resin 1.0	Maroon	25-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1394	elegoo-mars-5	Standard Resin 1.0	Beige	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1395	elegoo-mars-5	Standard Resin 2.0	White	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1396	elegoo-mars-5	Standard Resin 2.0	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1397	elegoo-mars-5	Standard Resin 2.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1398	elegoo-mars-5	Standard Resin 2.0	Orchid	30-35	3.5-4	0.05	2+3	75+230	230+75	0.5
+1399	elegoo-mars-5	Standard Resin 2.0	Slate Blue	30-35	3.5-4	0.05	2+3	75+230	230+75	0.5
+1400	elegoo-mars-5	Standard Resin 2.0	Medium Slate Blue	30-35	3.5-4	0.05	2+3	75+230	230+75	0.5
+1401	elegoo-mars-5	ABS-Like Resin 1.0	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1402	elegoo-mars-5	ABS-Like Resin 1.0	Black	25-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1403	elegoo-mars-5	ABS-Like Resin 1.0	White	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1404	elegoo-mars-5	ABS-Like Resin 1.0	Clear Red	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1405	elegoo-mars-5	ABS-Like Resin 1.0	Clear Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1406	elegoo-mars-5	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	2+3	75+230	230+75	0.5
+1407	elegoo-mars-5	ABS-Like Resin 1.0	Clear Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1408	elegoo-mars-5	ABS-Like Resin 1.0	Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1409	elegoo-mars-5	ABS-Like Resin 1.0	Yellow	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1410	elegoo-mars-5	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1411	elegoo-mars-5	ABS-Like Resin 1.0	Beige	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1412	elegoo-mars-5	ABS-Like Resin 1.0	Mint Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1413	elegoo-mars-5	ABS-Like Resin 1.0	Smoky Black	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1414	elegoo-mars-5	ABS-Like Resin 2.0	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1415	elegoo-mars-5	ABS-Like Resin 3.0	Grey	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1416	elegoo-mars-5	ABS-Like Resin 3.0	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1417	elegoo-mars-5	ABS-Like Resin 3.0	Clear Red	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1418	elegoo-mars-5	ABS-Like Resin 3.0	Clear Green	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1419	elegoo-mars-5	ABS-Like Resin 3.0	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1420	elegoo-mars-5	ABS-Like Resin 3.0	Mint Green	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1421	elegoo-mars-5	ABS-Like Resin 3.0	Yellow	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1422	elegoo-mars-5	ABS-Like Resin 3.0	Smoky Black	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1423	elegoo-mars-5	ABS-Like Resin 3.0	Beige	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1424	elegoo-mars-5	ABS-Like Resin 3.0	White	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1425	elegoo-mars-5	ABS-Like Resin 3.0	Clear Blue	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1426	elegoo-mars-5	ABS-Like Resin 3.0	Blue	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1427	elegoo-mars-5	ABS-Like Resin 3.0 +	Grey	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1428	elegoo-mars-5	ABS-Like Resin 3.0 +	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1429	elegoo-mars-5	ABS-Like Resin 3.0 +	Clear Red	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1430	elegoo-mars-5	ABS-Like Resin 3.0 +	Clear Green	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1431	elegoo-mars-5	ABS-Like Resin 3.0 +	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1432	elegoo-mars-5	ABS-Like Resin 3.0 +	Mint Green	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1433	elegoo-mars-5	ABS-Like Resin 3.0 +	Yellow	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1434	elegoo-mars-5	ABS-Like Resin 3.0 +	Smoky Black	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1435	elegoo-mars-5	ABS-Like Resin 3.0 +	Beige	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1436	elegoo-mars-5	ABS-Like Resin 3.0 +	White	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1437	elegoo-mars-5	ABS-Like Resin 3.0 +	Clear Blue	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1438	elegoo-mars-5	ABS-Like Resin 3.0 +	Blue	25-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1439	elegoo-mars-5	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1440	elegoo-mars-5	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1441	elegoo-mars-5	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1442	elegoo-mars-5	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1443	elegoo-mars-5	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1444	elegoo-mars-5	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1445	elegoo-mars-5	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1446	elegoo-mars-5	Water Washable Resin	Ceramic Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1447	elegoo-mars-5	Water Washable Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1448	elegoo-mars-5	Water Washable Resin	White	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1449	elegoo-mars-5	Water Washable Resin	Clear Red	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1450	elegoo-mars-5	Water Washable Resin	Clear Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1451	elegoo-mars-5	Water Washable Resin	Clear Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1452	elegoo-mars-5	Water Washable Resin	Yellow	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1453	elegoo-mars-5	Water Washable Resin	Beige	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1454	elegoo-mars-5	Water Washable Resin	Mint Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1455	elegoo-mars-5	Water Washable Resin	Smoky Black	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1456	elegoo-mars-5	Water Washable 2.0 Resin	Ceramic Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1457	elegoo-mars-5	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1458	elegoo-mars-5	Water Washable 2.0 Resin	White	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1459	elegoo-mars-5	Water Washable 2.0 Resin	Clear Red	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1460	elegoo-mars-5	Water Washable 2.0 Resin	Clear Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1461	elegoo-mars-5	Water Washable 2.0 Resin	Clear Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1462	elegoo-mars-5	Water Washable 2.0 Resin	Yellow	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1463	elegoo-mars-5	Water Washable 2.0 Resin	Beige	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1464	elegoo-mars-5	Water Washable 2.0 Resin	Mint Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1465	elegoo-mars-5	Water Washable 2.0 Resin	Smoky Black	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1466	elegoo-mars-5	Water Washable 2.0 Resin	Blue	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1467	elegoo-mars-5	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1468	elegoo-mars-5	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1469	elegoo-mars-5	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1470	elegoo-mars-5	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1471	elegoo-mars-5	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1472	elegoo-mars-5	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1473	elegoo-mars-5	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1474	elegoo-mars-5	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1475	elegoo-mars-5	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1476	elegoo-mars-5	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1477	elegoo-mars-5	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	2+3	75+230	230+75	0.5
+1478	elegoo-mars-5	Standard Plant-based Photopolymer Resin	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1479	elegoo-mars-5	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1480	elegoo-mars-5	Standard Plant-based Photopolymer Resin	White	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1481	elegoo-mars-5	Standard Plant-based Photopolymer Resin	Clear Green	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1482	elegoo-mars-5	Standard Plant-based Photopolymer Resin	Translucent	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1483	elegoo-mars-5	ABS-Like Plant-based Photopolymer Resin	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1484	elegoo-mars-5	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1485	elegoo-mars-5	ABS-Like Plant-based Photopolymer Resin	White	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1486	elegoo-mars-5	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	2+3	75+230	230+75	0.5
+1487	elegoo-mars-5	8K Standard Photopolymer Resin	Space Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1488	elegoo-mars-5	8K Standard Photopolymer Resin	White Smoke	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1489	elegoo-mars-5	8K Standard Photopolymer Resin	Vanilla	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1490	elegoo-mars-5	8K Standard Photopolymer Resin	Red Clay	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1491	elegoo-mars-5	8K ABS-Like Resin 3.0	Space Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1492	elegoo-mars-5	8K ABS-Like Resin 3.0	White Smoke	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1493	elegoo-mars-5	8K ABS-Like Resin 3.0	Vanilla	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1494	elegoo-mars-5	8K ABS-Like Resin 3.0	Red Clay	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1495	elegoo-mars-5	8K Water Washable Photopolymer Resin	Space Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1496	elegoo-mars-5	8K Water Washable Photopolymer Resin	White Smoke	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1497	elegoo-mars-5	8K Water Washable Photopolymer Resin	Vanilla	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1498	elegoo-mars-5	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1499	elegoo-mars-5	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1500	elegoo-mars-5	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1501	elegoo-mars-5	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1502	elegoo-mars-5	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1503	elegoo-mars-5	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1504	elegoo-mars-5	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1505	elegoo-mars-5	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1506	elegoo-mars-5	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1507	elegoo-mars-5	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1508	elegoo-mars-5	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1509	elegoo-mars-5	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1510	elegoo-mars-5	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1511	elegoo-mars-5	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1512	elegoo-mars-5	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1513	elegoo-mars-5	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1514	elegoo-mars-5	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1515	elegoo-mars-5	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1516	elegoo-mars-5	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1517	elegoo-mars-5	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1518	elegoo-mars-5	Tough Resin 1.0	Grey	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1519	elegoo-mars-5	Tough Resin 1.0	Black	25-35	2.5-3	0.05	2+3	75+230	230+75	0.5
+1520	elegoo-mars-5	Thermochromic Resin	Grey To Purple	30-35	3-3.5	0.05	2+3	75+230	230+75	0.5
+1521	elegoo-mars-5	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	2+3	75+230	230+75	0.5
+1522	elegoo-mars-5	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1523	elegoo-mars-5	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	2+3	75+230	230+75	0.5
+1524	elegoo-mars-5-ultra	Standard Resin 1.0	Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1525	elegoo-mars-5-ultra	Standard Resin 1.0	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1526	elegoo-mars-5-ultra	Standard Resin 1.0	Clear Red	25-35	2.5-3	0.05	/	/	/	0.5
+1527	elegoo-mars-5-ultra	Standard Resin 1.0	Clear Green	25-35	2.5-3	0.05	/	/	/	0.5
+1528	elegoo-mars-5-ultra	Standard Resin 1.0	Translucent	35-40	3-3.5	0.05	/	/	/	0.5
+1529	elegoo-mars-5-ultra	Standard Resin 1.0	Clear Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1530	elegoo-mars-5-ultra	Standard Resin 1.0	Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1531	elegoo-mars-5-ultra	Standard Resin 1.0	Yellow	25-35	2.5-3	0.05	/	/	/	0.5
+1532	elegoo-mars-5-ultra	Standard Resin 1.0	Maroon	35-40	3-3.5	0.05	/	/	/	0.5
+1533	elegoo-mars-5-ultra	Standard Resin 1.0	Beige	25-35	2.5-3	0.05	/	/	/	0.5
+1534	elegoo-mars-5-ultra	Standard Resin 2.0	Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1535	elegoo-mars-5-ultra	Standard Resin 2.0	White	25-35	2.5-3	0.05	/	/	/	0.5
+1536	elegoo-mars-5-ultra	Standard Resin 2.0	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1537	elegoo-mars-5-ultra	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	/	/	/	0.5
+1538	elegoo-mars-5-ultra	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	/	/	/	0.5
+1539	elegoo-mars-5-ultra	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	/	/	/	0.5
+1540	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1541	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1542	elegoo-mars-5-ultra	ABS-Like Resin 1.0	White	25-35	2.5-3	0.05	/	/	/	0.5
+1543	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Clear Red	25-35	2.5-3	0.05	/	/	/	0.5
+1544	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Clear Green	25-35	2.5-3	0.05	/	/	/	0.5
+1545	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	/	/	/	0.5
+1546	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Clear Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1547	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1548	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Yellow	25-35	2.5-3	0.05	/	/	/	0.5
+1549	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Maroon	35-40	3-3.5	0.05	/	/	/	0.5
+1550	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Beige	25-35	2.5-3	0.05	/	/	/	0.5
+1551	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Mint Green	25-35	2.5-3	0.05	/	/	/	0.5
+1552	elegoo-mars-5-ultra	ABS-Like Resin 1.0	Smoky Black	25-35	2.5-3	0.05	/	/	/	0.5
+1553	elegoo-mars-5-ultra	ABS-Like Resin 2.0	Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1554	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Grey	25-35	2.8-3.2	0.05	/	/	/	0.5
+1555	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Black	30-35	2.8-3.5	0.05	/	/	/	0.5
+1556	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Clear Red	25-35	2.8-3.2	0.05	/	/	/	0.5
+1557	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Clear Green	25-35	2.8-3.2	0.05	/	/	/	0.5
+1558	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Translucent	35-40	2.8-3.2	0.05	/	/	/	0.5
+1559	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Mint Green	25-35	2.8-3.2	0.05	/	/	/	0.5
+1560	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Yellow	25-35	2.8-3.2	0.05	/	/	/	0.5
+1561	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Smoky Black	25-35	2.8-3.2	0.05	/	/	/	0.5
+1562	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Beige	25-35	2.8-3.2	0.05	/	/	/	0.5
+1563	elegoo-mars-5-ultra	ABS-Like Resin 3.0	White	25-35	2.8-3.2	0.05	/	/	/	0.5
+1564	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Clear Blue	25-35	2.8-3.2	0.05	/	/	/	0.5
+1565	elegoo-mars-5-ultra	ABS-Like Resin 3.0	Blue	25-35	2.8-3.2	0.05	/	/	/	0.5
+1566	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Grey	25-35	2.8-3.2	0.05	/	/	/	0.5
+1567	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Black	30-35	2.8-3.5	0.05	/	/	/	0.5
+1568	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Clear Red	25-35	2.8-3.2	0.05	/	/	/	0.5
+1569	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Clear Green	25-35	2.8-3.2	0.05	/	/	/	0.5
+1570	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Translucent	35-40	2.8-3.2	0.05	/	/	/	0.5
+1571	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Mint Green	25-35	2.8-3.2	0.05	/	/	/	0.5
+1572	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Yellow	25-35	2.8-3.2	0.05	/	/	/	0.5
+1573	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Smoky Black	25-35	2.8-3.2	0.05	/	/	/	0.5
+1574	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Beige	25-35	2.8-3.2	0.05	/	/	/	0.5
+1575	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	White	25-35	2.8-3.2	0.05	/	/	/	0.5
+1576	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Clear Blue	25-35	2.8-3.2	0.05	/	/	/	0.5
+1577	elegoo-mars-5-ultra	ABS-Like Resin 3.0 +	Blue	25-35	2.8-3.2	0.05	/	/	/	0.5
+1578	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	/	/	/	0.5
+1579	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1580	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	/	/	/	0.5
+1581	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	/	/	/	0.5
+1582	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	/	/	/	0.5
+1583	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	/	/	/	0.5
+1584	elegoo-mars-5-ultra	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	/	/	/	0.5
+1585	elegoo-mars-5-ultra	Water Washable Resin	Ceramic Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1586	elegoo-mars-5-ultra	Water Washable Resin	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1587	elegoo-mars-5-ultra	Water Washable Resin	White	25-35	2.5-3	0.05	/	/	/	0.5
+1588	elegoo-mars-5-ultra	Water Washable Resin	Clear Red	25-35	2.5-3	0.05	/	/	/	0.5
+1589	elegoo-mars-5-ultra	Water Washable Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	0.5
+1590	elegoo-mars-5-ultra	Water Washable Resin	Clear Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1591	elegoo-mars-5-ultra	Water Washable Resin	Yellow	25-35	2.5-3	0.05	/	/	/	0.5
+1592	elegoo-mars-5-ultra	Water Washable Resin	Beige	25-35	2.5-3	0.05	/	/	/	0.5
+1593	elegoo-mars-5-ultra	Water Washable Resin	Mint Green	25-35	2.5-3	0.05	/	/	/	0.5
+1594	elegoo-mars-5-ultra	Water Washable Resin	Smoky Black	25-35	2.5-3	0.05	/	/	/	0.5
+1595	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Ceramic Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1596	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1597	elegoo-mars-5-ultra	Water Washable 2.0 Resin	White	25-35	2.5-3	0.05	/	/	/	0.5
+1598	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Clear Red	25-35	2.5-3	0.05	/	/	/	0.5
+1599	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	0.5
+1600	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Clear Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1601	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Yellow	25-35	2.5-3	0.05	/	/	/	0.5
+1602	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Beige	25-35	2.5-3	0.05	/	/	/	0.5
+1603	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Mint Green	25-35	2.5-3	0.05	/	/	/	0.5
+1604	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Smoky Black	25-35	2.5-3	0.05	/	/	/	0.5
+1605	elegoo-mars-5-ultra	Water Washable 2.0 Resin	Blue	25-35	2.5-3	0.05	/	/	/	0.5
+1606	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	/	/	/	0.5
+1607	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	/	/	/	0.5
+1608	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1609	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	/	/	/	0.5
+1610	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	/	/	/	0.5
+1611	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	/	/	/	0.5
+1612	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	/	/	/	0.5
+1613	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	/	/	/	0.5
+1614	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	/	/	/	0.5
+1615	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	/	/	/	0.5
+1616	elegoo-mars-5-ultra	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	/	/	/	0.5
+1617	elegoo-mars-5-ultra	Standard Plant-based Photopolymer Resin	Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1618	elegoo-mars-5-ultra	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1619	elegoo-mars-5-ultra	Standard Plant-based Photopolymer Resin	White	25-35	2.5-3	0.05	/	/	/	0.5
+1620	elegoo-mars-5-ultra	Standard Plant-based Photopolymer Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	0.5
+1621	elegoo-mars-5-ultra	Standard Plant-based Photopolymer Resin	Translucent	35-40	3-3.5	0.05	/	/	/	0.5
+1622	elegoo-mars-5-ultra	ABS-Like Plant-based Photopolymer Resin	Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1623	elegoo-mars-5-ultra	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	/	/	/	0.5
+1624	elegoo-mars-5-ultra	ABS-Like Plant-based Photopolymer Resin	White	25-35	2.5-3	0.05	/	/	/	0.5
+1625	elegoo-mars-5-ultra	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	0.5
+1626	elegoo-mars-5-ultra	8K Water Washable Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1627	elegoo-mars-5-ultra	8K Water Washable Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	0.5
+1628	elegoo-mars-5-ultra	8K Water Washable Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	0.5
+1629	elegoo-mars-5-ultra	8K Standard Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1630	elegoo-mars-5-ultra	8K Standard Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	0.5
+1631	elegoo-mars-5-ultra	8K Standard Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	0.5
+1632	elegoo-mars-5-ultra	8K Standard Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	0.5
+1633	elegoo-mars-5-ultra	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1634	elegoo-mars-5-ultra	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	0.5
+1635	elegoo-mars-5-ultra	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	0.5
+1636	elegoo-mars-5-ultra	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	0.5
+1637	elegoo-mars-5-ultra	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1638	elegoo-mars-5-ultra	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	0.5
+1639	elegoo-mars-5-ultra	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	0.5
+1640	elegoo-mars-5-ultra	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	0.5
+1641	elegoo-mars-5-ultra	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	0.5
+1642	elegoo-mars-5-ultra	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	0.5
+1643	elegoo-mars-5-ultra	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	0.5
+1644	elegoo-mars-5-ultra	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	0.5
+1645	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	/	/	/	0.5
+1646	elegoo-mars-5-ultra	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	/	/	/	0.5
+1647	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	/	/	/	0.5
+1648	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	/	/	/	0.5
+1649	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	/	/	/	0.5
+1650	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	/	/	/	0.5
+1651	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	/	/	/	0.5
+1652	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	/	/	/	0.5
+1653	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	/	/	/	0.5
+1654	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	/	/	/	0.5
+1655	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	/	/	/	0.5
+1656	elegoo-mars-5-ultra	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	/	/	/	0.5
+1657	elegoo-mars-5-ultra	Tough Resin 1.0	Grey	35-40	2.5-3	0.05	/	/	/	0.5
+1658	elegoo-mars-5-ultra	Tough Resin 1.0	Black	35-40	2.5-3	0.05	/	/	/	0.5
+1659	elegoo-mars-5-ultra	Thermochromic Resin	Grey To Purple	35-40	2.5-3	0.05	/	/	/	0.5
+1660	elegoo-mars-5-ultra	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	/	/	/	0.5
+1661	elegoo-mars-5-ultra	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	/	/	/	0.5
+1662	elegoo-mars-5-ultra	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	/	/	/	0.5
+2033	elegoo-saturn-3	Standard Resin 1.0	Grey	30	2.5	0.05	3+4	65+180	180+65	0.5
+2034	elegoo-saturn-3	Standard Resin 1.0	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2035	elegoo-saturn-3	Standard Resin 1.0	Clear Red	30	2.5	0.05	3+4	65+180	180+65	0.5
+2036	elegoo-saturn-3	Standard Resin 1.0	Clear Green	30	2.5	0.05	3+4	65+180	180+65	0.5
+2037	elegoo-saturn-3	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2038	elegoo-saturn-3	Standard Resin 1.0	Clear Blue	30	2.5	0.05	3+4	65+180	180+65	0.5
+2039	elegoo-saturn-3	Standard Resin 1.0	Blue	30	2.5	0.05	3+4	65+180	180+65	0.5
+2040	elegoo-saturn-3	Standard Resin 1.0	Yellow	30	2.5	0.05	3+4	65+180	180+65	0.5
+2041	elegoo-saturn-3	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2042	elegoo-saturn-3	Standard Resin 1.0	Beige	30	2.5	0.05	3+4	65+180	180+65	0.5
+2043	elegoo-saturn-3	Standard Resin 2.0	Grey	30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2044	elegoo-saturn-3	Standard Resin 2.0	White	30	2.5	0.05	3+4	65+180	180+65	0.5
+2045	elegoo-saturn-3	Standard Resin 2.0	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2046	elegoo-saturn-3	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	3+4	65+180	180+65	0.5
+2047	elegoo-saturn-3	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	3+4	65+180	180+65	0.5
+2048	elegoo-saturn-3	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	3+4	65+180	180+65	0.5
+2049	elegoo-saturn-3	ABS-Like Resin 1.0	Grey	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2050	elegoo-saturn-3	ABS-Like Resin 1.0	Black	30-35	2.8-3.5	0.05	3+4	65+180	180+65	0.5
+2051	elegoo-saturn-3	ABS-Like Resin 1.0	White	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2052	elegoo-saturn-3	ABS-Like Resin 1.0	Clear Red	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2053	elegoo-saturn-3	ABS-Like Resin 1.0	Clear Green	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2054	elegoo-saturn-3	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	3+4	65+180	180+65	0.5
+2055	elegoo-saturn-3	ABS-Like Resin 1.0	Clear Blue	30-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2056	elegoo-saturn-3	ABS-Like Resin 1.0	Blue	30-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2057	elegoo-saturn-3	ABS-Like Resin 1.0	Yellow	30-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2058	elegoo-saturn-3	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2059	elegoo-saturn-3	ABS-Like Resin 1.0	Beige	30-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2060	elegoo-saturn-3	ABS-Like Resin 1.0	Mint Green	30-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2061	elegoo-saturn-3	ABS-Like Resin 1.0	Smoky Black	30-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2062	elegoo-saturn-3	ABS-Like Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2063	elegoo-saturn-3	ABS-Like Resin 3.0	Grey	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2064	elegoo-saturn-3	ABS-Like Resin 3.0	Black	30-35	2.8-3.5	0.05	3+4	65+180	180+65	0.5
+2065	elegoo-saturn-3	ABS-Like Resin 3.0	Clear Red	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2066	elegoo-saturn-3	ABS-Like Resin 3.0	Clear Green	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2067	elegoo-saturn-3	ABS-Like Resin 3.0	Translucent	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2068	elegoo-saturn-3	ABS-Like Resin 3.0	Mint Green	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2069	elegoo-saturn-3	ABS-Like Resin 3.0	Yellow	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2070	elegoo-saturn-3	ABS-Like Resin 3.0	Smoky Black	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2071	elegoo-saturn-3	ABS-Like Resin 3.0	Beige	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2072	elegoo-saturn-3	ABS-Like Resin 3.0	White	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2073	elegoo-saturn-3	ABS-Like Resin 3.0	Clear Blue	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2074	elegoo-saturn-3	ABS-Like Resin 3.0	Blue	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2075	elegoo-saturn-3	ABS-Like Resin 3.0 +	Grey	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2076	elegoo-saturn-3	ABS-Like Resin 3.0 +	Black	30-35	2.8-3.5	0.05	3+4	65+180	180+65	0.5
+2077	elegoo-saturn-3	ABS-Like Resin 3.0 +	Clear Red	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2078	elegoo-saturn-3	ABS-Like Resin 3.0 +	Clear Green	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2079	elegoo-saturn-3	ABS-Like Resin 3.0 +	Translucent	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2080	elegoo-saturn-3	ABS-Like Resin 3.0 +	Mint Green	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2081	elegoo-saturn-3	ABS-Like Resin 3.0 +	Yellow	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2082	elegoo-saturn-3	ABS-Like Resin 3.0 +	Smoky Black	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2083	elegoo-saturn-3	ABS-Like Resin 3.0 +	Beige	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2084	elegoo-saturn-3	ABS-Like Resin 3.0 +	White	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2085	elegoo-saturn-3	ABS-Like Resin 3.0 +	Clear Blue	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2086	elegoo-saturn-3	ABS-Like Resin 3.0 +	Blue	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2087	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2088	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2089	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2090	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2091	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2092	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2093	elegoo-saturn-3	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2094	elegoo-saturn-3	Water Washable Resin	Ceramic Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2095	elegoo-saturn-3	Water Washable Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2096	elegoo-saturn-3	Water Washable Resin	White	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2097	elegoo-saturn-3	Water Washable Resin	Clear Red	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2098	elegoo-saturn-3	Water Washable Resin	Clear Green	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2099	elegoo-saturn-3	Water Washable Resin	Clear Blue	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2100	elegoo-saturn-3	Water Washable Resin	Yellow	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2101	elegoo-saturn-3	Water Washable Resin	Beige	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2102	elegoo-saturn-3	Water Washable Resin	Mint Green	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2103	elegoo-saturn-3	Water Washable Resin	Smoky Black	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2104	elegoo-saturn-3	Water Washable 2.0 Resin	Ceramic Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2105	elegoo-saturn-3	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2106	elegoo-saturn-3	Water Washable 2.0 Resin	White	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2107	elegoo-saturn-3	Water Washable 2.0 Resin	Clear Red	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2108	elegoo-saturn-3	Water Washable 2.0 Resin	Clear Green	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2109	elegoo-saturn-3	Water Washable 2.0 Resin	Clear Blue	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2110	elegoo-saturn-3	Water Washable 2.0 Resin	Yellow	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2111	elegoo-saturn-3	Water Washable 2.0 Resin	Beige	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2112	elegoo-saturn-3	Water Washable 2.0 Resin	Mint Green	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2113	elegoo-saturn-3	Water Washable 2.0 Resin	Smoky Black	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2114	elegoo-saturn-3	Water Washable 2.0 Resin	Blue	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2115	elegoo-saturn-3	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2116	elegoo-saturn-3	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2117	elegoo-saturn-3	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2118	elegoo-saturn-3	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2119	elegoo-saturn-3	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2120	elegoo-saturn-3	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2121	elegoo-saturn-3	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2122	elegoo-saturn-3	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2123	elegoo-saturn-3	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2124	elegoo-saturn-3	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2125	elegoo-saturn-3	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2126	elegoo-saturn-3	Standard Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2127	elegoo-saturn-3	Standard Plant-based Photopolymer Resin	Black	25-30	3-3.5	0.05	3+4	65+180	180+65	0.5
+2128	elegoo-saturn-3	Standard Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2129	elegoo-saturn-3	Standard Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2130	elegoo-saturn-3	Standard Plant-based Photopolymer Resin	Translucent	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2131	elegoo-saturn-3	ABS-Like Plant-based Photopolymer Resin	Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2132	elegoo-saturn-3	ABS-Like Plant-based Photopolymer Resin	Black	25-30	3-3.5	0.05	3+4	65+180	180+65	0.5
+2133	elegoo-saturn-3	ABS-Like Plant-based Photopolymer Resin	White	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2134	elegoo-saturn-3	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2135	elegoo-saturn-3	8K Water Washable Photopolymer Resin	Space Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2136	elegoo-saturn-3	8K Water Washable Photopolymer Resin	Vanilla	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2137	elegoo-saturn-3	8K Water Washable Photopolymer Resin	White Smoke	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2138	elegoo-saturn-3	8K Standard Photopolymer Resin	Space Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2139	elegoo-saturn-3	8K Standard Photopolymer Resin	Red Clay	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2140	elegoo-saturn-3	8K Standard Photopolymer Resin	Vanilla	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2141	elegoo-saturn-3	8K Standard Photopolymer Resin	White Smoke	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2142	elegoo-saturn-3	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2143	elegoo-saturn-3	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2144	elegoo-saturn-3	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2145	elegoo-saturn-3	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2146	elegoo-saturn-3	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2147	elegoo-saturn-3	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2148	elegoo-saturn-3	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2149	elegoo-saturn-3	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2150	elegoo-saturn-3	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2151	elegoo-saturn-3	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2152	elegoo-saturn-3	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2153	elegoo-saturn-3	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2154	elegoo-saturn-3	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2155	elegoo-saturn-3	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2156	elegoo-saturn-3	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2157	elegoo-saturn-3	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2158	elegoo-saturn-3	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2159	elegoo-saturn-3	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2160	elegoo-saturn-3	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2161	elegoo-saturn-3	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2162	elegoo-saturn-3	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2163	elegoo-saturn-3	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2164	elegoo-saturn-3	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2165	elegoo-saturn-3	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2166	elegoo-saturn-3	Tough Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2167	elegoo-saturn-3	Tough Resin 1.0	Black	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2168	elegoo-saturn-3	Thermochromic Resin	Grey To Purple	25-30	2.5-3	0.05	3+4	65+180	180+65	0.5
+2169	elegoo-saturn-3	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	3+4	65+180	180+65	0.5
+2170	elegoo-saturn-3	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2171	elegoo-saturn-3	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2309	elegoo-saturn-3-ultra	Standard Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2310	elegoo-saturn-3-ultra	Standard Resin 1.0	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2311	elegoo-saturn-3-ultra	Standard Resin 1.0	Clear Red	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2312	elegoo-saturn-3-ultra	Standard Resin 1.0	Clear Green	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2313	elegoo-saturn-3-ultra	Standard Resin 1.0	Translucent	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2314	elegoo-saturn-3-ultra	Standard Resin 1.0	Clear Blue	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2315	elegoo-saturn-3-ultra	Standard Resin 1.0	Blue	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2316	elegoo-saturn-3-ultra	Standard Resin 1.0	Yellow	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2317	elegoo-saturn-3-ultra	Standard Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2318	elegoo-saturn-3-ultra	Standard Resin 1.0	Beige	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2319	elegoo-saturn-3-ultra	Standard Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2320	elegoo-saturn-3-ultra	Standard Resin 2.0	White	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2321	elegoo-saturn-3-ultra	Standard Resin 2.0	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2322	elegoo-saturn-3-ultra	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	3+4	90+320	320+90	1
+2323	elegoo-saturn-3-ultra	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	3+4	90+320	320+90	1
+2324	elegoo-saturn-3-ultra	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	3+4	90+320	320+90	1
+2325	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2326	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2327	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	White	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2328	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Clear Red	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2329	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Clear Green	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2330	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	3+4	90+320	320+90	1
+2331	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Clear Blue	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2332	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Blue	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2333	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Yellow	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2334	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Maroon	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2335	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Beige	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2336	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Mint Green	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2337	elegoo-saturn-3-ultra	ABS-Like Resin 1.0	Smoky Black	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2338	elegoo-saturn-3-ultra	ABS-Like Resin 2.0	Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2339	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Grey	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2340	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2341	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Clear Red	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2342	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Clear Green	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2343	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Translucent	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2344	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Mint Green	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2345	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Yellow	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2346	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Smoky Black	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2347	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Beige	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2348	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	White	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2349	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Clear Blue	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2350	elegoo-saturn-3-ultra	ABS-Like Resin 3.0	Blue	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2351	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Grey	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2352	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2353	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Clear Red	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2354	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Clear Green	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2355	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Translucent	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2356	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Mint Green	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2357	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Yellow	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2358	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Smoky Black	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2359	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Beige	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2360	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	White	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2361	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Clear Blue	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2362	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 +	Blue	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2363	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2364	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2365	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2366	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2367	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2368	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2369	elegoo-saturn-3-ultra	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	3+4	90+320	320+90	1
+2370	elegoo-saturn-3-ultra	Water Washable Resin	Ceramic Grey	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2371	elegoo-saturn-3-ultra	Water Washable Resin	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2372	elegoo-saturn-3-ultra	Water Washable Resin	White	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2373	elegoo-saturn-3-ultra	Water Washable Resin	Clear Red	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2374	elegoo-saturn-3-ultra	Water Washable Resin	Clear Green	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2375	elegoo-saturn-3-ultra	Water Washable Resin	Clear Blue	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2376	elegoo-saturn-3-ultra	Water Washable Resin	Yellow	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2377	elegoo-saturn-3-ultra	Water Washable Resin	Beige	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2378	elegoo-saturn-3-ultra	Water Washable Resin	Mint Green	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2379	elegoo-saturn-3-ultra	Water Washable Resin	Smoky Black	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2380	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Ceramic Grey	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2381	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2382	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	White	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2383	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Clear Red	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2384	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Clear Green	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2385	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Clear Blue	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2386	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Yellow	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2387	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Beige	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2388	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Mint Green	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2389	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Smoky Black	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2390	elegoo-saturn-3-ultra	Water Washable 2.0 Resin	Blue	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2391	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2392	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2393	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2394	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2395	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2396	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2397	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2398	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2399	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2400	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2401	elegoo-saturn-3-ultra	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	3+4	90+320	320+90	1
+2402	elegoo-saturn-3-ultra	Standard Plant-based Photopolymer Resin	Grey	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2403	elegoo-saturn-3-ultra	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2404	elegoo-saturn-3-ultra	Standard Plant-based Photopolymer Resin	White	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2405	elegoo-saturn-3-ultra	Standard Plant-based Photopolymer Resin	Clear Green	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2406	elegoo-saturn-3-ultra	Standard Plant-based Photopolymer Resin	Translucent	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2407	elegoo-saturn-3-ultra	ABS-Like Plant-based Photopolymer Resin	Grey	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2408	elegoo-saturn-3-ultra	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	90+320	320+90	1
+2409	elegoo-saturn-3-ultra	ABS-Like Plant-based Photopolymer Resin	White	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2410	elegoo-saturn-3-ultra	ABS-Like Plant-based Photopolymer Resin	Clear Green	30-35	2.5-3	0.05	3+4	90+320	320+90	1
+2411	elegoo-saturn-3-ultra	8K Water Washable Photopolymer Resin	Space Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2412	elegoo-saturn-3-ultra	8K Water Washable Photopolymer Resin	Vanilla	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2413	elegoo-saturn-3-ultra	8K Water Washable Photopolymer Resin	White Smoke	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2414	elegoo-saturn-3-ultra	8K Standard Photopolymer Resin	Space Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2415	elegoo-saturn-3-ultra	8K Standard Photopolymer Resin	Red Clay	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2416	elegoo-saturn-3-ultra	8K Standard Photopolymer Resin	Vanilla	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2417	elegoo-saturn-3-ultra	8K Standard Photopolymer Resin	White Smoke	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2418	elegoo-saturn-3-ultra	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2419	elegoo-saturn-3-ultra	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2420	elegoo-saturn-3-ultra	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2421	elegoo-saturn-3-ultra	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2422	elegoo-saturn-3-ultra	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2423	elegoo-saturn-3-ultra	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2424	elegoo-saturn-3-ultra	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2425	elegoo-saturn-3-ultra	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2426	elegoo-saturn-3-ultra	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2427	elegoo-saturn-3-ultra	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2428	elegoo-saturn-3-ultra	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2429	elegoo-saturn-3-ultra	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	90+320	320+90	1
+2430	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2431	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2432	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2433	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2434	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2435	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2436	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2437	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2438	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2439	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2440	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2441	elegoo-saturn-3-ultra	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2442	elegoo-saturn-3-ultra	Tough Resin 1.0	Grey	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2443	elegoo-saturn-3-ultra	Tough Resin 1.0	Black	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2444	elegoo-saturn-3-ultra	Thermochromic Resin	Grey To Purple	25-30	2.5-3	0.05	3+4	90+320	320+90	1
+2445	elegoo-saturn-3-ultra	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	3+4	90+320	320+90	1
+2446	elegoo-saturn-3-ultra	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2447	elegoo-saturn-3-ultra	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	90+320	320+90	1
+2448	elegoo-saturn-4	Standard Resin 1.0	Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2449	elegoo-saturn-4	Standard Resin 1.0	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2450	elegoo-saturn-4	Standard Resin 1.0	Clear Red	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2451	elegoo-saturn-4	Standard Resin 1.0	Clear Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2452	elegoo-saturn-4	Standard Resin 1.0	Translucent	35-40	3-3.5	0.05	3+4	65+180	180+65	0.5
+2453	elegoo-saturn-4	Standard Resin 1.0	Clear Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2454	elegoo-saturn-4	Standard Resin 1.0	Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2455	elegoo-saturn-4	Standard Resin 1.0	Yellow	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2456	elegoo-saturn-4	Standard Resin 1.0	Maroon	35-40	3-3.5	0.05	3+4	65+180	180+65	0.5
+2457	elegoo-saturn-4	Standard Resin 1.0	Beige	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2458	elegoo-saturn-4	Standard Resin 2.0	Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2459	elegoo-saturn-4	Standard Resin 2.0	White	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2460	elegoo-saturn-4	Standard Resin 2.0	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2461	elegoo-saturn-4	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	3+4	65+180	180+65	0.5
+2462	elegoo-saturn-4	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	3+4	65+180	180+65	0.5
+2463	elegoo-saturn-4	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	3+4	65+180	180+65	0.5
+2464	elegoo-saturn-4	ABS-Like Resin 1.0	Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2465	elegoo-saturn-4	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2466	elegoo-saturn-4	ABS-Like Resin 1.0	White	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2467	elegoo-saturn-4	ABS-Like Resin 1.0	Clear Red	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2468	elegoo-saturn-4	ABS-Like Resin 1.0	Clear Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2469	elegoo-saturn-4	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	3+4	65+180	180+65	0.5
+2470	elegoo-saturn-4	ABS-Like Resin 1.0	Clear Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2471	elegoo-saturn-4	ABS-Like Resin 1.0	Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2472	elegoo-saturn-4	ABS-Like Resin 1.0	Yellow	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2473	elegoo-saturn-4	ABS-Like Resin 1.0	Maroon	35-40	3-3.5	0.05	3+4	65+180	180+65	0.5
+2474	elegoo-saturn-4	ABS-Like Resin 1.0	Beige	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2475	elegoo-saturn-4	ABS-Like Resin 1.0	Mint Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2476	elegoo-saturn-4	ABS-Like Resin 1.0	Smoky Black	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2477	elegoo-saturn-4	ABS-Like Resin 2.0	Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2478	elegoo-saturn-4	ABS-Like Resin 3.0	Grey	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2479	elegoo-saturn-4	ABS-Like Resin 3.0	Black	35-40	2.8-3.5	0.05	3+4	65+180	180+65	0.5
+2480	elegoo-saturn-4	ABS-Like Resin 3.0	Clear Red	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2481	elegoo-saturn-4	ABS-Like Resin 3.0	Clear Green	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2482	elegoo-saturn-4	ABS-Like Resin 3.0	Translucent	35-40	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2483	elegoo-saturn-4	ABS-Like Resin 3.0	Mint Green	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2484	elegoo-saturn-4	ABS-Like Resin 3.0	Yellow	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2485	elegoo-saturn-4	ABS-Like Resin 3.0	Smoky Black	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2486	elegoo-saturn-4	ABS-Like Resin 3.0	Beige	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2487	elegoo-saturn-4	ABS-Like Resin 3.0	White	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2488	elegoo-saturn-4	ABS-Like Resin 3.0	Clear Blue	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2489	elegoo-saturn-4	ABS-Like Resin 3.0	Blue	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2490	elegoo-saturn-4	ABS-Like Resin 3.0 +	Grey	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2491	elegoo-saturn-4	ABS-Like Resin 3.0 +	Black	35-40	2.8-3.5	0.05	3+4	65+180	180+65	0.5
+2492	elegoo-saturn-4	ABS-Like Resin 3.0 +	Clear Red	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2493	elegoo-saturn-4	ABS-Like Resin 3.0 +	Clear Green	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2494	elegoo-saturn-4	ABS-Like Resin 3.0 +	Translucent	35-40	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2495	elegoo-saturn-4	ABS-Like Resin 3.0 +	Mint Green	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2496	elegoo-saturn-4	ABS-Like Resin 3.0 +	Yellow	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2497	elegoo-saturn-4	ABS-Like Resin 3.0 +	Smoky Black	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2498	elegoo-saturn-4	ABS-Like Resin 3.0 +	Beige	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2499	elegoo-saturn-4	ABS-Like Resin 3.0 +	White	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2500	elegoo-saturn-4	ABS-Like Resin 3.0 +	Clear Blue	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2501	elegoo-saturn-4	ABS-Like Resin 3.0 +	Blue	35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2502	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	Grey	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2503	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2504	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	White	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2505	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	Beige	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2506	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2507	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	Translucent	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2508	elegoo-saturn-4	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.8-3.2	0.05	3+4	65+180	180+65	0.5
+2509	elegoo-saturn-4	Water Washable Resin	Ceramic Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2510	elegoo-saturn-4	Water Washable Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2511	elegoo-saturn-4	Water Washable Resin	White	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2512	elegoo-saturn-4	Water Washable Resin	Clear Red	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2513	elegoo-saturn-4	Water Washable Resin	Clear Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2514	elegoo-saturn-4	Water Washable Resin	Clear Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2515	elegoo-saturn-4	Water Washable Resin	Yellow	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2516	elegoo-saturn-4	Water Washable Resin	Beige	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2517	elegoo-saturn-4	Water Washable Resin	Mint Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2518	elegoo-saturn-4	Water Washable Resin	Smoky Black	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2519	elegoo-saturn-4	Water Washable 2.0 Resin	Ceramic Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2520	elegoo-saturn-4	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2521	elegoo-saturn-4	Water Washable 2.0 Resin	White	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2522	elegoo-saturn-4	Water Washable 2.0 Resin	Clear Red	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2523	elegoo-saturn-4	Water Washable 2.0 Resin	Clear Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2524	elegoo-saturn-4	Water Washable 2.0 Resin	Clear Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2525	elegoo-saturn-4	Water Washable 2.0 Resin	Yellow	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2526	elegoo-saturn-4	Water Washable 2.0 Resin	Beige	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2527	elegoo-saturn-4	Water Washable 2.0 Resin	Mint Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2528	elegoo-saturn-4	Water Washable 2.0 Resin	Smoky Black	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2529	elegoo-saturn-4	Water Washable 2.0 Resin	Blue	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2530	elegoo-saturn-4	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2531	elegoo-saturn-4	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2532	elegoo-saturn-4	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	3+4	75+230	230+75	0.5
+2533	elegoo-saturn-4	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2534	elegoo-saturn-4	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2535	elegoo-saturn-4	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2536	elegoo-saturn-4	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2537	elegoo-saturn-4	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2538	elegoo-saturn-4	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2539	elegoo-saturn-4	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2540	elegoo-saturn-4	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	3+4	75+230	230+75	0.5
+2541	elegoo-saturn-4	Standard Plant-based Photopolymer Resin	Grey	35	2.5-3	0.05	3+4	75+230	230+75	0.5
+2542	elegoo-saturn-4	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2543	elegoo-saturn-4	Standard Plant-based Photopolymer Resin	White	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2544	elegoo-saturn-4	Standard Plant-based Photopolymer Resin	Clear Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2545	elegoo-saturn-4	Standard Plant-based Photopolymer Resin	Translucent	35-40	3-3.5	0.05	3+4	65+180	180+65	0.5
+2546	elegoo-saturn-4	ABS-Like Plant-based Photopolymer Resin	Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2547	elegoo-saturn-4	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	3+4	65+180	180+65	0.5
+2548	elegoo-saturn-4	ABS-Like Plant-based Photopolymer Resin	White	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2549	elegoo-saturn-4	ABS-Like Plant-based Photopolymer Resin	Clear Green	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2550	elegoo-saturn-4	8K Water Washable Photopolymer Resin	Space Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2551	elegoo-saturn-4	8K Water Washable Photopolymer Resin	Vanilla	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2552	elegoo-saturn-4	8K Water Washable Photopolymer Resin	White Smoke	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2553	elegoo-saturn-4	8K Standard Photopolymer Resin	Space Grey	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2554	elegoo-saturn-4	8K Standard Photopolymer Resin	Red Clay	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2555	elegoo-saturn-4	8K Standard Photopolymer Resin	Vanilla	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2556	elegoo-saturn-4	8K Standard Photopolymer Resin	White Smoke	35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2557	elegoo-saturn-4	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2558	elegoo-saturn-4	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2559	elegoo-saturn-4	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2560	elegoo-saturn-4	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2561	elegoo-saturn-4	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2562	elegoo-saturn-4	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2563	elegoo-saturn-4	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2564	elegoo-saturn-4	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2565	elegoo-saturn-4	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2566	elegoo-saturn-4	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2567	elegoo-saturn-4	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2568	elegoo-saturn-4	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	3+4	65+180	180+65	0.5
+2569	elegoo-saturn-4	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2570	elegoo-saturn-4	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2571	elegoo-saturn-4	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2572	elegoo-saturn-4	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2573	elegoo-saturn-4	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2574	elegoo-saturn-4	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2575	elegoo-saturn-4	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2576	elegoo-saturn-4	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2577	elegoo-saturn-4	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2578	elegoo-saturn-4	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2579	elegoo-saturn-4	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2580	elegoo-saturn-4	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2581	elegoo-saturn-4	Tough Resin 1.0	Grey	35-40	2.5-3	0.05	3+4	65+180	180+65	0.5
+2582	elegoo-saturn-4	Tough Resin 1.0	Black	35-40	2.5-3	0.05	3+4	65+180	180+65	0.5
+2583	elegoo-saturn-4	Thermochromic Resin	Grey To Purple	35-40	2.5-3	0.05	3+4	65+180	180+65	0.5
+2584	elegoo-saturn-4	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	3+4	65+180	180+65	0.5
+2585	elegoo-saturn-4	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2586	elegoo-saturn-4	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	3+4	65+180	180+65	0.5
+2587	elegoo-saturn-4-ultra	Standard Resin 1.0	Grey	25-35	2.5-3	0.05	/	/	/	1
+2588	elegoo-saturn-4-ultra	Standard Resin 1.0	Black	30-35	3-3.5	0.05	/	/	/	1
+2589	elegoo-saturn-4-ultra	Standard Resin 1.0	Clear Red	25-35	2.5-3	0.05	/	/	/	1
+2590	elegoo-saturn-4-ultra	Standard Resin 1.0	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2591	elegoo-saturn-4-ultra	Standard Resin 1.0	Translucent	35-40	3-3.5	0.05	/	/	/	1
+2592	elegoo-saturn-4-ultra	Standard Resin 1.0	Clear Blue	25-35	2.5-3	0.05	/	/	/	1
+2593	elegoo-saturn-4-ultra	Standard Resin 1.0	Blue	25-35	2.5-3	0.05	/	/	/	1
+2594	elegoo-saturn-4-ultra	Standard Resin 1.0	Yellow	25-35	2.5-3	0.05	/	/	/	1
+2595	elegoo-saturn-4-ultra	Standard Resin 1.0	Maroon	35-40	3-3.5	0.05	/	/	/	1
+2596	elegoo-saturn-4-ultra	Standard Resin 1.0	Beige	25-35	2.5-3	0.05	/	/	/	1
+2597	elegoo-saturn-4-ultra	Standard Resin 2.0	Grey	25-35	2.5-3	0.05	/	/	/	1
+2598	elegoo-saturn-4-ultra	Standard Resin 2.0	White	25-35	2.5-3	0.05	/	/	/	1
+2599	elegoo-saturn-4-ultra	Standard Resin 2.0	Black	30-35	3-3.5	0.05	/	/	/	1
+2600	elegoo-saturn-4-ultra	Standard Resin 2.0	Orchid	35-40	3.5-4	0.05	/	/	/	1
+2601	elegoo-saturn-4-ultra	Standard Resin 2.0	Slate Blue	35-40	3.5-4	0.05	/	/	/	1
+2602	elegoo-saturn-4-ultra	Standard Resin 2.0	Medium Slate Blue	35-40	3.5-4	0.05	/	/	/	1
+2603	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Grey	25-35	2.5-3	0.05	/	/	/	1
+2604	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Black	30-35	3-3.5	0.05	/	/	/	1
+2605	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	White	25-35	2.5-3	0.05	/	/	/	1
+2606	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Clear Red	25-35	2.5-3	0.05	/	/	/	1
+2607	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2608	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	/	/	/	1
+2609	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Clear Blue	25-35	2.5-3	0.05	/	/	/	1
+2610	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Blue	25-35	2.5-3	0.05	/	/	/	1
+2611	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Yellow	25-35	2.5-3	0.05	/	/	/	1
+2612	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Maroon	35-40	3-3.5	0.05	/	/	/	1
+2613	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Beige	25-35	2.5-3	0.05	/	/	/	1
+2614	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Mint Green	25-35	2.5-3	0.05	/	/	/	1
+2615	elegoo-saturn-4-ultra	ABS-Like Resin 1.0	Smoky Black	25-35	2.5-3	0.05	/	/	/	1
+2616	elegoo-saturn-4-ultra	ABS-Like Resin 2.0	Grey	25-35	2.5-3	0.05	/	/	/	1
+2617	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Grey	25-35	2.5-3	0.05	/	/	/	1
+2618	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Black	30-35	2.5-3	0.05	/	/	/	1
+2619	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Clear Red	25-35	2.5-3	0.05	/	/	/	1
+2620	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2621	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Translucent	35-40	2.5-3	0.05	/	/	/	1
+2622	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Mint Green	25-35	2.5-3	0.05	/	/	/	1
+2623	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Yellow	25-35	2.5-3	0.05	/	/	/	1
+2624	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Smoky Black	25-35	2.5-3	0.05	/	/	/	1
+2625	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Beige	25-35	2.5-3	0.05	/	/	/	1
+2626	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	White	25-35	2.5-3	0.05	/	/	/	1
+2627	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Clear Blue	25-35	2.5-3	0.05	/	/	/	1
+2628	elegoo-saturn-4-ultra	ABS-Like Resin 3.0	Blue	25-35	2.5-3	0.05	/	/	/	1
+2629	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Grey	25-35	2.5-3	0.05	/	/	/	1
+2630	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Black	30-35	2.5-3	0.05	/	/	/	1
+2631	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Clear Red	25-35	2.5-3	0.05	/	/	/	1
+2632	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2633	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Translucent	35-40	2.5-3	0.05	/	/	/	1
+2634	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Mint Green	25-35	2.5-3	0.05	/	/	/	1
+2635	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Yellow	25-35	2.5-3	0.05	/	/	/	1
+2636	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Smoky Black	25-35	2.5-3	0.05	/	/	/	1
+2637	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Beige	25-35	2.5-3	0.05	/	/	/	1
+2638	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	White	25-35	2.5-3	0.05	/	/	/	1
+2639	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Clear Blue	25-35	2.5-3	0.05	/	/	/	1
+2640	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 +	Blue	25-35	2.5-3	0.05	/	/	/	1
+2641	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	Grey	30-35	2.5-3	0.05	/	/	/	1
+2642	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	Black	30-35	2.5-3	0.05	/	/	/	1
+2643	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	White	30-35	2.5-3	0.05	/	/	/	1
+2644	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	Beige	30-35	2.5-3	0.05	/	/	/	1
+2645	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	Clear Green	30-35	2.5-3	0.05	/	/	/	1
+2646	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	Translucent	30-35	2.5-3	0.05	/	/	/	1
+2647	elegoo-saturn-4-ultra	ABS-Like Resin 3.0 Pro	Yellow	30-35	2.5-3	0.05	/	/	/	1
+2648	elegoo-saturn-4-ultra	Water Washable Resin	Ceramic Grey	25-35	2.5-3	0.05	/	/	/	1
+2649	elegoo-saturn-4-ultra	Water Washable Resin	Black	30-35	3-3.5	0.05	/	/	/	1
+2650	elegoo-saturn-4-ultra	Water Washable Resin	White	25-35	2.5-3	0.05	/	/	/	1
+2651	elegoo-saturn-4-ultra	Water Washable Resin	Clear Red	25-35	2.5-3	0.05	/	/	/	1
+2652	elegoo-saturn-4-ultra	Water Washable Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2653	elegoo-saturn-4-ultra	Water Washable Resin	Clear Blue	25-35	2.5-3	0.05	/	/	/	1
+2654	elegoo-saturn-4-ultra	Water Washable Resin	Yellow	25-35	2.5-3	0.05	/	/	/	1
+2655	elegoo-saturn-4-ultra	Water Washable Resin	Beige	25-35	2.5-3	0.05	/	/	/	1
+2656	elegoo-saturn-4-ultra	Water Washable Resin	Mint Green	25-35	2.5-3	0.05	/	/	/	1
+2657	elegoo-saturn-4-ultra	Water Washable Resin	Smoky Black	25-35	2.5-3	0.05	/	/	/	1
+2658	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Ceramic Grey	25-35	2.5-3	0.05	/	/	/	1
+2659	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Black	30-35	3-3.5	0.05	/	/	/	1
+2660	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	White	25-35	2.5-3	0.05	/	/	/	1
+2661	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Clear Red	25-35	2.5-3	0.05	/	/	/	1
+2662	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2663	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Clear Blue	25-35	2.5-3	0.05	/	/	/	1
+2664	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Yellow	25-35	2.5-3	0.05	/	/	/	1
+2665	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Beige	25-35	2.5-3	0.05	/	/	/	1
+2666	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Mint Green	25-35	2.5-3	0.05	/	/	/	1
+2667	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Smoky Black	25-35	2.5-3	0.05	/	/	/	1
+2668	elegoo-saturn-4-ultra	Water Washable 2.0 Resin	Blue	25-35	2.5-3	0.05	/	/	/	1
+2669	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Ceramic Grey	25-30	2.8-3.2	0.05	/	/	/	1
+2670	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	White	25-30	2.8-3.2	0.05	/	/	/	1
+2671	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Black	30-35	3-3.5	0.05	/	/	/	1
+2672	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Clear Red	25-30	2.8-3.2	0.05	/	/	/	1
+2673	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Clear Green	25-30	2.8-3.2	0.05	/	/	/	1
+2674	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Smoky Black	25-30	2.8-3.2	0.05	/	/	/	1
+2675	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Clear Blue	25-30	2.8-3.2	0.05	/	/	/	1
+2676	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Yellow	25-30	2.8-3.2	0.05	/	/	/	1
+2677	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Beige	25-30	2.8-3.2	0.05	/	/	/	1
+2678	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Mint Green	25-30	2.8-3.2	0.05	/	/	/	1
+2679	elegoo-saturn-4-ultra	Water Washable ABS-Like Resin	Blue	25-30	2.8-3.2	0.05	/	/	/	1
+2680	elegoo-saturn-4-ultra	Standard Plant-based Photopolymer Resin	Grey	25-35	2.5-3	0.05	/	/	/	1
+2681	elegoo-saturn-4-ultra	Standard Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	/	/	/	1
+2682	elegoo-saturn-4-ultra	Standard Plant-based Photopolymer Resin	White	25-35	2.5-3	0.05	/	/	/	1
+2683	elegoo-saturn-4-ultra	Standard Plant-based Photopolymer Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2684	elegoo-saturn-4-ultra	Standard Plant-based Photopolymer Resin	Translucent	35-40	3-3.5	0.05	/	/	/	1
+2685	elegoo-saturn-4-ultra	ABS-Like Plant-based Photopolymer Resin	Grey	25-35	2.5-3	0.05	/	/	/	1
+2686	elegoo-saturn-4-ultra	ABS-Like Plant-based Photopolymer Resin	Black	30-35	3-3.5	0.05	/	/	/	1
+2687	elegoo-saturn-4-ultra	ABS-Like Plant-based Photopolymer Resin	White	25-35	2.5-3	0.05	/	/	/	1
+2688	elegoo-saturn-4-ultra	ABS-Like Plant-based Photopolymer Resin	Clear Green	25-35	2.5-3	0.05	/	/	/	1
+2689	elegoo-saturn-4-ultra	8K Water Washable Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	1
+2690	elegoo-saturn-4-ultra	8K Water Washable Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	1
+2691	elegoo-saturn-4-ultra	8K Water Washable Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	1
+2692	elegoo-saturn-4-ultra	8K Standard Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	1
+2693	elegoo-saturn-4-ultra	8K Standard Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	1
+2694	elegoo-saturn-4-ultra	8K Standard Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	1
+2695	elegoo-saturn-4-ultra	8K Standard Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	1
+2696	elegoo-saturn-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	1
+2697	elegoo-saturn-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	1
+2698	elegoo-saturn-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	1
+2699	elegoo-saturn-4-ultra	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	1
+2700	elegoo-saturn-4-ultra	8K Water Washable 2.0 Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	1
+2701	elegoo-saturn-4-ultra	8K Water Washable 2.0 Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	1
+2702	elegoo-saturn-4-ultra	8K Water Washable 2.0 Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	1
+2703	elegoo-saturn-4-ultra	8K Water Washable 2.0 Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	1
+2704	elegoo-saturn-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	25-35	2.5-3	0.05	/	/	/	1
+2705	elegoo-saturn-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	25-35	2.5-3	0.05	/	/	/	1
+2706	elegoo-saturn-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	25-35	2.5-3	0.05	/	/	/	1
+2707	elegoo-saturn-4-ultra	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	25-35	2.5-3	0.05	/	/	/	1
+2708	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Grey	25-35	2.5-3.5	0.05	/	/	/	1
+2709	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	White	25-35	2.5-3.5	0.05	/	/	/	1
+2710	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Black	25-35	2.5-3.5	0.05	/	/	/	1
+2711	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Beige	25-35	2.5-3.5	0.05	/	/	/	1
+2712	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Yellow	25-35	2.5-3.5	0.05	/	/	/	1
+2713	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Clear Blue	25-35	2.5-3.5	0.05	/	/	/	1
+2714	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Clear Red	25-35	2.5-3.5	0.05	/	/	/	1
+2715	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Clear Green	25-35	2.5-3.5	0.05	/	/	/	1
+2716	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Neon-Pumpkin	25-35	2.5-3.5	0.05	/	/	/	1
+2717	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Neon-Lemon	25-35	2.5-3.5	0.05	/	/	/	1
+2718	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Neon-Lime	25-35	2.5-3.5	0.05	/	/	/	1
+2719	elegoo-saturn-4-ultra	ABS-Like Ultra Resin	Neon-Peach	25-35	2.5-3.5	0.05	/	/	/	1
+2720	elegoo-saturn-4-ultra	Tough Resin 1.0	Grey	35-40	2.5-3	0.05	/	/	/	1
+2721	elegoo-saturn-4-ultra	Tough Resin 1.0	Black	35-40	2.5-3	0.05	/	/	/	1
+2722	elegoo-saturn-4-ultra	Thermochromic Resin	Grey To Purple	35-40	2.5-3	0.05	/	/	/	1
+2723	elegoo-saturn-4-ultra	Dental Castable UV Resin	Clear Green	25-35	3.5-4.5	0.05	/	/	/	1
+2724	elegoo-saturn-4-ultra	Dental Orthodontic UV Resin	Orange	25-35	2.5-3.5	0.05	/	/	/	1
+2725	elegoo-saturn-4-ultra	Dental Model UV Resin	Orange	25-35	2.5-3.5	0.05	/	/	/	1
+2726	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2727	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Black	32-37	2.3-2.8	0.05	/	/	/	1.2
+2728	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2729	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2730	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Translucent	27-32	2.3-2.8	0.05	/	/	/	1.2
+2731	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2732	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2733	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2734	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Maroon	32-37	2.3-2.8	0.05	/	/	/	1.2
+2735	elegoo-saturn-4-ultra-16k	Standard Resin 1.0	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2736	elegoo-saturn-4-ultra-16k	Standard Resin 2.0	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2737	elegoo-saturn-4-ultra-16k	Standard Resin 2.0	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2738	elegoo-saturn-4-ultra-16k	Standard Resin 2.0	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2739	elegoo-saturn-4-ultra-16k	Standard Resin 2.0	Orchid	27-32	2.3-2.8	0.05	/	/	/	1.2
+2740	elegoo-saturn-4-ultra-16k	Standard Resin 2.0	Slate Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2741	elegoo-saturn-4-ultra-16k	Standard Resin 2.0	Medium Slate Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2742	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2743	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2744	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2745	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2746	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2747	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Clear	35-40	6-8	0.05	/	/	/	1.2
+2748	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2749	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2750	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2751	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Maroon	32-37	2.3-2.8	0.05	/	/	/	1.2
+2752	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2753	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Mint Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2754	elegoo-saturn-4-ultra-16k	ABS-Like Resin 1.0	Smoky Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2755	elegoo-saturn-4-ultra-16k	ABS-Like Resin 2.0	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2756	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2757	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2758	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2759	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2760	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Translucent	27-32	2.3-2.8	0.05	/	/	/	1.2
+2761	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Mint Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2762	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2763	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Smoky Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2764	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2765	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2766	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2767	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0	Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2768	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2769	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2770	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2771	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2772	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Translucent	27-32	2.3-2.8	0.05	/	/	/	1.2
+2773	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Mint Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2774	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2775	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Smoky Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2776	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2777	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2778	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2779	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 +	Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2780	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2781	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2782	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2783	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2784	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2785	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	Translucent	27-32	2.3-2.8	0.05	/	/	/	1.2
+2786	elegoo-saturn-4-ultra-16k	ABS-Like Resin 3.0 Pro	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2787	elegoo-saturn-4-ultra-16k	Water Washable Resin	Ceramic Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2788	elegoo-saturn-4-ultra-16k	Water Washable Resin	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2789	elegoo-saturn-4-ultra-16k	Water Washable Resin	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2790	elegoo-saturn-4-ultra-16k	Water Washable Resin	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2791	elegoo-saturn-4-ultra-16k	Water Washable Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2792	elegoo-saturn-4-ultra-16k	Water Washable Resin	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2793	elegoo-saturn-4-ultra-16k	Water Washable Resin	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2794	elegoo-saturn-4-ultra-16k	Water Washable Resin	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2795	elegoo-saturn-4-ultra-16k	Water Washable Resin	Mint Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2796	elegoo-saturn-4-ultra-16k	Water Washable Resin	Smoky Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2797	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Ceramic Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2798	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2799	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2800	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2801	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2802	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2803	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2804	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2805	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Mint Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2806	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Smoky Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2807	elegoo-saturn-4-ultra-16k	Water Washable 2.0 Resin	Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2808	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Ceramic Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2809	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2810	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2811	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2812	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2813	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Smoky Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2814	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2815	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2816	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2817	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Mint Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2818	elegoo-saturn-4-ultra-16k	Water Washable ABS-Like Resin	Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2819	elegoo-saturn-4-ultra-16k	Standard Plant-based Photopolymer Resin	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2820	elegoo-saturn-4-ultra-16k	Standard Plant-based Photopolymer Resin	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2821	elegoo-saturn-4-ultra-16k	Standard Plant-based Photopolymer Resin	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2822	elegoo-saturn-4-ultra-16k	Standard Plant-based Photopolymer Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2823	elegoo-saturn-4-ultra-16k	Standard Plant-based Photopolymer Resin	Translucent	27-32	2.3-2.8	0.05	/	/	/	1.2
+2824	elegoo-saturn-4-ultra-16k	ABS-Like Plant-based Photopolymer Resin	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2825	elegoo-saturn-4-ultra-16k	ABS-Like Plant-based Photopolymer Resin	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2826	elegoo-saturn-4-ultra-16k	ABS-Like Plant-based Photopolymer Resin	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2827	elegoo-saturn-4-ultra-16k	ABS-Like Plant-based Photopolymer Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2828	elegoo-saturn-4-ultra-16k	8K Water Washable Photopolymer Resin	Space Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2829	elegoo-saturn-4-ultra-16k	8K Water Washable Photopolymer Resin	Vanilla	27-32	2.3-2.8	0.05	/	/	/	1.2
+2830	elegoo-saturn-4-ultra-16k	8K Water Washable Photopolymer Resin	White Smoke	27-32	2.3-2.8	0.05	/	/	/	1.2
+2831	elegoo-saturn-4-ultra-16k	8K Standard Photopolymer Resin	Space Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2832	elegoo-saturn-4-ultra-16k	8K Standard Photopolymer Resin	Red Clay	27-32	2.3-2.8	0.05	/	/	/	1.2
+2833	elegoo-saturn-4-ultra-16k	8K Standard Photopolymer Resin	Vanilla	27-32	2.3-2.8	0.05	/	/	/	1.2
+2834	elegoo-saturn-4-ultra-16k	8K Standard Photopolymer Resin	White Smoke	27-32	2.3-2.8	0.05	/	/	/	1.2
+2835	elegoo-saturn-4-ultra-16k	8K ABS-Like 3.0 Photopolymer Resin	Space Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2836	elegoo-saturn-4-ultra-16k	8K ABS-Like 3.0 Photopolymer Resin	Vanilla	27-32	2.3-2.8	0.05	/	/	/	1.2
+2837	elegoo-saturn-4-ultra-16k	8K ABS-Like 3.0 Photopolymer Resin	White Smoke	27-32	2.3-2.8	0.05	/	/	/	1.2
+2838	elegoo-saturn-4-ultra-16k	8K ABS-Like 3.0 Photopolymer Resin	Red Clay	27-32	2.3-2.8	0.05	/	/	/	1.2
+2839	elegoo-saturn-4-ultra-16k	8K Water Washable 2.0 Photopolymer Resin	Space Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2840	elegoo-saturn-4-ultra-16k	8K Water Washable 2.0 Photopolymer Resin	Vanilla	27-32	2.3-2.8	0.05	/	/	/	1.2
+2841	elegoo-saturn-4-ultra-16k	8K Water Washable 2.0 Photopolymer Resin	White Smoke	27-32	2.3-2.8	0.05	/	/	/	1.2
+2842	elegoo-saturn-4-ultra-16k	8K Water Washable 2.0 Photopolymer Resin	Red Clay	27-32	2.3-2.8	0.05	/	/	/	1.2
+2843	elegoo-saturn-4-ultra-16k	8K Water Washable ABS-Like Photopolymer Resin	Space Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2844	elegoo-saturn-4-ultra-16k	8K Water Washable ABS-Like Photopolymer Resin	Vanilla	27-32	2.3-2.8	0.05	/	/	/	1.2
+2845	elegoo-saturn-4-ultra-16k	8K Water Washable ABS-Like Photopolymer Resin	White Smoke	27-32	2.3-2.8	0.05	/	/	/	1.2
+2846	elegoo-saturn-4-ultra-16k	8K Water Washable ABS-Like Photopolymer Resin	Red Clay	27-32	2.3-2.8	0.05	/	/	/	1.2
+2847	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2848	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	White	27-32	2.3-2.8	0.05	/	/	/	1.2
+2849	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2850	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Beige	27-32	2.3-2.8	0.05	/	/	/	1.2
+2851	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Yellow	27-32	2.3-2.8	0.05	/	/	/	1.2
+2852	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Clear Blue	27-32	2.3-2.8	0.05	/	/	/	1.2
+2853	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Clear Red	27-32	2.3-2.8	0.05	/	/	/	1.2
+2854	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2855	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Neon-Pumpkin	27-32	2.3-2.8	0.05	/	/	/	1.2
+2856	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Neon-Lemon	27-32	2.3-2.8	0.05	/	/	/	1.2
+2857	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Neon-Lime	27-32	2.3-2.8	0.05	/	/	/	1.2
+2858	elegoo-saturn-4-ultra-16k	ABS-Like Ultra Resin	Neon-Peach	27-32	2.3-2.8	0.05	/	/	/	1.2
+2859	elegoo-saturn-4-ultra-16k	Tough Resin 1.0	Grey	27-32	2.3-2.8	0.05	/	/	/	1.2
+2860	elegoo-saturn-4-ultra-16k	Tough Resin 1.0	Black	27-32	2.3-2.8	0.05	/	/	/	1.2
+2861	elegoo-saturn-4-ultra-16k	Thermochromic Resin	Grey To Purple	27-32	2.3-2.8	0.05	/	/	/	1.2
+2862	elegoo-saturn-4-ultra-16k	Dental Castable UV Resin	Clear Green	27-32	2.3-2.8	0.05	/	/	/	1.2
+2863	elegoo-saturn-4-ultra-16k	Dental Orthodontic UV Resin	Orange	27-32	2.3-2.8	0.05	/	/	/	1.2
+2864	elegoo-saturn-4-ultra-16k	Dental Model UV Resin	Orange	27-32	2.3-2.8	0.05	/	/	/	1.2

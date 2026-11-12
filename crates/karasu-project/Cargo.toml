@@ -1,0 +1,21 @@
+[package]
+name = "karasu-project"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Headless project model and slicing pipeline shared by the karasu-slicer command line and desktop application"
+
+[dependencies]
+karasu-core = { path = "../karasu-core" }
+# The logging facade (TD-096): ours and egui's, wgpu's and winit's records reach one logger.
+# Reviewed in TD-096; already in the tree through the desktop stack. No optional features.
+log = { version = "=0.4.34", default-features = false, features = ["std"] }
+# The project file's document (TD-130): the core's own JSON stack, already reviewed (TD-077,
+# TD-106) and in the tree; no new crate.
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.150", features = ["float_roundtrip"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,29 @@
+[package]
+name = "karasu-cli"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+default-run = "karasu-cli"
+description = "Headless command-line interface for karasu-slicer"
+
+[dependencies]
+karasu-core = { path = "../karasu-core" }
+karasu-project = { path = "../karasu-project" }
+# The logging facade (TD-096), the same version as karasu-project's.
+log = { version = "=0.4.34", default-features = false, features = ["std"] }
+# Cooperative SIGINT/console Ctrl-C delivery for `slice`; reviewed in TD-044.
+ctrlc = "=3.5.2"
+
+[lints]
+workspace = true
+
+
+# Keep the former executable name as a compatibility entry point, not a legacy package.
+[[bin]]
+name = "resin-cli"
+path = "src/legacy.rs"
+test = false
+bench = false
+doc = false

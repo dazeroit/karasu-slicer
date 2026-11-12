@@ -1,0 +1,16 @@
+{
+  "kind": "material",
+  "profile": {
+    "schema_version": 2,
+    "id": "elegoo-water-washable-abs-like-resin",
+    "name": "ELEGOO Water-Washable ABS-Like Resin",
+    "revision": 1,
+    "vendor": "elegoo",
+    "kind": "water_washable",
+    "density_g_per_ml": 1.05,
+    "cost_per_liter": null,
+    "currency": null,
+    "based_on": null,
+    "colour": "Ceramic Grey"
+  }
+}
