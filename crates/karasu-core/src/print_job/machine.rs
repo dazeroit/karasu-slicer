@@ -1112,6 +1112,21 @@ impl MachineEncoder {
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn the_goo_version_field_holds_the_longest_version_allowed() {
+        use crate::print_job::MAX_VERSION_LEN;
+        let mut out = Vec::new();
+        text(&mut out, &"9".repeat(MAX_VERSION_LEN), 24).expect("23 characters fit");
+        assert_eq!(out.len(), 24);
+        assert_eq!(out[MAX_VERSION_LEN], 0);
+        assert!(text(&mut Vec::new(), &"9".repeat(MAX_VERSION_LEN + 1), 24).is_err());
+        // The pre-release forms of the release process fit.
+        for version in ["10.10.10-alpha.10", "10.10.10-rc.10", "1.10.0-beta.12"] {
+            assert!(version.len() <= MAX_VERSION_LEN, "{version}");
+        }
+    }
+
     fn settings() -> WireSettings {
         WireSettings {
             exposure_s: 2.,

@@ -71,6 +71,10 @@ steps.
 The packages are reproducible for the same executables: entries are sorted and dated at
 `SOURCE_DATE_EPOCH`, by default the last commit's time.
 
+The `.deb` carries the version with `~` in place of `-` (`1.0.0~rc.1`), so that Debian orders
+pre-releases before their release (TD-151); `test_package.py` checks it
+(`python3 -m unittest discover -s tools/packaging -p 'test_*.py'`, also run by CI).
+
 ## What each package does
 
 - **Windows installer:** installs under `%LOCALAPPDATA%\Programs\karasu-slicer`; a Start menu
