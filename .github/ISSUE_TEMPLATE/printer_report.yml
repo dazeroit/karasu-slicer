@@ -1,0 +1,99 @@
+name: Printer report
+description: How karasu-slicer's files worked on your printer, whether they worked or not.
+title: "Printer report: "
+labels: [printer]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for trying karasu-slicer on your printer. Each report helps check the printers
+        of the built-in catalog: the
+        [table of supported printers](https://github.com/dazeroit/karasu-slicer#supported-printers)
+        records whose image orientation has been checked and which have printed karasu-slicer's
+        files. One printer per report; a print that worked is as useful to report as one that
+        did not.
+
+        **Checking the orientation.** Before a long print, print a small part placed near one
+        corner of the plate, with raised letters on its top face. In karasu-slicer the plate's
+        front edge carries the "Front" tab. Stand the printed part as it stood on the plate: if
+        the letters read backwards, the image is mirrored; if they read correctly but the part
+        printed at another corner, the image is turned.
+
+        A problem with karasu-slicer itself, such as a crash or a wrong result in the application,
+        belongs in a [bug report](https://github.com/dazeroit/karasu-slicer/issues/new?template=bug_report.yml).
+  - type: input
+    id: version
+    attributes:
+      label: karasu-slicer version
+      description: Help > About karasu-slicer, or `karasu-cli --version`.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: printer
+    attributes:
+      label: Printer
+      description: As karasu-slicer names it in its list of printers.
+      placeholder: Elegoo Saturn 4
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File format
+      description: The extension of the file karasu-slicer wrote.
+      placeholder: .goo
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Printer firmware version
+      description: If the printer shows it, usually in its settings or "About" screen.
+  - type: dropdown
+    id: opened
+    attributes:
+      label: Did the printer accept the file?
+      options:
+        - "Yes: it listed the file and started printing"
+        - "No: it did not list the file, or refused it"
+        - "Partly: it listed the file but showed wrong information"
+    validations:
+      required: true
+  - type: dropdown
+    id: orientation
+    attributes:
+      label: Image orientation
+      description: Checked as described above.
+      options:
+        - "Correct: the letters read correctly and the part printed where it lay"
+        - "Mirrored: the letters read backwards"
+        - "Turned: the letters read correctly, but the part printed at another corner"
+        - "Not checked"
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Print result
+      options:
+        - Printed completely
+        - Printed, with defects described below
+        - Did not finish
+        - Not printed
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: >-
+        What the printer showed (preview image, layer count, print time), the resin and the
+        layer height, and any defect. Photos of the printed part help.
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: >-
+        If you can, attach the project (.karasu) or the printer file (compress it into a .zip if
+        GitHub refuses it). Share only files you have the right to share.
