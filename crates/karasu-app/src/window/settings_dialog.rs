@@ -754,10 +754,7 @@ impl SettingsDialog {
         }
         let typing = self.hex.as_ref().is_some_and(|(field, _)| *field == id);
         let mut text = if typing {
-            self.hex
-                .as_ref()
-                .map(|(_, t)| t.clone())
-                .unwrap_or_default()
+            self.hex.as_ref().map_or_default(|(_, t)| t.clone())
         } else {
             hex(*colour)
         };

@@ -814,8 +814,7 @@ fn plan_with(
             .as_ref()
             .and_then(|m| m.preparation.objects.get(m.index))
             .and_then(|p| p.as_ref().ok())
-            .map(karasu_project::pipeline::ObjectPreparation::drain_cylinders)
-            .unwrap_or_default();
+            .map_or_default(karasu_project::pipeline::ObjectPreparation::drain_cylinders);
         candidates(
             surface,
             mesh,
@@ -1057,14 +1056,13 @@ fn plan_braces(
         &model.braces,
         &|_| stop.load(Ordering::Relaxed),
     )
-    .map(|planned| {
+    .map_or_default(|planned| {
         planned
             .into_iter()
             .filter(|p| p.skipped.is_none())
             .map(|p| p.brace)
             .collect()
     })
-    .unwrap_or_default()
 }
 
 /// The document `document` (the kept supports) with `outcome`'s supports and braces added, as

@@ -1145,15 +1145,13 @@ fn minima_of(
         },
         (None, None) => return Vec::new(),
     };
-    found
-        .map(|minima| {
-            minima
-                .iter()
-                .filter(|m| !m.on_plate)
-                .map(|m| m.point.coordinates())
-                .collect()
-        })
-        .unwrap_or_default()
+    found.map_or_default(|minima| {
+        minima
+            .iter()
+            .filter(|m| !m.on_plate)
+            .map(|m| m.point.coordinates())
+            .collect()
+    })
 }
 
 #[cfg(test)]

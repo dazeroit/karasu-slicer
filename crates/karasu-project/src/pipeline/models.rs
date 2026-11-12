@@ -145,7 +145,7 @@ pub struct NameFields<'a> {
 /// trimmed. Without an extension; never empty (`model` then).
 #[must_use]
 pub fn model_file_name(pattern: &str, fields: &NameFields<'_>) -> String {
-    let number = fields.number.map(|n| n.to_string()).unwrap_or_default();
+    let number = fields.number.map_or_default(|n| n.to_string());
     let text = pattern
         .replace("{project}", fields.project)
         .replace("{plate}", fields.plate)

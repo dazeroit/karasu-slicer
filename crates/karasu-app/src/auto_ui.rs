@@ -252,18 +252,14 @@ fn plan_input(
     // place the plan leaves as it is.
     let replaced = workspace
         .supports(index)
-        .map(|d| replaced(d, &surface, &to_world, values.place))
-        .unwrap_or_default();
+        .map_or_default(|d| replaced(d, &surface, &to_world, values.place));
     let document = workspace.supports(index).map(|d| without(d, &replaced));
-    let kept_tips = document
-        .as_ref()
-        .map(|d| {
-            d.supports
-                .iter()
-                .map(|s| to_world.point(s.tip_mm))
-                .collect()
-        })
-        .unwrap_or_default();
+    let kept_tips = document.as_ref().map_or_default(|d| {
+        d.supports
+            .iter()
+            .map(|s| to_world.point(s.tip_mm))
+            .collect()
+    });
     let shared = preparation
         .shared(workspace, index)
         .map(|(shared, _)| shared);

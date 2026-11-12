@@ -528,14 +528,12 @@ impl Library {
             .printer(printer_id)
             .and_then(|p| p.based_on.as_ref())
             .map(|b| b.id.clone());
-        let official: Vec<CatalogSetting> = model
-            .map(|model| {
-                self.catalog
-                    .settings_for(&model, catalog_id)
-                    .cloned()
-                    .collect()
-            })
-            .unwrap_or_default();
+        let official: Vec<CatalogSetting> = model.map_or_default(|model| {
+            self.catalog
+                .settings_for(&model, catalog_id)
+                .cloned()
+                .collect()
+        });
         for setting in &official {
             if let Some(id) = self.copy_setting(setting, printer_id, &resin)? {
                 added.settings.push(id);

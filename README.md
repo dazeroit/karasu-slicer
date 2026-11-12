@@ -85,7 +85,7 @@ with karasu-slicer** says whether karasu-slicer's files have been printed on tha
 
 ## Building
 
-Prerequisites: the stable Rust toolchain (Cargo, rustfmt and Clippy; developed with Rust 1.99).
+Prerequisites: the stable Rust toolchain, 1.100 or later (Cargo, rustfmt and Clippy).
 On Windows, the MSVC build tools. On Linux, a Vulkan or OpenGL (EGL) driver and an X11 or Wayland
 session to run the application.
 

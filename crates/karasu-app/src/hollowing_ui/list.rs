@@ -139,9 +139,8 @@ impl HollowingUi {
         let Some(object) = index else {
             return Vec::new();
         };
-        let verdicts: Vec<(Option<String>, Vec<String>)> = preparation
-            .verdicts(workspace, object)
-            .map(|v| {
+        let verdicts: Vec<(Option<String>, Vec<String>)> =
+            preparation.verdicts(workspace, object).map_or_default(|v| {
                 v.iter()
                     .map(|v| {
                         (
@@ -150,8 +149,7 @@ impl HollowingUi {
                         )
                     })
                     .collect()
-            })
-            .unwrap_or_default();
+            });
         let applied = workspace
             .holes(object)
             .into_iter()

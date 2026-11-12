@@ -239,8 +239,7 @@ impl Session {
     fn support_ids(&self) -> Vec<u64> {
         self.workspace
             .supports(0)
-            .map(|d| d.supports.iter().map(|s| s.id).collect())
-            .unwrap_or_default()
+            .map_or_default(|d| d.supports.iter().map(|s| s.id).collect())
     }
 
     /// Support `id`'s tip X on the plate.
