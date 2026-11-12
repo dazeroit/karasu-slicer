@@ -109,6 +109,9 @@ published. Cost: a hardware key, about €50–60, once.
 - **The project's licence:** decided (owner, 2026-11-11, TD-145): AGPL-3.0-or-later, OSI
   approved, with a CLA that keeps commercial dual licensing possible. SignPath Foundation
   excludes commercial dual licensing, so the open-source route left is Certum Open Source.
+- **When:** decided (owner, 2026-11-12, TD-150): no certificate until the public response
+  justifies its cost; previews and the first releases are published unsigned, with
+  `SHA256SUMS` and a build provenance attestation.
 
 ## Sources (read 2026-11-10)
 

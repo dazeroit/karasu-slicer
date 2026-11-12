@@ -5644,6 +5644,51 @@ before a release. Agents work on topic branches and never push to `main` or `rel
 **Tests:** the CTB writer version of `1.2.3`, `1.2.3-rc.1` and `2.0.0-dev`, and its limit of 255
 per part.
 
+## TD-150 — Release builds and distribution
+
+**Status:** decided by the owner on 2026-11-12. The first preview, 0.1.0, waits for the owner's
+go-ahead.
+
+**Context:** the packages of TD-141 were built by hand on the owner's machines. A release made
+that way cannot show which sources it came from, and depends on one machine's state.
+
+**Decision:**
+1. A tag `vX.Y.Z` starts `.github/workflows/release.yml`. It fails unless the tag is `v` followed
+   by the version in `Cargo.toml`; it builds the release executables and the packages of
+   `tools/packaging` from the tagged commit on GitHub's runners (Windows Server 2025 with its Inno
+   Setup 6.7; Ubuntu 22.04, so the Linux executables need glibc 2.35 at most), with no cache;
+   it writes `SHA256SUMS`, records a build provenance attestation for every file and opens a
+   **draft** release with the files, the download notes (`tools/packaging/release-notes.md`) and
+   GitHub's list of merged pull requests.
+2. The owner installs the draft's packages and runs the application on real hardware before
+   publishing it. A draft that fails is not fixed by moving the tag: the next version follows.
+   Versions `0.x` and those with a pre-release suffix are published as pre-releases.
+3. GitHub Releases is the only channel for now. winget and Flathub are considered after 1.0, if
+   users ask for them; the Microsoft Store and an APT repository only on demand.
+4. No code-signing certificate until the public response justifies its cost (owner, 2026-11-12):
+   the Windows files stay unsigned and the release notes explain Windows' warning. Certum Open
+   Source Code Signing remains the route when it is wanted
+   ([research](research/CODE-SIGNING-RESEARCH.md)); its key cannot be used unattended, so the
+   owner would sign the executables and the installer on Windows between the build and the
+   draft.
+5. No automatic update. A check for a newer release, off until the user turns it on, is a later
+   change of the application.
+
+**Implementation:** the build jobs run with a read-only token and no secrets, like CI; only the
+draft job, for tags, may write releases and attestations. Pull requests that change
+`release.yml` or `tools/packaging`, and a manual run, build the packages as workflow artifacts
+(kept 7 days) without releasing anything. Actions: GitHub's own, pinned to commits
+(`actions/checkout` v7.0.1, `actions/setup-python` v7.1.0, `actions/upload-artifact` v7.0.2,
+`actions/download-artifact` v8.0.2, `actions/attest-build-provenance` v4.2.2). Users check a
+download with `sha256sum --check` and `gh attestation verify`.
+
+**Alternatives:** building and uploading the packages by hand leaves no record of their sources;
+publishing straight from the tag skips the trial on real hardware; a signing certificate now
+costs money before anyone has asked for the software.
+
+**Tests:** the workflow's pull request run builds every package from the branch; the artifacts
+are installed by hand before the first tag.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

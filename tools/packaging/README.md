@@ -32,7 +32,16 @@ application and the packages use.
   `tools/assets/make_splash.ps1 -Master <file>` writes `assets/ui/images/splash.png` (see
   `docs/UI-DESIGN.md`, Startup splash): resampled to 1440 × 810, square and opaque.
 
-## Building
+## Releases
+
+Releases are built by `.github/workflows/release.yml` (TD-150) on GitHub's runners: a tag
+`vX.Y.Z` builds every package below from the tagged commit and opens a draft release with them,
+`SHA256SUMS`, a build provenance attestation and `release-notes.md` (the download notes; `{version}`
+is replaced). Pull requests that change this folder or the workflow build the same packages as
+workflow artifacts. [docs/RELEASE-PROCESS.md](../../docs/RELEASE-PROCESS.md) describes the
+steps.
+
+## Building by hand
 
 1. Build the release executables on each platform:
 
@@ -86,7 +95,9 @@ licence, followed by the standard texts of those licences.
 ## Known limits
 
 - `karasu-cli.exe` carries no icon; `karasu.exe` does.
-- No signing (Windows Authenticode, Linux package signatures): see
+- No signing (Windows Authenticode, Linux package signatures) until the public response
+  justifies a certificate (TD-150): see
   [docs/research/CODE-SIGNING-RESEARCH.md](../../docs/research/CODE-SIGNING-RESEARCH.md).
+  Releases carry `SHA256SUMS` and a build provenance attestation instead.
 - The command line is not added to `PATH` by the Windows installer.
 - The `resin-cli` compatibility alias is not packaged.

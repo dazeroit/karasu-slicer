@@ -1,0 +1,187 @@
+# Release builds (TD-150): the packages of tools/packaging built from one commit on GitHub's
+# runners. A tag vX.Y.Z (only the owner can create one, TD-149) builds them and opens a draft
+# release with the packages, SHA256SUMS and a build provenance attestation; the owner tries the
+# draft's packages and publishes it. Pull requests that change the packaging, and a manual run,
+# build the packages as workflow artifacts without releasing anything.
+#
+# Security: the build jobs run with a read-only token and without secrets, as CI does, and use no
+# cache, so a release is built from the tagged sources alone. Only the draft job, which runs for
+# tags alone, can write releases and attestations. Only GitHub's own actions are used, pinned to
+# commits.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    branches: [main, 'release/**']
+    paths:
+      - .github/workflows/release.yml
+      - tools/packaging/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read the version and check the tag
+        id: version
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::The tag $GITHUB_REF_NAME does not match the version $version in Cargo.toml"
+            exit 1
+          fi
+          case "$version" in 0.*|*-*) prerelease=true ;; *) prerelease=false ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Version $version, pre-release: $prerelease"
+
+  windows:
+    name: Windows packages
+    needs: version
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Keep the repository's line endings
+        run: git config --global core.autocrlf false
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+      - name: Install Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Fetch the crates
+        run: cargo fetch --locked
+      - name: Build the release executables
+        run: cargo build --release --locked -p karasu-app -p karasu-cli
+      - name: Assemble the ZIP and the installer's folder
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: python tools/packaging/package.py windows target/release dist
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          $stage = Join-Path $PWD "dist\karasu-slicer-$env:VERSION-windows-x64"
+          & $iscc /Q "/DVersion=$env:VERSION" "/DSource=$stage" "/DOutput=$PWD\dist" tools\packaging\karasu.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item -Recurse -Force $stage
+          Get-ChildItem dist | Format-Table Name, Length
+      - name: Keep the packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages-windows
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  linux:
+    name: Linux packages
+    needs: version
+    # The oldest supported runner, so the executables need the oldest C library (glibc 2.35).
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+      - name: Install Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Fetch the crates
+        run: cargo fetch --locked
+      - name: Build the release executables
+        run: cargo build --release --locked -p karasu-app -p karasu-cli
+      - name: Assemble the tar.gz and the .deb
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          python tools/packaging/package.py linux target/release dist
+          dpkg-deb --field dist/*.deb Version Depends
+      - name: Keep the packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages-linux
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  draft:
+    name: Draft release
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [version, windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Collect the packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: dist
+      - name: Write the checksums
+        working-directory: dist
+        run: |
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Attest the packages' provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - name: Open the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed "s/{version}/$VERSION/g" tools/packaging/release-notes.md > "$RUNNER_TEMP/notes.md"
+          flags=(--draft --verify-tag --generate-notes --title "karasu-slicer $VERSION" --notes-file "$RUNNER_TEMP/notes.md")
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" dist/* -R "$GITHUB_REPOSITORY" "${flags[@]}"
