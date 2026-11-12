@@ -91,6 +91,7 @@ git diff --check
 ```
 
 Native Windows runs follow [tools/windows-native/README.md](tools/windows-native/README.md).
+Pull requests run these checks on Linux and Windows (`.github/workflows/ci.yml`).
 
 ## Repository layout
 
@@ -110,6 +111,7 @@ Native Windows runs follow [tools/windows-native/README.md](tools/windows-native
 - [docs/UI-DESIGN.md](docs/UI-DESIGN.md): the interface's design rules.
 - [docs/TECHNOLOGY-DECISIONS.md](docs/TECHNOLOGY-DECISIONS.md): decisions and open questions.
 - [docs/TEST-STRATEGY.md](docs/TEST-STRATEGY.md): how the software is tested.
+- [docs/RELEASE-PROCESS.md](docs/RELEASE-PROCESS.md): branches, versions and releases.
 - [docs/MILESTONE-NOTES.md](docs/MILESTONE-NOTES.md): what each engine milestone added.
 - [docs/CATALOG-SOURCES.md](docs/CATALOG-SOURCES.md): the printer catalog's sources and limits.
 - [docs/FUZZ-CAMPAIGNS.md](docs/FUZZ-CAMPAIGNS.md): fuzz target protocols and campaign records.

@@ -18,8 +18,15 @@ be.
 
 ## Supported versions
 
-karasu-slicer has no stable release yet. Fixes go into the `main` branch, and into the latest
-release once releases are published.
+| Version | Supported |
+|---|---|
+| `main` | yes |
+| 0.x previews | no: fixes ship in the next preview |
+
+karasu-slicer has no stable release yet. From 1.0, the latest series receives every fix and the
+previous series receives security fixes for three months after the first release of the next
+major version ([docs/RELEASE-PROCESS.md](docs/RELEASE-PROCESS.md#supported-series)); this table
+lists them.
 
 ## Scope
 

@@ -187,7 +187,17 @@ Contributions follow the same method (`CONTRIBUTING.md`, `CLA.md`).
 Inspect Git status before editing. Preserve user files and unrelated changes. Do not commit, push,
 change remotes, or create remote repositories unless explicitly asked. Commit messages must be
 English, descriptive, and imperative. Commit messages must not contain `Co-Authored-By:` trailers
-or any other reference to AI agents or assistants. The project is licensed AGPL-3.0-or-later
+or any other reference to AI agents or assistants.
+
+Branches and releases follow [docs/RELEASE-PROCESS.md](docs/RELEASE-PROCESS.md) (owner,
+2026-11-12, TD-149). Work on a topic branch (`feat/…`, `fix/…`, `docs/…`) and open a pull request
+into `main`; never commit or push to `main` or `release/*` directly, never create, move or delete
+`v*` tags, and never merge a pull request, unless the owner asks for that specific action. A pull
+request's title and description become the squash commit's message, so they follow the same rules
+as commit messages. Changes to a release branch are fixes carried from `main` with
+`git cherry-pick -x`, or catalog-level additions, as the process describes.
+
+The project is licensed AGPL-3.0-or-later
 (owner, 2026-11-11, TD-145; `LICENSE`); its name and logo are trademarks, not licensed with the
 code (`TRADEMARKS.md`), and external contributions need the CLA (`CONTRIBUTING.md`). Never
 change the licence, relicense code or add code under an incompatible licence without explicit

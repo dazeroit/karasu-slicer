@@ -10,6 +10,19 @@ Thank you for considering a contribution to karasu-slicer.
 - Run the checks listed in the [README](README.md#checks-before-a-change) before you send a
   change.
 
+## Branches and pull requests
+
+Branches, versions and releases follow [docs/RELEASE-PROCESS.md](docs/RELEASE-PROCESS.md). In
+short:
+
+- Base your work on `main`, in a branch of your fork, and open a pull request into `main`. A fix
+  for a released series goes into `main` first; the maintainer carries it to the release branch.
+- Keep one change per pull request. Its title is an English sentence in the imperative ("Fix
+  the raft outline on rotated models"); its description says what changes and why. They become
+  the commit's message when the pull request is squash-merged.
+- The checks named **Linux** and **Windows** (CI) and **CLA** must pass, and the branch must be
+  up to date with `main`.
+
 ## Licence of contributions
 
 karasu-slicer is licensed under the GNU Affero General Public License, version 3 or any later
