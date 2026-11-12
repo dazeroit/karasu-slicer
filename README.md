@@ -25,6 +25,14 @@ geometric correctness, numerical robustness, deterministic output and memory saf
 - **Printers:** the built-in catalog below, and custom printers described by their panel and
   file format.
 
+<p align="center">
+  <img src="docs/images/supports-screenshot.png" alt="The karasu-slicer window: a miniature on the plate of an Anycubic Photon P1, held by automatic supports, with the Supports tools and the Automatic panel open" width="900">
+  <br>
+  <sub>Automatic supports on a miniature. Model:
+  <a href="https://www.printables.com/model/1746548-female-barbarian-warrior-miniature-fantasy-tableto">Female Barbarian Warrior Miniature</a>
+  (Printables, <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>).</sub>
+</p>
+
 The software is under active development and has not been released yet; see
 [ROADMAP.md](ROADMAP.md) for the milestones and their status.
 
