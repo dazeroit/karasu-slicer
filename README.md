@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/dazeroit/karasu-slicer/releases"><img src="https://img.shields.io/github/v/release/dazeroit/karasu-slicer?include_prereleases&amp;label=release" alt="Latest release"></a>
   <a href="https://github.com/dazeroit/karasu-slicer/actions/workflows/ci.yml"><img src="https://github.com/dazeroit/karasu-slicer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="Licence: AGPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-informational" alt="Platforms: Windows and Linux">
@@ -33,8 +34,9 @@ geometric correctness, numerical robustness, deterministic output and memory saf
   (Printables, <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>).</sub>
 </p>
 
-The software is under active development and has not been released yet; see
-[ROADMAP.md](ROADMAP.md) for the milestones and their status.
+Download it for Windows or Linux from the
+[releases page](https://github.com/dazeroit/karasu-slicer/releases). Versions 0.x are previews,
+released while development continues; [ROADMAP.md](ROADMAP.md) lists the milestones.
 
 ## Supported printers
 

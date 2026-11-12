@@ -1382,6 +1382,18 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        application smoke runs pass (Vulkan 12.9 ms, OpenGL 12.4 ms, FX-03 16.4 ms mean; splash
        1.51 s, opaque). It covers everything since 84dac6f: the licence and Help › About
        (664337b), the long profile menus (1313a77) and the resin catalog (TD-146, 907f450).
+     - **Preview 0.1.0 (owner, 2026-11-12):** the first release, published from `main` as a
+       GitHub pre-release ([v0.1.0](https://github.com/dazeroit/karasu-slicer/releases/tag/v0.1.0),
+       tag on db26153) with every printer of the catalog, so that users can report how each one
+       prints (the printer report form, 9caf015). Rust 1.100 came out the same day; its new
+       Clippy lints were fixed and the toolchains moved to it (db26153). **Native Windows
+       validation of db26153** (`validate.ps1 -IncludeExamples -IncludeApp`, a clean snapshot of
+       1,179 files; rustc 1.100.0 MSVC): no failed command; Debug and Release each pass 1,759
+       tests with 25 ignored (Linux 1,761); the print examples match the Linux output byte for
+       byte apart from the PP1's `os` field; the three application smoke runs pass (Vulkan
+       12.8 ms, OpenGL 12.6 ms, FX-03 16.4 ms mean). The release workflow built the packages from
+       the tag; their checksums and build-provenance attestations were verified, and the portable
+       ZIP and the tar.gz ran (command line and application smoke test).
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the
