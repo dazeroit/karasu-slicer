@@ -30,7 +30,7 @@ exported snapshot, not an independently changing live checkout.
 From WSL, invoke Windows PowerShell explicitly. Adapt the distribution name and checkout path:
 
 ```console
-/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -ExecutionPolicy Bypass -File '\\wsl.localhost\Ubuntu\develop\dazero\karasu-slicer-analysis\tools\windows-native\validate.ps1' -InputRoot '\\wsl.localhost\Ubuntu\tmp\karasu-native-m5' -IncludeExamples
+/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -ExecutionPolicy Bypass -File '\\wsl.localhost\Ubuntu\path\to\karasu-slicer\tools\windows-native\validate.ps1' -InputRoot '\\wsl.localhost\Ubuntu\tmp\karasu-native-m5' -IncludeExamples
 ```
 
 `-ExecutionPolicy Bypass` applies only to this PowerShell process so the reviewed validation script

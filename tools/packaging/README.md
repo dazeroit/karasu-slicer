@@ -1,7 +1,7 @@
 # Packaging
 
-The tools that turn release executables into karasu-slicer's packages. The packages are a
-prototype and are not signed. Each carries karasu-slicer's licence (`LICENSE.txt`, AGPL-3.0 or
+The tools that turn release executables into karasu-slicer's packages. The packages are not
+signed. Each carries karasu-slicer's licence (`LICENSE.txt`, AGPL-3.0 or
 later), its trademark note (`TRADEMARKS.txt`) and the third-party notices. The design
 and its measurements are in TD-141 ([docs/TECHNOLOGY-DECISIONS.md](../../docs/TECHNOLOGY-DECISIONS.md)).
 

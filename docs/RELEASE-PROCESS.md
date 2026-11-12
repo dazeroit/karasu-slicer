@@ -97,7 +97,9 @@ Nightly builds are not published (TD-151).
 To release a version:
 
 1. The commit that sets the version has passed CI on both systems and the complete native Windows
-   validation ([tools/windows-native](../tools/windows-native/README.md)).
+   validation ([tools/windows-native](../tools/windows-native/README.md)), and `cargo audit`
+   reports no vulnerability in the crates compiled into the executables
+   ([TD-152](TECHNOLOGY-DECISIONS.md#td-152--dependency-audit-before-the-first-release)).
 2. The owner creates the annotated tag and pushes it:
    `git tag -a vX.Y.Z -m "karasu-slicer X.Y.Z"`, then `git push origin vX.Y.Z`.
 3. The tag starts `.github/workflows/release.yml` ([TD-150](TECHNOLOGY-DECISIONS.md#td-150--release-builds-and-distribution)).
