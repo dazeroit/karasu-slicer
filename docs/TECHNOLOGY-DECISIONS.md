@@ -5719,6 +5719,30 @@ pre-release forms fit; a 31-character version fails the build (checked by hand);
 `tools/packaging/test_package.py`, run by CI, checks the Debian versions and that `dpkg` orders
 alpha, beta, rc, release, patch, `-dev` and the next release as Semantic Versioning does.
 
+## TD-152 — Dependency audit before the first release
+
+**Status:** done on 2026-11-12, at the owner's request, in the review before the first release.
+
+**Findings** (`cargo audit`, RustSec database of 2026-11-12; "shipped" means compiled into
+`karasu` or `karasu-cli` for Windows x64 or Linux x86-64, checked with `cargo tree --target`):
+
+| Advisory | Crate | Shipped | Action |
+|---|---|---|---|
+| RUSTSEC-2026-0384, vulnerability (race in `time::Interval`) | `tokio` 1.54.0, also yanked | no: only `wasm-bindgen-futures` for the web target | 1.54.1 |
+| RUSTSEC-2026-0486, unsound (`xattr` with an empty buffer) | `rustix` 1.1.5 | no | 1.1.6 |
+| yanked | `clipboard-win` 5.4.1 (egui's clipboard) | Windows | 5.4.3 |
+| yanked | `async-executor` 1.14.0 (Linux accessibility) | Linux | 1.14.1 |
+| RUSTSEC-2026-0370/0371/0372, unmaintained | `zvariant`, `zvariant_derive`, `zbus_names` | Linux (screen-reader support through AccessKit) | kept, as in the M6.0 review; no replacement upstream yet |
+
+**Decision:** the four crates are moved to the patch versions above with
+`cargo update --precise`; no crate is added or removed (401 packages), and Cargo resolves `errno`
+and `rustix` to the `windows-sys` 0.52 already in the lock file. After the update `cargo audit`
+reports no vulnerability, only the three unmaintained warnings. Dependabot reported none of these
+findings, so `cargo audit` stays part of the review before every release.
+
+**Tests:** the complete checks on Linux and CI on Linux and Windows build and test the updated
+lock file.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

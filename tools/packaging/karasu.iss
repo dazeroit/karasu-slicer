@@ -1,4 +1,4 @@
-; karasu-slicer's Windows installer (TD-141, packaging prototype), for Inno Setup 6.
+; karasu-slicer's Windows installer (TD-141, TD-150), for Inno Setup 6.
 ;
 ; Installs for the current user, without administrator rights: the application and the command
 ; line under %LOCALAPPDATA%\Programs\karasu-slicer, a Start menu entry (and a desktop one on

@@ -18,8 +18,8 @@ resin-core = { package = "karasu-core", path = "../karasu-slicer/crates/karasu-c
 ```
 
 Only naming changes: geometry APIs, units, algorithms, formats, version, diagnostics semantics and
-resource policies remain intact. The checkout directory is `/develop/dazero/karasu-slicer-analysis`; external
-historical research paths retain their original names.
+resource policies remain intact. The checkout directory may have any name; external historical
+research paths retain their original names.
 The existing `reference-fixtures` tool and version-1 fixture dataset/STL headers preserve their
 historical identifiers and exact bytes. Archived research/validation records retain original names;
 current API documentation and commands use Karasu names. See TD-033 for the migration boundary.

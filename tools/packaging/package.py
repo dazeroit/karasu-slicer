@@ -1,4 +1,4 @@
-"""Assemble karasu-slicer's packages from built executables (TD-141, packaging prototype).
+"""Assemble karasu-slicer's packages from built executables (TD-141, TD-150).
 
 Windows: a portable ZIP, and the staged folder `tools/packaging/karasu.iss` (Inno Setup) builds
 the per-user installer from. Linux: a tar.gz with `install.sh` (into `~/.local` by default), and a
@@ -42,7 +42,10 @@ ICON_SIZES = (16, 24, 32, 48, 64, 128, 256, 512)
 README = """karasu-slicer {version}
 {rule}
 
-A native MSLA/LCD resin slicer. This is a packaging prototype (M6.7).
+A native MSLA/LCD resin slicer for Windows and Linux. Before printing, check whether the image
+orientation of your printer has been verified (README, Supported printers):
+https://github.com/dazeroit/karasu-slicer#supported-printers. Report problems at
+https://github.com/dazeroit/karasu-slicer/issues.
 
 - karasu{exe}: the desktop application. Open a project (.karasu) or a model (STL, 3MF, OBJ) by
   passing it on the command line, dropping it on the window or from the File menu.
@@ -305,15 +308,16 @@ def deb(binaries: Path, output: Path, mtime: int) -> None:
     control = f"""Package: {NAME}
 Version: {deb_version(version())}
 Architecture: amd64
-Maintainer: karasu-slicer project <karasu-slicer@invalid>
+Maintainer: Ivan Maruca <2752243+skullab@users.noreply.github.com>
 Installed-Size: {size_kib}
 Depends: libc6 (>= {newest}), libgcc-s1, libxkbcommon0, libvulkan1 | libegl1
 Recommends: libwayland-client0, libxkbcommon-x11-0, libx11-6, libxcursor1, libxi6, libxrandr2, xdg-desktop-portal
 Section: graphics
 Priority: optional
+Homepage: https://github.com/dazeroit/karasu-slicer
 Description: native MSLA/LCD resin slicer
  karasu-slicer prepares models for MSLA/LCD resin printers: supports, hollowing,
- drain holes and slicing into printer files. This is a packaging prototype.
+ drain holes and slicing into printer files.
 """
     (stage / "DEBIAN").mkdir()
     (stage / "DEBIAN" / "control").write_text(control)
