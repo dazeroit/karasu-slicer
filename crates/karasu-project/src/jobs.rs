@@ -542,8 +542,7 @@ impl ModelExportJob {
                     (PlateFiles::PerModel(paths), Some((number, _))) => paths
                         .iter()
                         .find(|(i, _)| *i + 1 == number)
-                        .map(|(_, p)| p.clone())
-                        .unwrap_or_default(),
+                        .map_or_default(|(_, p)| p.clone()),
                     (PlateFiles::PerModel(_), None) => std::path::PathBuf::new(),
                 };
                 let mut observer = ExportPhases {

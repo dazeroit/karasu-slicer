@@ -794,8 +794,7 @@ fn file_table(ui: &mut egui::Ui, planned: &[Planned], states: &[State]) {
                         let name = file
                             .file
                             .file_name()
-                            .map(|n| n.to_string_lossy().into_owned())
-                            .unwrap_or_default();
+                            .map_or_default(|n| n.to_string_lossy().into_owned());
                         ui.label(name);
                         let (text, colour) = match states.get(k) {
                             None | Some(State::Waiting) => (tr!("export-all-waiting"), weak),

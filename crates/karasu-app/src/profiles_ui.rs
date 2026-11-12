@@ -1347,14 +1347,13 @@ mod tests {
                 labels = output
                     .platform_output
                     .accesskit_update
-                    .map(|update| {
+                    .map_or_default(|update| {
                         update
                             .nodes
                             .iter()
                             .filter_map(|(_, node)| node.label().map(str::to_owned))
                             .collect()
-                    })
-                    .unwrap_or_default();
+                    });
             }
             let count = |label: String| labels.iter().filter(|l| **l == label).count();
             assert_eq!(

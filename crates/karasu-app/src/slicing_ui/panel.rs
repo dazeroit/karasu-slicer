@@ -36,16 +36,14 @@ fn printer_formats(
     reference: bool,
 ) -> Vec<String> {
     let supported: Vec<String> = format_ids().split(", ").map(str::to_owned).collect();
-    let mut formats: Vec<String> = printer
-        .map(|printer| {
-            printer
-                .format_ids
-                .iter()
-                .filter(|f| supported.contains(f) && f.as_str() != REFERENCE_FORMAT)
-                .cloned()
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut formats: Vec<String> = printer.map_or_default(|printer| {
+        printer
+            .format_ids
+            .iter()
+            .filter(|f| supported.contains(f) && f.as_str() != REFERENCE_FORMAT)
+            .cloned()
+            .collect()
+    });
     if reference && printer.is_some() {
         formats.push(REFERENCE_FORMAT.to_owned());
     }

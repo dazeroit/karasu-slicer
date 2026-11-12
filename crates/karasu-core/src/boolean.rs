@@ -260,9 +260,9 @@ fn specks(out: &output::Output) -> (Vec<bool>, usize) {
     // Each body's box, by its root.
     let mut boxes: std::collections::HashMap<u32, ([i64; 3], [i64; 3])> =
         std::collections::HashMap::new();
-    for v in 0..out.vertices.len() {
+    for (v, vertex) in out.vertices.iter().enumerate() {
         let r = root(&mut parent, u32::try_from(v).unwrap_or(u32::MAX));
-        let c = out.vertices[v].coordinates();
+        let c = vertex.coordinates();
         let (lo, hi) = boxes.entry(r).or_insert((c, c));
         for ((lo, hi), &value) in lo.iter_mut().zip(hi.iter_mut()).zip(&c) {
             *lo = (*lo).min(value);
