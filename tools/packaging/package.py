@@ -46,7 +46,7 @@ A native MSLA/LCD resin slicer for Windows and Linux. Before printing, check whe
 orientation of your printer has been verified (README, Supported printers):
 https://github.com/dazeroit/karasu-slicer#supported-printers. Report problems at
 https://github.com/dazeroit/karasu-slicer/issues.
-
+{warning}
 - karasu{exe}: the desktop application. Open a project (.karasu) or a model (STL, 3MF, OBJ) by
   passing it on the command line, dropping it on the window or from the File menu.
 - karasu-cli{exe}: the command line (karasu-cli --help).
@@ -60,6 +60,24 @@ trademarks, not licensed with the code (TRADEMARKS.txt).
 
 THIRD-PARTY-NOTICES.txt lists the open-source crates compiled into the executables, with their
 licences.
+"""
+
+# The warning every pre-release's README carries, in the words of tools/packaging/beta-warning.md
+# (the release notes) and of the repository's README.
+BETA_WARNING = """
+WARNING: karasu-slicer is beta software: use it with care. It has been tested on few printers
+so far, and a defect in the files it writes can make a print fail: a part mirrored or turned,
+layers exposed too long or too short, a model that comes loose from the plate. A failed print
+can leave cured resin in the vat; when the next print presses on it, it can tear the release
+film or crack the printer's screen.
+
+- On a printer whose image orientation is not verified, print a small test part first.
+- Watch the first layers of a print, and stop the printer if something looks wrong.
+- After a failed print, check the vat and its film for cured pieces before printing again.
+- Check the exposure, lift and layer settings against the recommendations of the printer's and
+  the resin's makers.
+
+karasu-slicer is provided without any warranty: you use it at your own risk.
 """
 
 DESKTOP = """[Desktop Entry]
@@ -155,6 +173,16 @@ def deb_version(semver: str) -> str:
     return semver.replace("-", "~")
 
 
+def is_pre_release(semver: str) -> bool:
+    """Whether a version is a pre-release, not yet declared stable (TD-151).
+
+    Versions before 1.0 are previews and a suffix (`-dev`, `-alpha.N`, `-beta.N`, `-rc.N`) marks
+    a pre-release; build metadata (`+...`) does not. `.github/workflows/release.yml` applies the
+    same rule to publish the release as a GitHub pre-release with the beta warning.
+    """
+    return semver.startswith("0.") or "-" in semver.split("+", 1)[0]
+
+
 def epoch() -> int:
     if "SOURCE_DATE_EPOCH" in os.environ:
         return int(os.environ["SOURCE_DATE_EPOCH"])
@@ -164,9 +192,12 @@ def epoch() -> int:
     return int(out.stdout.strip())
 
 
-def readme(exe: str) -> bytes:
-    title = f"karasu-slicer {version()}"
-    return README.format(version=version(), rule="=" * len(title), exe=exe).encode()
+def readme(exe: str, semver: str | None = None) -> bytes:
+    """The package's README, with the beta warning while the version is a pre-release."""
+    semver = semver or version()
+    title = f"karasu-slicer {semver}"
+    warning = BETA_WARNING if is_pre_release(semver) else ""
+    return README.format(version=semver, rule="=" * len(title), exe=exe, warning=warning).encode()
 
 
 def third_party(target: str) -> bytes:

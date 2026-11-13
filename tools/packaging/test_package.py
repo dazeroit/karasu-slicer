@@ -1,4 +1,4 @@
-"""Tests of the packaging script's version handling (TD-151).
+"""Tests of the packaging script's version handling and beta warning (TD-151).
 
 Run: python3 -m unittest discover -s tools/packaging -p 'test_*.py'
 """
@@ -28,6 +28,29 @@ class DebianVersion(unittest.TestCase):
                 result = subprocess.run(["dpkg", "--compare-versions", package.deb_version(older),
                                          "lt", package.deb_version(newer)])
                 self.assertEqual(result.returncode, 0)
+
+
+class BetaWarning(unittest.TestCase):
+    def test_previews_and_suffixed_versions_are_pre_releases(self):
+        for semver in ["0.1.0", "0.2.0-dev", "1.0.0-rc.1", "1.1.0-beta.2", "2.0.0-alpha.1"]:
+            with self.subTest(semver=semver):
+                self.assertTrue(package.is_pre_release(semver))
+
+    def test_stable_versions_are_not_pre_releases(self):
+        for semver in ["1.0.0", "1.2.3", "10.0.0", "1.0.0+build-7"]:
+            with self.subTest(semver=semver):
+                self.assertFalse(package.is_pre_release(semver))
+
+    def test_the_readme_carries_the_warning_only_before_a_stable_version(self):
+        warning = b"WARNING: karasu-slicer is beta software"
+        self.assertIn(warning, package.readme("", "0.2.0"))
+        self.assertIn(warning, package.readme(".exe", "1.1.0-rc.1"))
+        self.assertNotIn(b"WARNING", package.readme("", "1.0.0"))
+
+    def test_the_release_notes_warning_names_the_tagged_licence(self):
+        notes = (package.ROOT / "tools" / "packaging" / "beta-warning.md").read_text()
+        self.assertTrue(notes.startswith("> [!WARNING]\n"))
+        self.assertIn("/blob/v{version}/LICENSE", notes)
 
 
 if __name__ == "__main__":

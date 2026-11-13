@@ -5713,11 +5713,21 @@ are installed by hand before the first tag.
    not want a separate repository. If they come, they need a short version
    (`0.2.0-nightly.20261112` fits; the commit goes elsewhere), portable packages only, and their
    own settings and profile folders, so that they cannot change a stable installation's data.
+6. Until the software is declared stable, it warns that it is beta software, to use with care
+   (owner, 2026-11-13): a failed print can leave cured resin in the vat that tears the release
+   film or cracks the screen. The top of every pre-release's notes
+   (`tools/packaging/beta-warning.md`) and its packages' README carry the warning; a
+   pre-release is a 0.x version or one with a suffix, the rule that already makes it a GitHub
+   pre-release, so the release workflow and `package.py` add it from the version alone and a
+   stable version carries none. The repository's README carries it until the first stable
+   release, which removes it by hand.
 
 **Tests:** the GOO version field holds 23 characters and refuses 24, and the longest planned
 pre-release forms fit; a 31-character version fails the build (checked by hand);
 `tools/packaging/test_package.py`, run by CI, checks the Debian versions and that `dpkg` orders
-alpha, beta, rc, release, patch, `-dev` and the next release as Semantic Versioning does.
+alpha, beta, rc, release, patch, `-dev` and the next release as Semantic Versioning does, which
+versions are pre-releases, and that the packages' README carries the beta warning only before a
+stable version.
 
 ## TD-152 — Dependency audit before the first release
 

@@ -84,6 +84,13 @@ format, which only a major version may do, says so at the top of its release not
 order pre-releases correctly: the `.deb` writes `2.0.0~beta.1`, which Debian sorts before
 `2.0.0`.
 
+Every pre-release (the 0.x previews and every version with a suffix) is beta software and warns
+to use it with care, at the top of its release notes (`tools/packaging/beta-warning.md`) and in
+its packages' README; the release workflow and `tools/packaging/package.py` add the warning from
+the version alone. A stable version (1.0.0 and later, without a suffix) carries none. The
+repository's README carries the same warning until the first stable release, which removes it by
+hand.
+
 Nightly builds are not published (TD-151).
 
 ## Tags and releases

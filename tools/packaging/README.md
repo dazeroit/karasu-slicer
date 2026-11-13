@@ -37,9 +37,11 @@ application and the packages use.
 Releases are built by `.github/workflows/release.yml` (TD-150) on GitHub's runners: a tag
 `vX.Y.Z` builds every package below from the tagged commit and opens a draft release with them,
 `SHA256SUMS`, a build provenance attestation and `release-notes.md` (the download notes; `{version}`
-is replaced). Pull requests that change this folder or the workflow build the same packages as
-workflow artifacts. [docs/RELEASE-PROCESS.md](../../docs/RELEASE-PROCESS.md) describes the
-steps.
+is replaced). A pre-release (a 0.x version, or one with a suffix) is published as a GitHub
+pre-release, its notes open with `beta-warning.md` and its packages' README carries the same
+warning, until a version is declared stable. Pull requests that change this folder or the
+workflow build the same packages as workflow artifacts.
+[docs/RELEASE-PROCESS.md](../../docs/RELEASE-PROCESS.md) describes the steps.
 
 ## Building by hand
 
