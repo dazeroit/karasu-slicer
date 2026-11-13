@@ -181,7 +181,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sed "s/{version}/$VERSION/g" tools/packaging/release-notes.md > "$RUNNER_TEMP/notes.md"
+          # A pre-release opens with the beta warning, until a version is declared stable (TD-151).
+          {
+            if [ "$PRERELEASE" = true ]; then
+              sed "s/{version}/$VERSION/g" tools/packaging/beta-warning.md
+              echo
+            fi
+            sed "s/{version}/$VERSION/g" tools/packaging/release-notes.md
+          } > "$RUNNER_TEMP/notes.md"
           flags=(--draft --verify-tag --generate-notes --title "karasu-slicer $VERSION" --notes-file "$RUNNER_TEMP/notes.md")
           if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" dist/* -R "$GITHUB_REPOSITORY" "${flags[@]}"
