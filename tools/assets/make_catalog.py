@@ -72,6 +72,14 @@ SOURCES = {
     "A28": "https://store.anycubic.com/products/colored-uv-resin (Standard Resin, density"
            " 1.13 g/cm³), read in the Internet Archive's capture of 2026-10-14: the store refused"
            " requests on 2026-11-11",
+    "A29": "https://store.anycubic.com/products/photon-p1-max-best-large-resin-3d-printer (read"
+           " 2026-11-14: 14\" 12K LCD, 11520 × 8640 px, 24.8 × 24.8 µm, 285.5 × 214 × 300 mm;"
+           " SHA-256 c8a6628cea51dfc0b7a76b5a905f0e82ab518898c27624574c6e9500f468a500)",
+    "A30": "https://wiki.anycubic.com/en/resin-3d-printer/anycubic-photon-p1-max (read 2026-11-14:"
+           " its test files are .pp1m)",
+    "A31": "Photon Workshop 4.2.1.20's Photon P1 Max file for a test model, exported by the owner"
+           " on 2026-11-14 (SHA-256 25af4e3d38561e02…): the P1's archive with key_suffix pp1m,"
+           " 11520 × 8640 px, rotate_z 180 (TD-154)",
     "E1": "https://us.elegoo.com/products/saturn-4-ultra-16k-10inch-monochrome-lcd-resin-3d-printer",
     "E2": "https://www.elegoo.com/blogs/3d-printer-user-guide/official-suggestions-for-elegoo-resin-on-elegoo-printers"
           " (official settings spreadsheet, SHA-256 7f67e7dc1c540981e9f9927bb54d7185c5deb0086e97fac51013e8dac5e97472)",
@@ -118,7 +126,7 @@ ANYCUBIC_WORKSHOP = [
 # Elegoo printers read CHITUBOX's CTB and ELEGOO's GOO.
 VENDORS = [
     ("anycubic", "Anycubic", "https://www.anycubic.com",
-     ["photon-v1-firmware-motion", "anycubic-pp1-v3"] + ANYCUBIC_WORKSHOP,
+     ["photon-v1-firmware-motion", "anycubic-pp1-v3", "anycubic-pp1m-v3"] + ANYCUBIC_WORKSHOP,
      "anycubic-standard-resin"),
     ("elegoo", "Elegoo", "https://www.elegoo.com",
      ["ctb-v2-plain", "ctb-v3-plain", "ctb-v4-plain", "ctb-v5-plain", "goo-v3"],
@@ -148,6 +156,10 @@ PRINTERS = [
      ["anycubic-pm5s-v518"], "A7", "z_lift"),
     ("anycubic", "photon-p1", "Anycubic Photon P1", (13312, 5120), (16.8, 24.6046875), 230,
      ["anycubic-pp1-v3"], "A10, A11", "z_lift"),
+    # The Photon P1 Max (owner, 2026-11-14, TD-154): official specifications (A29), its format
+    # from Photon Workshop's file (A31).
+    ("anycubic", "photon-p1-max", "Anycubic Photon P1 Max", (11520, 8640), (24.8, 24.8), 300,
+     ["anycubic-pp1m-v3"], "A29, A30, A31", "z_lift"),
     # Phase 1 of the catalog's widening (owner, 2026-11-10): the Anycubic printers whose formats
     # karasu-slicer already writes, from the official manuals (A12-A26).
     ("anycubic", "photon-zero", "Anycubic Photon Zero", (854, 480), (115.5, 115.5), 150,
@@ -255,6 +267,11 @@ ORIENTATION = {
     "anycubic-photon-mono-x2": (False, False),
     "anycubic-photon-ultra": (False, False),
 }
+
+# Orientations taken without a verification, as (mirror_x, mirror_y): the printer stays "not
+# verified". The Photon P1 Max's file from Photon Workshop declares the P1's `rotate_z` 180 but holds
+# outlines, not an image to compare (TD-154); the P1's mirroring stores what that declares.
+ASSUMED_ORIENTATION = {"anycubic-photon-p1-max": (True, True)}
 
 # Panels that Photon Workshop declares upright (TD-153): its files give the short side as the
 # image's width and lay the plate's X along it, the part keeping its orientation in the image. The
@@ -562,7 +579,7 @@ def entries():
     for vendor, slug, model, pixels, pitch, height, formats, src, release in PRINTERS:
         pid = printer_id(vendor, slug)
         (px, py), (ux, uy) = panel(pid, pixels, pitch)
-        mirror_x, mirror_y = ORIENTATION.get(pid, (False, False))
+        mirror_x, mirror_y = ORIENTATION.get(pid, ASSUMED_ORIENTATION.get(pid, (False, False)))
         vendor_name = next(name for v, name, *_ in VENDORS if v == vendor)
         printers.append({
             "file": f"printers/{vendor}/{slug}.json",
@@ -925,6 +942,7 @@ def write_readme(materials, settings, report):
         "- elegoo-mars-4-max: no print settings, its manual showing the Mars 4 DLP's values",
         "  instead of its own bottom layers.",
         "- anycubic-photon and anycubic-photon-zero: no resin table anywhere.",
+        "- anycubic-photon-p1-max: not in Anycubic's resin table (A8, read again on 2026-11-14).",
         "",
         "**Colours with other settings** than those the entry holds, on at least one printer",
         "(E2, A8); their users adjust a copy:",
@@ -965,6 +983,12 @@ def write_readme(materials, settings, report):
         "  126.976 mm. Its Standard Resin setting is Photon Workshop's default; Anycubic's resin",
         "  page (A8) has listed the P1 since 2026-11 with other values (2 s, bottom 20 s × 1 layer,",
         "  anti-aliasing 4, one 5 mm lift at 3 mm/s), which the catalog uses for its other resins.",
+        "- The Photon P1 Max (TD-154) has no print setting: Anycubic's resin table does not list it.",
+        "  Its official 285.5 × 214 mm (A29) is smaller than its panel (285.696 × 214.272 mm);",
+        "  placement uses the panel's area. Its orientation is not verified: Photon Workshop",
+        "  4.2.1.20 writes its layers as outlines, with the P1's rotate_z 180, so the profile",
+        "  takes the P1's mirroring in X and Y. Whether its firmware reads the PW0 layer images",
+        "  karasu-slicer writes, as the P1's does, is not established.",
         "- The Photon, Photon S and Photon Mono 4K's official printable areas (115 × 65 and",
         "  132 × 80 mm) are smaller than their panels; placement uses the panel's area.",
         "- The M5 and M5s pitch along Y (24 µm) is inferred from the official 123 mm over 5120",

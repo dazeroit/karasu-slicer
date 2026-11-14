@@ -1400,6 +1400,9 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        export (`tools/orientation-check`) found no printer mirrored; ten profiles change (five
        ELEGOO turned 180 degrees, five Anycubic panels declared upright), and 33 of the 34
        printers are verified (not the Jupiter 2, for which SatelLite writes GOO version 5.2).
+     - **Photon P1 Max (owner, 2026-11-14, TD-154):** added to the catalog, not verified: the
+       `.pp1m` archive is the P1's under its own name and suffix (`anycubic-pp1m-v3`); no print
+       settings, since Anycubic's resin table does not list it.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

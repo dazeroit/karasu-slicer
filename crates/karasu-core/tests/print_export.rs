@@ -950,6 +950,60 @@ fn pp1_bands_take_their_down_speed_from_the_retract_stage_that_covers_them() {
 }
 
 #[test]
+fn the_photon_p1_max_archive_is_the_p1_archive_under_its_own_name() {
+    use karasu_core::export::{BuiltinExporter, BuiltinFormat, PixelPolicy};
+    // TD-154: Photon Workshop writes the P1 Max's `.pp1m` with the P1's members and settings,
+    // naming the machine "Anycubic Photon P1 Max" and the suffix `pp1m`.
+    let exporter = BuiltinExporter::new(BuiltinFormat::AnycubicPhotonP1Max, PixelPolicy::Exact);
+    assert_eq!(
+        (exporter.id(), exporter.extension()),
+        ("anycubic-pp1m-v3", "pp1m")
+    );
+    let mut printer = printer();
+    printer.format_ids = vec![exporter.id().into()];
+    let resin = resin();
+    let plan = schedule(0.0625, 0.125, 3);
+    let job = PrintJob::new(
+        "p1-max-job",
+        &printer,
+        &resin,
+        &plan,
+        &[],
+        JobLimits::default(),
+    )
+    .unwrap();
+    let temp = Temp::new();
+    let path = temp.0.join(format!("p1-max.{}", exporter.extension()));
+    export_machine(
+        &path,
+        &job,
+        &exporter,
+        images(&plan, &printer),
+        ExportLimits::default(),
+        &mut Cancellation::never(),
+    )
+    .unwrap();
+    let raw = fs::read(&path).unwrap();
+    let archive = karasu_core::archive::ArchiveReader::open(
+        &raw,
+        karasu_core::archive::ArchiveLimits {
+            max_entries: 1 << 16,
+            max_entry_bytes: 1 << 30,
+        },
+    )
+    .unwrap();
+    assert!(archive
+        .names()
+        .any(|name| name == "layer_images/layer_0.pw0Img"));
+    let bytes = readable(raw.clone());
+    let contains = |text: &str| bytes.windows(text.len()).any(|w| w == text.as_bytes());
+    assert!(contains(r#""key_suffix":"pp1m""#));
+    assert!(contains(r#""name":"Anycubic Photon P1 Max""#));
+    assert!(contains(r#""alias":"Anycubic Photon P1 Max""#));
+    assert!(!contains(r#""key_suffix":"pp1""#));
+}
+
+#[test]
 fn pp1_files_declare_a_half_turn_and_refuse_one_axis_mirrors() {
     use karasu_core::export::{BuiltinExporter, BuiltinFormat, PixelPolicy};
     // TD-104: Photon Workshop and ChiTuBox store the P1's image turned half a turn from Lychee's

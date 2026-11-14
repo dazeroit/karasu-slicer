@@ -18,6 +18,7 @@ panel's area (pixels × pixel pitch), which fixes the pixel pitch the slicer nee
 | Anycubic Photon Mono M5 | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 200 | anycubic-pm5-v517 | verified | A6 |
 | Anycubic Photon Mono M5s | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 200 | anycubic-pm5s-v518 | verified | A7 |
 | Anycubic Photon P1 | 13312 × 5120 | 16.8 × 24.6046875 | 223.6416 × 125.976 × 230 | anycubic-pp1-v3 | verified | A10, A11 |
+| Anycubic Photon P1 Max | 11520 × 8640 | 24.8 × 24.8 | 285.696 × 214.272 × 300 | anycubic-pp1m-v3 | not verified | A29, A30, A31 |
 | Anycubic Photon Zero | 480 × 854 | 115.5 × 115.5 | 55.44 × 98.637 × 150 | anycubic-pw0-v1 | verified | A12, A13 |
 | Anycubic Photon Mono | 1620 × 2560 | 51 × 51 | 82.62 × 130.56 × 165 | anycubic-pwmo-v1 | verified | A12, A14 |
 | Anycubic Photon Ultra | 1280 × 720 | 80 × 80 | 102.4 × 57.6 × 165 | anycubic-dlp-v515 | verified | A12, A15 |
@@ -135,6 +136,7 @@ with every value as published.
 | Anycubic Photon Mono M5 | 6 | 6 | 0 |
 | Anycubic Photon Mono M5s | 6 | 6 | 0 |
 | Anycubic Photon P1 | 16 | 16 | 0 |
+| Anycubic Photon P1 Max | 0 | 0 | 0 |
 | Anycubic Photon Zero | 0 | 0 | 0 |
 | Anycubic Photon Mono | 7 | 7 | 0 |
 | Anycubic Photon Ultra | 6 | 6 | 0 |
@@ -181,6 +183,7 @@ with every value as published.
 - elegoo-mars-4-max: no print settings, its manual showing the Mars 4 DLP's values
   instead of its own bottom layers.
 - anycubic-photon and anycubic-photon-zero: no resin table anywhere.
+- anycubic-photon-p1-max: not in Anycubic's resin table (A8, read again on 2026-11-14).
 
 **Colours with other settings** than those the entry holds, on at least one printer
 (E2, A8); their users adjust a copy:
@@ -227,6 +230,12 @@ with every value as published.
   126.976 mm. Its Standard Resin setting is Photon Workshop's default; Anycubic's resin
   page (A8) has listed the P1 since 2026-11 with other values (2 s, bottom 20 s × 1 layer,
   anti-aliasing 4, one 5 mm lift at 3 mm/s), which the catalog uses for its other resins.
+- The Photon P1 Max (TD-154) has no print setting: Anycubic's resin table does not list it.
+  Its official 285.5 × 214 mm (A29) is smaller than its panel (285.696 × 214.272 mm);
+  placement uses the panel's area. Its orientation is not verified: Photon Workshop
+  4.2.1.20 writes its layers as outlines, with the P1's rotate_z 180, so the profile
+  takes the P1's mirroring in X and Y. Whether its firmware reads the PW0 layer images
+  karasu-slicer writes, as the P1's does, is not established.
 - The Photon, Photon S and Photon Mono 4K's official printable areas (115 × 65 and
   132 × 80 mm) are smaller than their panels; placement uses the panel's area.
 - The M5 and M5s pitch along Y (24 µm) is inferred from the official 123 mm over 5120
@@ -334,6 +343,9 @@ Anycubic, 20 ELEGOO), which is not either maker's whole line-up:
 - A26: https://cdn.shopify.com/s/files/1/0245/5519/2380/files/Photon_Mono_M5s_Pro-EN-V0.0.4.pdf and https://wiki.anycubic.com/en/resin-3d-printer/photon-mono-m5s-pro (16.8 × 24.8 µm pixels)
 - A27: https://store.anycubic.com/collections/uv-resin/products.json (the 16 resins sold, read 2026-11-11)
 - A28: https://store.anycubic.com/products/colored-uv-resin (Standard Resin, density 1.13 g/cm³), read in the Internet Archive's capture of 2026-10-14: the store refused requests on 2026-11-11
+- A29: https://store.anycubic.com/products/photon-p1-max-best-large-resin-3d-printer (read 2026-11-14: 14" 12K LCD, 11520 × 8640 px, 24.8 × 24.8 µm, 285.5 × 214 × 300 mm; SHA-256 c8a6628cea51dfc0b7a76b5a905f0e82ab518898c27624574c6e9500f468a500)
+- A30: https://wiki.anycubic.com/en/resin-3d-printer/anycubic-photon-p1-max (read 2026-11-14: its test files are .pp1m)
+- A31: Photon Workshop 4.2.1.20's Photon P1 Max file for a test model, exported by the owner on 2026-11-14 (SHA-256 25af4e3d38561e02…): the P1's archive with key_suffix pp1m, 11520 × 8640 px, rotate_z 180 (TD-154)
 - E1: https://us.elegoo.com/products/saturn-4-ultra-16k-10inch-monochrome-lcd-resin-3d-printer
 - E2: https://www.elegoo.com/blogs/3d-printer-user-guide/official-suggestions-for-elegoo-resin-on-elegoo-printers (official settings spreadsheet, SHA-256 7f67e7dc1c540981e9f9927bb54d7185c5deb0086e97fac51013e8dac5e97472)
 - E3: https://www.elegoo.com/pages/download (official downloads, read 2026-11-10: each printer's manual, versions 2025-2026, and the .goo test files named in its archives)

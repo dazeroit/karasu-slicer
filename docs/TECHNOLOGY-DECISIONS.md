@@ -5836,6 +5836,45 @@ their own. The five upright plates show their short side along X. A manufacturer
 what that slicer writes, not what the printer does: a print on each printer remains the proof,
 and the README's table records the printers printed.
 
+**Confirmed in SatelLite (2026-11-14):** the test "F" exported by karasu-slicer from the merged
+catalog (d264786) for the Saturn 4 Ultra 16K declares mirror X 0, Y 1 and matches SatelLite's
+file as stored (1.00). The owner opened it in SatelLite 1.0.2.43, which showed it turned 180
+degrees exactly as it shows its own file, no longer mirrored.
+
+## TD-154 — The Photon P1 Max and its `.pp1m` archive
+
+**Status:** Implemented on 2026-11-14 at the owner's request; the printer stays "not verified".
+
+**Observation:** Photon Workshop 4.2.1.20's files for the same test model (TD-153), for the
+Photon P1 (SHA-256 `5ca4ec0c…`) and the Photon P1 Max (`25af4e3d…`), are the same archive: the
+same members, settings schema, compression, `key_image_format` `pwszImg`, `max_file_version`
+518, `property` 119, `raster_antialiasing` 4, `rotate_z` 180, and identical firmware constants.
+The P1 Max's differs in `key_suffix` (`pp1m`), the machine name ("Anycubic Photon P1 Max"),
+the panel (11520 × 8640 pixels of 24.8 µm), the sizes (285.5 × 214 × 300 mm), one
+`child_screen` over the whole panel and one platform height (karasu-slicer already writes both
+for the P1), `print_exposure_calibration_func` 3 (the P1's file has 1; karasu-slicer writes
+neither), and its resins' values, which are Photon Workshop's presets and not used. Both files
+hold each layer as an outline (`pwszImg` members), not as an image, so neither orientation
+could be compared. Anycubic publishes the specifications (A29); its resin table (A8, read again
+on 2026-11-14) does not list the P1 Max.
+
+**Decision (owner, 2026-11-14):**
+1. A format `anycubic-pp1m-v3` writes the Photon P1's archive under the P1 Max's machine name
+   and suffix, with PW0 layer images as for the P1 (`Pp1Model` in `print_job::pp1`).
+2. The catalog lists the Photon P1 Max (`anycubic-photon-p1-max`): 11520 × 8640 pixels of
+   24.8 µm, the panel's 285.696 × 214.272 mm (the official 285.5 × 214 mm is smaller), 300 mm
+   high, without print settings.
+3. Its orientation is not verified. The profile mirrors in X and Y as the P1's, which stores
+   what `rotate_z` 180 declares, the value Photon Workshop's file declares
+   (`ASSUMED_ORIENTATION` in `tools/assets/make_catalog.py`).
+
+**Known limits:** whether the P1 Max's firmware reads PW0 layer images, as the P1's does, and
+whether it needs `print_exposure_calibration_func`, is not established; a print on the printer
+will tell, and the printer report form asks for one.
+
+**Tests:** an export for the P1 Max records the suffix `pp1m`, the machine name and PW0 layer
+members; the format is listed with the others, and the README's table lists the printer.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

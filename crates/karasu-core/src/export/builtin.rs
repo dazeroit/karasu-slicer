@@ -11,7 +11,7 @@ use crate::{
             preview_sizes, CodecError, EncoderLimits, MachineEncoder, MachineFormat, Quantization,
             WireJob, WireLayer,
         },
-        pp1::{Pp1Encoder, PP1_PREVIEW_SIZES},
+        pp1::{Pp1Encoder, Pp1Model, PP1_PREVIEW_SIZES},
         sl1::{Sl1Encoder, Sl1Model, SL1_PREVIEW_SIZES},
         JobLayer, PrintJob,
     },
@@ -31,8 +31,11 @@ pub enum BuiltinFormat {
     CtbV5Plain,
     /// Elegoo GOO version three with per-layer advanced settings and grayscale8.
     GooV3,
-    /// Anycubic Photon P1 version-three ZIP with native layer images; not P1 Max.
+    /// Anycubic Photon P1 version-three ZIP with native layer images.
     AnycubicPhotonP1,
+    /// Anycubic Photon P1 Max: the Photon P1's archive under the P1 Max's name, `.pp1m`
+    /// (TD-154).
+    AnycubicPhotonP1Max,
     /// Anycubic Photon Workshop binary file of one extension and revision (TD-063).
     AnycubicWorkshop(AnycubicWorkshop),
     /// Legacy Photon version one, explicitly delegating all motion to printer firmware.
@@ -49,7 +52,7 @@ pub enum BuiltinFormat {
 #[derive(Clone, Copy)]
 enum Kind {
     Machine(MachineFormat),
-    Pp1,
+    Pp1(Pp1Model),
     Sl1(Sl1Model),
 }
 /// Anycubic Photon Workshop binary targets (TD-063): one per file extension, at the revision
@@ -263,7 +266,7 @@ impl BuiltinExporter {
     pub const fn preview_sizes(&self) -> [[u32; 2]; 2] {
         match self.kind() {
             Kind::Machine(format) => preview_sizes(format),
-            Kind::Pp1 => PP1_PREVIEW_SIZES,
+            Kind::Pp1(_) => PP1_PREVIEW_SIZES,
             Kind::Sl1(_) => SL1_PREVIEW_SIZES,
         }
     }
@@ -304,17 +307,19 @@ impl BuiltinExporter {
             BuiltinFormat::PhotonV1FirmwareMotion => Some(MachineFormat::PhotonV1),
             BuiltinFormat::PrusaSl1FirmwareMotion
             | BuiltinFormat::PrusaSl1sFirmwareMotion
-            | BuiltinFormat::AnycubicPhotonP1 => None,
+            | BuiltinFormat::AnycubicPhotonP1
+            | BuiltinFormat::AnycubicPhotonP1Max => None,
         }
     }
     const fn kind(&self) -> Kind {
         match self.format {
-            BuiltinFormat::AnycubicPhotonP1 => Kind::Pp1,
+            BuiltinFormat::AnycubicPhotonP1 => Kind::Pp1(Pp1Model::P1),
+            BuiltinFormat::AnycubicPhotonP1Max => Kind::Pp1(Pp1Model::P1Max),
             BuiltinFormat::PrusaSl1FirmwareMotion => Kind::Sl1(Sl1Model::Sl1),
             BuiltinFormat::PrusaSl1sFirmwareMotion => Kind::Sl1(Sl1Model::Sl1s),
             _ => match self.machine_format() {
                 Some(format) => Kind::Machine(format),
-                None => Kind::Pp1,
+                None => Kind::Pp1(Pp1Model::P1),
             },
         }
     }
@@ -359,10 +364,9 @@ impl BuiltinExporter {
             transition_count: job.settings().transition_layer_count,
             layer_count: u32::try_from(job.layer_count())
                 .map_err(|_| ExportError::Invalid("machine layer count exceeds u32".into()))?,
-            machine_name: if self.format == BuiltinFormat::AnycubicPhotonP1 {
-                "Anycubic Photon P1".into()
-            } else {
-                job.printer().name.clone()
+            machine_name: match self.kind() {
+                Kind::Pp1(model) => model.machine_name().into(),
+                Kind::Machine(_) | Kind::Sl1(_) => job.printer().name.clone(),
             },
             normal,
             bottom,
@@ -424,6 +428,7 @@ impl MachineExporter for BuiltinExporter {
             BuiltinFormat::AnycubicWorkshop(target) => target.id(),
             BuiltinFormat::GooV3 => "goo-v3",
             BuiltinFormat::AnycubicPhotonP1 => "anycubic-pp1-v3",
+            BuiltinFormat::AnycubicPhotonP1Max => "anycubic-pp1m-v3",
             BuiltinFormat::PhotonV1FirmwareMotion => "photon-v1-firmware-motion",
             BuiltinFormat::PrusaSl1FirmwareMotion => "prusa-sl1-firmware-motion",
             BuiltinFormat::PrusaSl1sFirmwareMotion => "prusa-sl1s-firmware-motion",
@@ -438,6 +443,7 @@ impl MachineExporter for BuiltinExporter {
             BuiltinFormat::AnycubicWorkshop(target) => target.extension(),
             BuiltinFormat::GooV3 => "goo",
             BuiltinFormat::AnycubicPhotonP1 => "pp1",
+            BuiltinFormat::AnycubicPhotonP1Max => "pp1m",
             BuiltinFormat::PhotonV1FirmwareMotion => "photon",
             BuiltinFormat::PrusaSl1FirmwareMotion => "sl1",
             BuiltinFormat::PrusaSl1sFirmwareMotion => "sl1s",
@@ -453,7 +459,7 @@ impl MachineExporter for BuiltinExporter {
         let wire = self.wire_job(job)?;
         match self.kind() {
             Kind::Machine(format) => MachineEncoder::validate_metadata(format, &wire),
-            Kind::Pp1 => Pp1Encoder::validate_metadata(&wire),
+            Kind::Pp1(_) => Pp1Encoder::validate_metadata(&wire),
             Kind::Sl1(model) => Sl1Encoder::validate_metadata(model, &wire),
         }
         .map_err(error)?;
@@ -467,7 +473,7 @@ impl MachineExporter for BuiltinExporter {
                 Kind::Machine(format) => {
                     MachineEncoder::validate_layer(format, &wire, &encoded, index)
                 }
-                Kind::Pp1 => Pp1Encoder::validate_layer(&wire, &encoded, index),
+                Kind::Pp1(_) => Pp1Encoder::validate_layer(&wire, &encoded, index),
                 Kind::Sl1(_) => Sl1Encoder::validate_layer(&wire, &encoded, index),
             }
             .map_err(error)?;
@@ -494,9 +500,16 @@ impl MachineExporter for BuiltinExporter {
                 )
                 .map_err(error)?,
             ),
-            Kind::Pp1 => Encoder::Pp1(
-                Pp1Encoder::begin(wire, writer, limits(value), self.quantization(), cancel)
-                    .map_err(error)?,
+            Kind::Pp1(model) => Encoder::Pp1(
+                Pp1Encoder::begin(
+                    model,
+                    wire,
+                    writer,
+                    limits(value),
+                    self.quantization(),
+                    cancel,
+                )
+                .map_err(error)?,
             ),
             Kind::Sl1(model) => Encoder::Sl1(
                 Sl1Encoder::begin(model, wire, writer, limits(value), cancel).map_err(error)?,

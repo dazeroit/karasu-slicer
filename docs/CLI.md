@@ -189,7 +189,8 @@ model import → optional topology gate → explicit placement → uniform layer
 - `--format <id>`: one of these identifiers. The output extension must match it.
   - `ctb-v2-plain`, `ctb-v3-plain`, `ctb-v4-plain` and `ctb-v5-plain` (TD-063), all `.ctb`.
     These are plain CTB: encrypted CTB, which some firmware requires, is not supported.
-  - `goo-v3` (`.goo`) and `anycubic-pp1-v3` (`.pp1`).
+  - `goo-v3` (`.goo`), `anycubic-pp1-v3` (`.pp1`) and `anycubic-pp1m-v3` (`.pp1m`, the Photon P1
+    Max's archive, TD-154).
   - `photon-v1-firmware-motion` (`.photon`).
   - `anycubic-<ext>-v<revision>` for the Anycubic Photon Workshop family (TD-063). Examples are
     `anycubic-pwmx-v1`, `anycubic-pwma-v516`, `anycubic-pm5-v517`, `anycubic-pm5s-v518` and
