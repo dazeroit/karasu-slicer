@@ -5870,7 +5870,9 @@ on 2026-11-14) does not list the P1 Max.
 
 **Known limits:** whether the P1 Max's firmware reads PW0 layer images, as the P1's does, and
 whether it needs `print_exposure_calibration_func`, is not established; a print on the printer
-will tell, and the printer report form asks for one.
+will tell, and the printer report form asks for one. Photon Workshop 4.2.1.20 opens
+karasu-slicer's `.pp1m` of the test model (owner, 2026-11-14), which shows that the slicer
+accepts the archive, not what the printer does.
 
 **Tests:** an export for the P1 Max records the suffix `pp1m`, the machine name and PW0 layer
 members; the format is listed with the others, and the README's table lists the printer.
