@@ -8,6 +8,7 @@
       "formats": [
         "photon-v1-firmware-motion",
         "anycubic-pp1-v3",
+        "anycubic-pp1m-v3",
         "anycubic-pws-v1",
         "anycubic-pw0-v1",
         "anycubic-pwx-v1",
@@ -100,6 +101,12 @@
       "release": "z_lift",
       "orientation_verified": true,
       "sources": "A10, A11"
+    },
+    {
+      "file": "printers/anycubic/photon-p1-max.json",
+      "release": "z_lift",
+      "orientation_verified": false,
+      "sources": "A29, A30, A31"
     },
     {
       "file": "printers/anycubic/photon-zero.json",

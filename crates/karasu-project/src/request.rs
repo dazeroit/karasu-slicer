@@ -40,13 +40,14 @@ impl fmt::Display for QuotedPath<'_> {
 pub const REFERENCE_FORMAT: &str = "reference";
 
 /// Machine dialects that can be selected besides the Anycubic Photon Workshop targets.
-const MACHINE_FORMATS: [BuiltinFormat; 9] = [
+const MACHINE_FORMATS: [BuiltinFormat; 10] = [
     BuiltinFormat::CtbV2Plain,
     BuiltinFormat::CtbV3Plain,
     BuiltinFormat::CtbV4Plain,
     BuiltinFormat::CtbV5Plain,
     BuiltinFormat::GooV3,
     BuiltinFormat::AnycubicPhotonP1,
+    BuiltinFormat::AnycubicPhotonP1Max,
     BuiltinFormat::PhotonV1FirmwareMotion,
     BuiltinFormat::PrusaSl1FirmwareMotion,
     BuiltinFormat::PrusaSl1sFirmwareMotion,
@@ -868,6 +869,7 @@ pub fn machine_exporter_with(
         BuiltinFormat::AnycubicWorkshop(target) if target.bitplanes() => PixelPolicy::RoundToFormat,
         BuiltinFormat::GooV3
         | BuiltinFormat::AnycubicPhotonP1
+        | BuiltinFormat::AnycubicPhotonP1Max
         | BuiltinFormat::AnycubicWorkshop(_)
         | BuiltinFormat::PrusaSl1FirmwareMotion
         | BuiltinFormat::PrusaSl1sFirmwareMotion => PixelPolicy::Exact,
@@ -906,6 +908,7 @@ pub fn format_names() -> Vec<FormatName> {
                 BuiltinFormat::CtbV5Plain => ("CHITUBOX", "CTB version 5, unencrypted".to_owned()),
                 BuiltinFormat::GooV3 => ("ELEGOO", "GOO".to_owned()),
                 BuiltinFormat::AnycubicPhotonP1 => ("Anycubic", "Photon P1".to_owned()),
+                BuiltinFormat::AnycubicPhotonP1Max => ("Anycubic", "Photon P1 Max".to_owned()),
                 BuiltinFormat::AnycubicWorkshop(target) => {
                     ("Anycubic Photon Workshop", target.models().to_owned())
                 }

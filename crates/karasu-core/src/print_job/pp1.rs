@@ -15,9 +15,39 @@ use crate::{
 use serde_json::{json, Value};
 use std::io::Write;
 
+/// The Photon P1 family member an archive is written for (TD-154). Photon Workshop writes the
+/// Photon P1 Max's `.pp1m` as the P1's `.pp1`, with the same members, settings and firmware
+/// constants; the machine's name and the archive's suffix tell them apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Pp1Model {
+    /// Anycubic Photon P1, `.pp1`.
+    P1,
+    /// Anycubic Photon P1 Max, `.pp1m`.
+    P1Max,
+}
+
+impl Pp1Model {
+    /// The archive's extension and the settings' `key_suffix`.
+    pub(crate) const fn suffix(self) -> &'static str {
+        match self {
+            Self::P1 => "pp1",
+            Self::P1Max => "pp1m",
+        }
+    }
+
+    /// The machine name Photon Workshop gives the printer, recorded in the settings.
+    pub(crate) const fn machine_name(self) -> &'static str {
+        match self {
+            Self::P1 => "Anycubic Photon P1",
+            Self::P1Max => "Anycubic Photon P1 Max",
+        }
+    }
+}
+
 /// Streaming masks, bounded retained controller/scene records, deterministic ZIP whose members
 /// are deflated when that makes them smaller (TD-133).
 pub(crate) struct Pp1Encoder {
+    model: Pp1Model,
     job: WireJob,
     limits: EncoderLimits,
     quantization: Quantization,
@@ -225,6 +255,7 @@ impl Pp1Encoder {
     }
 
     pub(crate) fn begin(
+        model: Pp1Model,
         job: WireJob,
         writer: &mut dyn WriteSeek,
         limits: EncoderLimits,
@@ -264,6 +295,7 @@ impl Pp1Encoder {
             .map_err(|_| CodecError::Limit("PP1 preview allocation"))?;
         projection.resize(224 * 168, 0);
         let mut result = Self {
+            model,
             job,
             limits,
             quantization,
@@ -321,7 +353,7 @@ impl Pp1Encoder {
         // the image format `pwszImg` (its only one for the P1, whatever the members' suffix),
         // the format's identity numbers, preview colours, a `picture` and a complete resin.
         json!({"version":"3","machine_type":{
-            "version":"3","name":j.machine_name,"key_suffix":"pp1","key_image_format":"pwszImg",
+            "version":"3","name":j.machine_name,"key_suffix":self.model.suffix(),"key_image_format":"pwszImg",
             "max_file_version":518,"property":119,"raster_segments_capacity":100_000,
             "res_x":j.resolution[0],"res_y":j.resolution[1],
             "xy_pixel":j.build_mm[0]*1000./f64::from(j.resolution[0]),"xy_pixel_y":j.build_mm[1]*1000./f64::from(j.resolution[1]),
@@ -1018,6 +1050,7 @@ mod tests {
         let mut out = Cursor::new(Vec::new());
         let mut cancel = Cancellation::never();
         let mut encoder = Pp1Encoder::begin(
+            Pp1Model::P1,
             j.clone(),
             &mut out,
             limits(),
@@ -1114,6 +1147,7 @@ mod tests {
             let mut out = Cursor::new(Vec::new());
             let mut cancel = Cancellation::never();
             let mut encoder = Pp1Encoder::begin(
+                Pp1Model::P1,
                 j.clone(),
                 &mut out,
                 limits(),
@@ -1158,6 +1192,7 @@ mod tests {
         };
         let mut out = Cursor::new(Vec::new());
         let result = Pp1Encoder::begin(
+            Pp1Model::P1,
             WireJob {
                 previews: Some(swapped),
                 ..job()
@@ -1176,6 +1211,7 @@ mod tests {
         j.normal.pwm = 128;
         let mut out = Cursor::new(Vec::new());
         assert!(Pp1Encoder::begin(
+            Pp1Model::P1,
             j,
             &mut out,
             limits(),
@@ -1205,6 +1241,7 @@ mod tests {
         let mut tiny = limits();
         tiny.max_metadata_bytes = 1;
         assert!(Pp1Encoder::begin(
+            Pp1Model::P1,
             job(),
             &mut Cursor::new(Vec::new()),
             tiny,
@@ -1224,6 +1261,7 @@ mod tests {
         .is_err());
         let mut out = Cursor::new(Vec::new());
         let encoder = Pp1Encoder::begin(
+            Pp1Model::P1,
             job(),
             &mut out,
             limits(),
@@ -1242,7 +1280,14 @@ mod tests {
         let mut cancel = Cancellation::new(&mut predicate);
         let mut out = Cursor::new(Vec::new());
         assert!(matches!(
-            Pp1Encoder::begin(job(), &mut out, limits(), Quantization::Exact, &mut cancel),
+            Pp1Encoder::begin(
+                Pp1Model::P1,
+                job(),
+                &mut out,
+                limits(),
+                Quantization::Exact,
+                &mut cancel
+            ),
             Err(CodecError::Cancelled(_))
         ));
         assert_eq!(out.into_inner(), [] as [u8; 0]);
@@ -1268,6 +1313,7 @@ mod tests {
         let mut out = Cursor::new(Vec::new());
         let mut cancel = Cancellation::never();
         let mut encoder = Pp1Encoder::begin(
+            Pp1Model::P1,
             j.clone(),
             &mut out,
             limits(),

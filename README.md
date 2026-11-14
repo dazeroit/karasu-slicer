@@ -90,6 +90,7 @@ whether it worked or not: each report helps check a printer.
 | Anycubic | Photon Mono X 6Ks | .px6s | verified | not yet |
 | Anycubic | Photon Mono X2 | .pmx2 | verified | not yet |
 | Anycubic | Photon P1 | .pp1 | verified | yes (2026-11-03) |
+| Anycubic | Photon P1 Max | .pp1m | not verified | not yet |
 | Anycubic | Photon S | .pws | verified | not yet |
 | Anycubic | Photon Ultra | .dlp | verified | not yet |
 | Anycubic | Photon Zero | .pw0 | verified | not yet |

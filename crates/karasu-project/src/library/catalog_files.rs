@@ -39,6 +39,10 @@ pub(super) const FILES: &[(&str, &str)] = &[
         include_str!("../../../../assets/catalog/printers/anycubic/photon-p1.json"),
     ),
     (
+        "printers/anycubic/photon-p1-max.json",
+        include_str!("../../../../assets/catalog/printers/anycubic/photon-p1-max.json"),
+    ),
+    (
         "printers/anycubic/photon-zero.json",
         include_str!("../../../../assets/catalog/printers/anycubic/photon-zero.json"),
     ),
