@@ -1394,6 +1394,12 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        12.8 ms, OpenGL 12.6 ms, FX-03 16.4 ms mean). The release workflow built the packages from
        the tag; their checksums and build-provenance attestations were verified, and the portable
        ZIP and the tar.gz ran (command line and application smoke test).
+     - **Panel orientation of the catalog (owner, 2026-11-14, TD-153):** each printer follows
+       its manufacturer's slicer, stored image and declared mirroring. A test "F" exported by
+       ELEGOO SatelLite 1.0.2.43 and Anycubic Photon Workshop 4.2.1.20 against karasu-slicer's
+       export (`tools/orientation-check`) found no printer mirrored; ten profiles change (five
+       ELEGOO turned 180 degrees, five Anycubic panels declared upright), and 33 of the 34
+       printers are verified (not the Jupiter 2, for which SatelLite writes GOO version 5.2).
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

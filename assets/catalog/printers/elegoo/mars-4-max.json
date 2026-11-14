@@ -4,7 +4,7 @@
     "schema_version": 2,
     "id": "elegoo-mars-4-max",
     "name": "Mars 4 Max",
-    "revision": 1,
+    "revision": 2,
     "build_size_mm": [
       195.84,
       122.4,
@@ -19,8 +19,8 @@
       0.0
     ],
     "swap_xy": false,
-    "mirror_x": false,
-    "mirror_y": false,
+    "mirror_x": true,
+    "mirror_y": true,
     "format_ids": [
       "goo-v3"
     ],

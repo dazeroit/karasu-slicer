@@ -12,6 +12,14 @@ may place the model a little differently); each flip scores the better of the tw
 names the flip that stands out. The files' own declarations (GOO mirror bytes, PP1 `rotate_z`)
 are printed beside it.
 
+When the candidate's panel is the reference's with its sides exchanged (2560 x 1440 against
+1440 x 2560), two readings are tried. The part may keep its orientation in the image while the
+panel's sides are exchanged: the slicers then disagree on which plate side is X, and only the
+centred comparison applies ("exchanged panel"); in karasu-slicer's printer profile that is the
+resolution and the plate's X and Y sizes exchanged. Or the image may be transposed: transposing
+alone mirrors the part across the diagonal, transposing and then mirroring along one axis turns it
+a quarter turn; in the profile that is `swap_xy`, then `mirror_x`/`mirror_y`.
+
 With `--dirs`, every reference file is paired with the candidates of the same extension named
 after it: the same stem (the printer id), or the stem followed by `--` and a format id, as
 `export_karasu.py` names a printer's second format. One Markdown row is printed per pair.
@@ -25,6 +33,19 @@ from print_files import read  # noqa: E402
 FLIPS = ('as stored', 'mirror X', 'mirror Y', 'turned 180')
 MEANING = {'as stored': 'same image', 'turned 180': 'turned 180 degrees, same handedness',
            'mirror X': 'MIRRORED', 'mirror Y': 'MIRRORED'}
+EXCHANGED_MEANING = {'as stored': 'same image on an exchanged panel',
+                     'turned 180': 'turned 180 degrees on an exchanged panel, same handedness',
+                     'mirror X': 'MIRRORED (exchanged panel)',
+                     'mirror Y': 'MIRRORED (exchanged panel)'}
+TRANSPOSED_MEANING = {'as stored': 'MIRRORED (transposed)',
+                      'turned 180': 'MIRRORED (transposed, turned 180 degrees)',
+                      'mirror X': 'turned 90 degrees (transposed, mirror X), same handedness',
+                      'mirror Y': 'turned 90 degrees (transposed, mirror Y), same handedness'}
+
+
+def transpose(pixels, width, height):
+    """The image with rows and columns exchanged: `height` columns by `width` rows."""
+    return b''.join(pixels[x::width] for x in range(width))
 
 
 def silhouette(pixels, width, height, size):
@@ -66,21 +87,31 @@ def iou(a, b):
 
 def compare(reference_path, candidate_path, layer=None):
     ref, can = read(reference_path), read(candidate_path)
-    if (ref.width, ref.height) != (can.width, can.height):
+    transposed = (ref.width, ref.height) == (can.height, can.width) != (can.width, can.height)
+    if (ref.width, ref.height) != (can.width, can.height) and not transposed:
         raise ValueError(f'panels differ: {ref.width}x{ref.height} and {can.width}x{can.height}')
     size = max(1, round(max(ref.width, ref.height) / 2048))
     cols, rows = -(-ref.width // size), -(-ref.height // size)
     a = silhouette(ref.layer(ref.count // 2 if layer is None else layer), ref.width, ref.height,
                    size)
-    b = silhouette(can.layer(can.count // 2 if layer is None else layer), can.width, can.height,
-                   size)
-    return {'reference': ref, 'candidate': can, **judge(a, b, cols, rows)}
+    pixels = can.layer(can.count // 2 if layer is None else layer)
+    if not transposed:
+        return {'reference': ref, 'candidate': can, 'mode': 'same panel',
+                **judge(a, silhouette(pixels, ref.width, ref.height, size), cols, rows)}
+    turned = judge(a, silhouette(transpose(pixels, can.width, can.height), ref.width, ref.height,
+                                 size), cols, rows)
+    exchanged = judge(a, silhouette(pixels, can.width, can.height, size),
+                      -(-can.width // size), -(-can.height // size), in_place=False)
+    mode, result = max((('exchanged panel', exchanged), ('transposed', turned)),
+                       key=lambda m: (m[1]['verdict'] is not None, max(m[1]['score'].values())))
+    return {'reference': ref, 'candidate': can, 'mode': mode, **result}
 
 
-def judge(a, b, cols, rows):
-    """Scores of silhouette `b` under each flip against `a` on a `cols` x `rows` grid, and the
-    flip that stands out (at least 0.85, and 0.2 above the next), or None."""
-    in_place = {k: iou(a, flip(b, k, cols, rows)) for k in FLIPS}
+def judge(a, b, cols, rows, in_place=True):
+    """Scores of silhouette `b` (on a `cols` x `rows` grid) under each flip against `a`, and the
+    flip that stands out (at least 0.85, and 0.2 above the next), or None. Without `in_place`,
+    for panels of different shapes, only the centred comparison counts."""
+    in_place = {k: iou(a, flip(b, k, cols, rows)) if in_place else 0.0 for k in FLIPS}
     aligned = {k: iou(centred(a), centred(flip(b, k, cols, rows))) for k in FLIPS}
     score = {k: max(in_place[k], aligned[k]) for k in FLIPS}
     ranked = sorted(FLIPS, key=score.get, reverse=True)
@@ -92,7 +123,10 @@ def judge(a, b, cols, rows):
 
 def describe(result):
     v = result['verdict']
-    return MEANING[v] if v else 'unclear'
+    if not v:
+        return 'unclear'
+    return {'transposed': TRANSPOSED_MEANING, 'exchanged panel': EXCHANGED_MEANING}.get(
+        result.get('mode'), MEANING)[v]
 
 
 def main(argv):

@@ -4,7 +4,7 @@
     "schema_version": 2,
     "id": "elegoo-mars-4-ultra",
     "name": "Mars 4 Ultra",
-    "revision": 2,
+    "revision": 3,
     "build_size_mm": [
       153.36,
       77.76,
@@ -19,8 +19,8 @@
       0.0
     ],
     "swap_xy": false,
-    "mirror_x": true,
-    "mirror_y": true,
+    "mirror_x": false,
+    "mirror_y": false,
     "format_ids": [
       "goo-v3"
     ],

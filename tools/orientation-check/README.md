@@ -3,7 +3,7 @@
 Standard-library Python scripts that check each catalog printer's panel orientation against the
 file its manufacturer's slicer writes for the same model. They read files and write only the test
 model and karasu-slicer's exports. They extend `tools/goo-orientation` (TD-104, TD-143) to every
-format the catalog's printers use.
+format the catalog's printers use; TD-153 records the first complete comparison.
 
 - `make_f.py [OUT.stl]` writes the test model: an "F" 20 × 30 mm and 2 mm thick, which reads
   correctly seen from above (+X right, +Y toward the plate's back). The letter is chiral, so
@@ -43,11 +43,19 @@ two, and the verdict names the flip that scores at least 0.85 and 0.2 above the 
 - **same image**: karasu-slicer stores the manufacturer's image.
 - **turned 180 degrees, same handedness**: the part keeps its handedness but faces the other side
   of the plate.
+- **same image on an exchanged panel**: the part's image agrees, but the two files declare the
+  panel with its sides exchanged (1440 × 2560 against 2560 × 1440); the profile's resolution and
+  plate X and Y are to be exchanged.
+- **turned 90 degrees (transposed, …)**: the image is transposed and flipped; the profile needs
+  `swap_xy` and the mirror named.
 - **MIRRORED**: the part would print mirrored; the profile is wrong.
 - **unclear**: no flip stands out; check that both files hold the same model.
 
-A printer's profile is aligned with its manufacturer's slicer exactly (owner, 2026-11-14): the same
-stored image and the same declaration (GOO mirror bytes, PP1 `rotate_z`), so that its files print
-as the manufacturer's do however the firmware reads the declaration.
+Files the readers name but do not read: GOO versions other than 3.0, PP1 layers stored as outlines
+(`pwszImg`) and encrypted CTB, whose encryption is not bypassed.
+
+A printer's profile is aligned with its manufacturer's slicer exactly (owner, 2026-11-14,
+TD-153): the same stored image and the same declaration (GOO mirror bytes, PP1 `rotate_z`), so
+that its files print as the manufacturer's do however the firmware reads the declaration.
 
 Run the tests with `python3 -m unittest discover -s tools/orientation-check -p 'test_*.py'`.

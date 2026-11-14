@@ -72,6 +72,26 @@ class Verdicts(unittest.TestCase):
                          {(1, 0), (2, 0), (3, 0), (4, 0), (5, 0)})
 
 
+class Transposition(unittest.TestCase):
+    def test_transposing_exchanges_rows_and_columns(self):
+        # 3 columns by 2 rows becomes 2 columns by 3 rows.
+        self.assertEqual(compare.transpose(bytes([1, 2, 3, 4, 5, 6]), 3, 2),
+                         bytes([1, 4, 2, 5, 3, 6]))
+
+    def test_transposed_verdicts_name_the_handedness(self):
+        self.assertEqual(compare.describe({'verdict': 'mirror X', 'mode': 'transposed'}),
+                         'turned 90 degrees (transposed, mirror X), same handedness')
+        self.assertTrue(compare.describe({'verdict': 'as stored', 'mode': 'transposed'})
+                        .startswith('MIRRORED'))
+        self.assertEqual(compare.describe({'verdict': 'as stored', 'mode': 'exchanged panel'}),
+                         'same image on an exchanged panel')
+
+    def test_an_exchanged_panel_compares_centred_only(self):
+        result = compare.judge(f_cells(90, 45), f_cells(40, 80), 120, 200, in_place=False)
+        self.assertEqual(result['verdict'], 'as stored')
+        self.assertEqual(result['in_place']['as stored'], 0.0)
+
+
 class Decoders(unittest.TestCase):
     def test_pw0_runs_decode_and_a_truncated_end_stays_unlit(self):
         # Level 15 for 3 pixels (12-bit run), level 0 for 2, then a level 5 run of 2.

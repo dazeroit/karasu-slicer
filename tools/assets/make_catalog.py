@@ -208,19 +208,67 @@ PRINTERS = [
      ["goo-v3"], "E3, E6", "z_lift"),
 ]
 
-# Panel orientations verified against a reference file (TD-104), as (mirror_x, mirror_y) in
-# karasu-slicer's convention, whose raster puts the plate's front in the first row. Others keep
-# no mirroring until a reference shows theirs.
+# Panel orientations verified against a reference file, as (mirror_x, mirror_y) in karasu-slicer's
+# convention, whose raster puts the plate's front in the first row. Others keep no mirroring
+# until a reference shows theirs. Each printer follows its manufacturer's slicer, stored image and
+# declared mirroring both (owner, 2026-11-14, TD-153): the test "F" exported by ELEGOO SatelLite
+# 1.0.2.43 and Anycubic Photon Workshop 4.2.1.20 against karasu-slicer's export.
 ORIENTATION = {
-    "elegoo-saturn-4-ultra-16k": (True, True),
+    # Photon Workshop's image, matched in TD-104; printed on 2026-11-03.
     "anycubic-photon-p1": (True, True),
-    # ELEGOO's own test files (E3): the same ROOK.stl exported by karasu-slicer matches ELEGOO's
-    # ROOK.goo turned 180 degrees for these three, as stored for the Saturn 3 Ultra (TD-143).
-    "elegoo-mars-4": (True, True),
-    "elegoo-mars-4-ultra": (True, True),
+    # ELEGOO's own test file (E3, TD-143); SatelLite writes encrypted CTB for it, not compared.
     "elegoo-saturn-3": (True, True),
-    "elegoo-saturn-3-ultra": (False, False),
+    # SatelLite's image as stored, declaring X 1, Y 0 (TD-153).
+    "elegoo-saturn-3-ultra": (True, True),
+    "elegoo-mars-4-max": (True, True),
+    # SatelLite's image as stored, declaring X 0, Y 1 (TD-153): the Mars 4, Mars 4 Ultra and
+    # Saturn 4 Ultra 16K turn back from the 180 degrees that TD-104 and TD-143 took from ChiTuBox
+    # and ELEGOO's test files.
+    "elegoo-mars-4": (False, False),
+    "elegoo-mars-4-ultra": (False, False),
+    "elegoo-saturn-4-ultra-16k": (False, False),
+    "elegoo-jupiter-se": (False, False),
+    "elegoo-mars-5": (False, False),
+    "elegoo-mars-5-ultra": (False, False),
+    "elegoo-saturn-4": (False, False),
+    "elegoo-saturn-4-ultra": (False, False),
+    # Photon Workshop's image as stored (TD-153); the first five on an upright panel (UPRIGHT).
+    "anycubic-photon": (False, False),
+    "anycubic-photon-s": (False, False),
+    "anycubic-photon-zero": (False, False),
+    "anycubic-photon-mono": (False, False),
+    "anycubic-photon-mono-sq": (False, False),
+    "anycubic-photon-d2": (False, False),
+    "anycubic-photon-m3": (False, False),
+    "anycubic-photon-m3-max": (False, False),
+    "anycubic-photon-m3-plus": (False, False),
+    "anycubic-photon-m3-premium": (False, False),
+    "anycubic-photon-mono-2": (False, False),
+    "anycubic-photon-mono-4": (False, False),
+    "anycubic-photon-mono-4k": (False, False),
+    "anycubic-photon-mono-m5": (False, False),
+    "anycubic-photon-mono-m5s": (False, False),
+    "anycubic-photon-mono-m5s-pro": (False, False),
+    "anycubic-photon-mono-x": (False, False),
+    "anycubic-photon-mono-x-6k": (False, False),
+    "anycubic-photon-mono-x-6ks": (False, False),
+    "anycubic-photon-mono-x2": (False, False),
+    "anycubic-photon-ultra": (False, False),
 }
+
+# Panels that Photon Workshop declares upright (TD-153): its files give the short side as the
+# image's width and lay the plate's X along it, the part keeping its orientation in the image. The
+# profile exchanges the panel's sides and the plate's X and Y with them (revision 2); PRINTERS
+# keeps the panels as the manufacturers list them.
+UPRIGHT = {"anycubic-photon", "anycubic-photon-s", "anycubic-photon-zero", "anycubic-photon-mono",
+           "anycubic-photon-mono-sq"}
+
+
+def panel(pid, pixels, pitch):
+    """The profile's panel pixels and pitch (X, Y): as listed, or exchanged when UPRIGHT."""
+    if pid in UPRIGHT:
+        return pixels[::-1], pitch[::-1]
+    return pixels, pitch
 
 # Printers on which the owner printed karasu-slicer's files, with the first such print: the
 # README's table of supported printers says so (TD-117: the Photon P1's HillGiant, 2026-11-03).
@@ -228,12 +276,22 @@ PRINTED = {"anycubic-photon-p1": "2026-11-03"}
 
 # Catalog entries changed since their first publication, by revision.
 REVISION = {
-    "elegoo-saturn-4-ultra-16k": 2,
+    # Mirrored in X and Y after ChiTuBox (TD-104), back to SatelLite's image (TD-153).
+    "elegoo-saturn-4-ultra-16k": 3,
     "anycubic-photon-p1": 2,
-    # Mirrored in X and Y once verified (TD-143).
-    "elegoo-mars-4": 2,
-    "elegoo-mars-4-ultra": 2,
+    # Mirrored in X and Y after ELEGOO's test files (TD-143), back to SatelLite's image (TD-153).
+    "elegoo-mars-4": 3,
+    "elegoo-mars-4-ultra": 3,
     "elegoo-saturn-3": 2,
+    # Mirrored in X and Y as SatelLite's image (TD-153).
+    "elegoo-saturn-3-ultra": 2,
+    "elegoo-mars-4-max": 2,
+    # Upright panels, as Photon Workshop's (TD-153).
+    "anycubic-photon": 2,
+    "anycubic-photon-s": 2,
+    "anycubic-photon-zero": 2,
+    "anycubic-photon-mono": 2,
+    "anycubic-photon-mono-sq": 2,
     # Anycubic's anti-aliasing (A8), taken from 2026-11-11.
     "anycubic-photon-ultra-anycubic-standard-resin": 2,
     "anycubic-photon-d2-anycubic-standard-resin": 2,
@@ -501,8 +559,9 @@ def setting(printer, resin, height, count, transitions, bottom, normal, status, 
 
 def entries():
     printers = []
-    for vendor, slug, model, (px, py), (ux, uy), height, formats, src, release in PRINTERS:
+    for vendor, slug, model, pixels, pitch, height, formats, src, release in PRINTERS:
         pid = printer_id(vendor, slug)
+        (px, py), (ux, uy) = panel(pid, pixels, pitch)
         mirror_x, mirror_y = ORIENTATION.get(pid, (False, False))
         vendor_name = next(name for v, name, *_ in VENDORS if v == vendor)
         printers.append({
@@ -800,7 +859,8 @@ def write_readme(materials, settings, report):
         "| Printer | Panel (px) | Pixel (µm) | Build (mm) | Formats | Orientation | Sources |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
-    for vendor, slug, model, (px, py), (ux, uy), height, formats, src, release in PRINTERS:
+    for vendor, slug, model, pixels, pitch, height, formats, src, release in PRINTERS:
+        (px, py), (ux, uy) = panel(printer_id(vendor, slug), pixels, pitch)
         build = f"{mm(px * ux)} × {mm(py * uy)} × {height}"
         verified = "verified" if printer_id(vendor, slug) in ORIENTATION else "not verified"
         lines.append(f"| {model} | {px} × {py} | {ux} × {uy} | {build} | {', '.join(formats)} |"
@@ -890,10 +950,13 @@ def write_readme(materials, settings, report):
         "  printed (the Mono X's row repeats the Photon Ultra's; the Mono's High Clear reads \"1/\").",
         "- The Photon P1's fixed 0.45 s per layer (revision 2) is its firmware's frame time, found",
         "  in Photon Workshop's own estimates (TD-122).",
-        "- Panel orientation: the Saturn 4 Ultra 16K (revision 2) and the Photon P1 mirror in X and",
-        "  Y, measured against the manufacturer's slicer output for the same model, whose stored",
-        "  image they then match; their headers declare it as those slicers do (TD-104). The other",
-        "  Anycubic panels keep no mirroring: no reference has been compared for them yet.",
+        "- Panel orientation follows each manufacturer's slicer, stored image and declared",
+        "  mirroring both, measured on a test model exported by ELEGOO SatelLite 1.0.2.43 and",
+        "  Anycubic Photon Workshop 4.2.1.20 (TD-153; the Photon P1 by TD-104, the Saturn 3 by",
+        "  ELEGOO's test file, TD-143). The Saturn 3 Ultra and Mars 4 Max mirror in X and Y; the",
+        "  Mars 4, Mars 4 Ultra and Saturn 4 Ultra 16K no longer do (revision 3). The Photon,",
+        "  Photon S, Photon Zero, Photon Mono and Photon Mono SQ have upright panels, the short side",
+        "  as the image width and the plate's X (revision 2), as Photon Workshop's files.",
         "",
         "**Known limits:**",
         "",
@@ -928,8 +991,10 @@ def write_readme(materials, settings, report):
         "- Not included: the Photon X and the Photon Mono SE, whose official specifications could",
         "  not be read; the Photon S and other Photon Workshop printers keep their own entries.",
         "- The ELEGOO printers added on 2026-11-10 (phase 2) come from the official manuals (E3);",
-        "  ELEGOO's product pages could not be read that day. None has been tried on the printer,",
-        "  and their panel orientation is not verified (only the Saturn 4 Ultra 16K's is). GOO is",
+        "  ELEGOO's product pages could not be read that day. None has been tried on the printer;",
+        "  their panel orientation is verified against SatelLite except the Jupiter 2's, for which",
+        "  SatelLite 1.0.2.43 writes GOO version 5.2, a layout karasu-slicer does not read or",
+        "  write (TD-153). GOO is",
         "  stated for the Mars 4, Mars 4 Max, Mars 4 Ultra, Saturn 3, Saturn 3 Ultra, Saturn 4 Ultra",
         "  and Jupiter 2 (official .goo test files or pages); for the Mars 5, Mars 5 Ultra, Saturn 4",
         "  and Jupiter SE it is inferred from their manuals' slicer, ELEGOO SatelLite, which writes",

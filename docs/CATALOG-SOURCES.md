@@ -10,40 +10,40 @@ panel's area (pixels × pixel pitch), which fixes the pixel pitch the slicer nee
 
 | Printer | Panel (px) | Pixel (µm) | Build (mm) | Formats | Orientation | Sources |
 | --- | --- | --- | --- | --- | --- | --- |
-| Anycubic Photon | 2560 × 1440 | 47 × 47 | 120.32 × 67.68 × 155 | photon-v1-firmware-motion, anycubic-pws-v1 | not verified | A1, A9 |
-| Anycubic Photon S | 2560 × 1440 | 47 × 47 | 120.32 × 67.68 × 165 | anycubic-pws-v1 | not verified | A2, A9 |
-| Anycubic Photon Mono X | 3840 × 2400 | 50 × 50 | 192 × 120 × 245 | anycubic-pwmx-v1 | not verified | A3, A9 |
-| Anycubic Photon Mono SQ | 2560 × 2400 | 50 × 50 | 128 × 120 × 200 | anycubic-pmsq-v515 | not verified | A4, A9 |
-| Anycubic Photon Mono 4K | 3840 × 2400 | 35 × 35 | 134.4 × 84 × 165 | anycubic-pwma-v516 | not verified | A5, A9 |
-| Anycubic Photon Mono M5 | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 200 | anycubic-pm5-v517 | not verified | A6 |
-| Anycubic Photon Mono M5s | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 200 | anycubic-pm5s-v518 | not verified | A7 |
+| Anycubic Photon | 1440 × 2560 | 47 × 47 | 67.68 × 120.32 × 155 | photon-v1-firmware-motion, anycubic-pws-v1 | verified | A1, A9 |
+| Anycubic Photon S | 1440 × 2560 | 47 × 47 | 67.68 × 120.32 × 165 | anycubic-pws-v1 | verified | A2, A9 |
+| Anycubic Photon Mono X | 3840 × 2400 | 50 × 50 | 192 × 120 × 245 | anycubic-pwmx-v1 | verified | A3, A9 |
+| Anycubic Photon Mono SQ | 2400 × 2560 | 50 × 50 | 120 × 128 × 200 | anycubic-pmsq-v515 | verified | A4, A9 |
+| Anycubic Photon Mono 4K | 3840 × 2400 | 35 × 35 | 134.4 × 84 × 165 | anycubic-pwma-v516 | verified | A5, A9 |
+| Anycubic Photon Mono M5 | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 200 | anycubic-pm5-v517 | verified | A6 |
+| Anycubic Photon Mono M5s | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 200 | anycubic-pm5s-v518 | verified | A7 |
 | Anycubic Photon P1 | 13312 × 5120 | 16.8 × 24.6046875 | 223.6416 × 125.976 × 230 | anycubic-pp1-v3 | verified | A10, A11 |
-| Anycubic Photon Zero | 854 × 480 | 115.5 × 115.5 | 98.637 × 55.44 × 150 | anycubic-pw0-v1 | not verified | A12, A13 |
-| Anycubic Photon Mono | 2560 × 1620 | 51 × 51 | 130.56 × 82.62 × 165 | anycubic-pwmo-v1 | not verified | A12, A14 |
-| Anycubic Photon Ultra | 1280 × 720 | 80 × 80 | 102.4 × 57.6 × 165 | anycubic-dlp-v515 | not verified | A12, A15 |
-| Anycubic Photon M3 | 4096 × 2560 | 40 × 40 | 163.84 × 102.4 × 180 | anycubic-pm3-v516 | not verified | A12, A16 |
-| Anycubic Photon M3 Max | 6480 × 3600 | 46 × 46 | 298.08 × 165.6 × 300 | anycubic-pm3m-v516 | not verified | A12, A17 |
-| Anycubic Photon M3 Plus | 5760 × 3600 | 34.4 × 34.4 | 198.144 × 123.84 × 245 | anycubic-pwmb-v516 | not verified | A12, A18 |
-| Anycubic Photon M3 Premium | 7680 × 4320 | 28.5 × 28.5 | 218.88 × 123.12 × 250 | anycubic-pm3r-v516 | not verified | A12, A19 |
-| Anycubic Photon Mono X 6K | 5760 × 3600 | 34.4 × 34.4 | 198.144 × 123.84 × 245 | anycubic-pwmb-v516 | not verified | A12, A20 |
-| Anycubic Photon Mono X 6Ks | 5760 × 3600 | 34 × 34 | 195.84 × 122.4 × 200 | anycubic-px6s-v517 | not verified | A12, A21 |
-| Anycubic Photon Mono X2 | 4096 × 2560 | 48 × 48 | 196.608 × 122.88 × 200 | anycubic-pmx2-v516 | not verified | A12, A22 |
-| Anycubic Photon Mono 2 | 4096 × 2560 | 35 × 35 | 143.36 × 89.6 × 165 | anycubic-pm3n-v517 | not verified | A12, A23 |
-| Anycubic Photon Mono 4 | 9024 × 5120 | 17 × 17 | 153.408 × 87.04 × 165 | anycubic-pm4n-v517 | not verified | A12, A24 |
-| Anycubic Photon D2 | 2560 × 1440 | 51 × 51 | 130.56 × 73.44 × 165 | anycubic-dl2p-v516 | not verified | A12, A25 |
-| Anycubic Photon Mono M5s Pro | 13312 × 5120 | 16.8 × 24.8 | 223.6416 × 126.976 × 200 | anycubic-m5sp-v518 | not verified | A12, A26 |
+| Anycubic Photon Zero | 480 × 854 | 115.5 × 115.5 | 55.44 × 98.637 × 150 | anycubic-pw0-v1 | verified | A12, A13 |
+| Anycubic Photon Mono | 1620 × 2560 | 51 × 51 | 82.62 × 130.56 × 165 | anycubic-pwmo-v1 | verified | A12, A14 |
+| Anycubic Photon Ultra | 1280 × 720 | 80 × 80 | 102.4 × 57.6 × 165 | anycubic-dlp-v515 | verified | A12, A15 |
+| Anycubic Photon M3 | 4096 × 2560 | 40 × 40 | 163.84 × 102.4 × 180 | anycubic-pm3-v516 | verified | A12, A16 |
+| Anycubic Photon M3 Max | 6480 × 3600 | 46 × 46 | 298.08 × 165.6 × 300 | anycubic-pm3m-v516 | verified | A12, A17 |
+| Anycubic Photon M3 Plus | 5760 × 3600 | 34.4 × 34.4 | 198.144 × 123.84 × 245 | anycubic-pwmb-v516 | verified | A12, A18 |
+| Anycubic Photon M3 Premium | 7680 × 4320 | 28.5 × 28.5 | 218.88 × 123.12 × 250 | anycubic-pm3r-v516 | verified | A12, A19 |
+| Anycubic Photon Mono X 6K | 5760 × 3600 | 34.4 × 34.4 | 198.144 × 123.84 × 245 | anycubic-pwmb-v516 | verified | A12, A20 |
+| Anycubic Photon Mono X 6Ks | 5760 × 3600 | 34 × 34 | 195.84 × 122.4 × 200 | anycubic-px6s-v517 | verified | A12, A21 |
+| Anycubic Photon Mono X2 | 4096 × 2560 | 48 × 48 | 196.608 × 122.88 × 200 | anycubic-pmx2-v516 | verified | A12, A22 |
+| Anycubic Photon Mono 2 | 4096 × 2560 | 35 × 35 | 143.36 × 89.6 × 165 | anycubic-pm3n-v517 | verified | A12, A23 |
+| Anycubic Photon Mono 4 | 9024 × 5120 | 17 × 17 | 153.408 × 87.04 × 165 | anycubic-pm4n-v517 | verified | A12, A24 |
+| Anycubic Photon D2 | 2560 × 1440 | 51 × 51 | 130.56 × 73.44 × 165 | anycubic-dl2p-v516 | verified | A12, A25 |
+| Anycubic Photon Mono M5s Pro | 13312 × 5120 | 16.8 × 24.8 | 223.6416 × 126.976 × 200 | anycubic-m5sp-v518 | verified | A12, A26 |
 | Elegoo Saturn 4 Ultra 16K | 15120 × 6230 | 14 × 19 | 211.68 × 118.37 × 220 | goo-v3 | verified | E1 |
 | Elegoo Mars 4 | 8520 × 4320 | 18 × 18 | 153.36 × 77.76 × 175 | goo-v3 | verified | E3 |
-| Elegoo Mars 4 Max | 5760 × 3600 | 34 × 34 | 195.84 × 122.4 × 150 | goo-v3 | not verified | E3, E4, E5, E8 |
+| Elegoo Mars 4 Max | 5760 × 3600 | 34 × 34 | 195.84 × 122.4 × 150 | goo-v3 | verified | E3, E4, E5, E8 |
 | Elegoo Mars 4 Ultra | 8520 × 4320 | 18 × 18 | 153.36 × 77.76 × 165 | goo-v3 | verified | E3, E5 |
-| Elegoo Mars 5 | 4098 × 2560 | 35 × 35 | 143.43 × 89.6 × 150 | goo-v3 | not verified | E3, E6 |
-| Elegoo Mars 5 Ultra | 8520 × 4320 | 18 × 18 | 153.36 × 77.76 × 165 | goo-v3 | not verified | E3, E4, E6 |
+| Elegoo Mars 5 | 4098 × 2560 | 35 × 35 | 143.43 × 89.6 × 150 | goo-v3 | verified | E3, E6 |
+| Elegoo Mars 5 Ultra | 8520 × 4320 | 18 × 18 | 153.36 × 77.76 × 165 | goo-v3 | verified | E3, E4, E6 |
 | Elegoo Saturn 3 | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 250 | goo-v3 | verified | E3 |
 | Elegoo Saturn 3 Ultra | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 260 | goo-v3 | verified | E3 |
-| Elegoo Saturn 4 | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 220 | goo-v3 | not verified | E3, E6 |
-| Elegoo Saturn 4 Ultra | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 220 | goo-v3 | not verified | E3, E7 |
+| Elegoo Saturn 4 | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 220 | goo-v3 | verified | E3, E6 |
+| Elegoo Saturn 4 Ultra | 11520 × 5120 | 19 × 24 | 218.88 × 122.88 × 220 | goo-v3 | verified | E3, E7 |
 | Elegoo Jupiter 2 | 15120 × 6230 | 20 × 26 | 302.4 × 161.98 × 300 | goo-v3 | not verified | E3 |
-| Elegoo Jupiter SE | 5448 × 3064 | 51 × 51 | 277.848 × 156.264 × 300 | goo-v3 | not verified | E3, E6 |
+| Elegoo Jupiter SE | 5448 × 3064 | 51 × 51 | 277.848 × 156.264 × 300 | goo-v3 | verified | E3, E6 |
 
 **Resins** are materials, one entry per product (owner, 2026-11-11): Anycubic's 16 resins
 sold on 2026-11-11 (A27), the 23 resins of ELEGOO's table without its fast-printing
@@ -212,10 +212,13 @@ with every value as published.
   printed (the Mono X's row repeats the Photon Ultra's; the Mono's High Clear reads "1/").
 - The Photon P1's fixed 0.45 s per layer (revision 2) is its firmware's frame time, found
   in Photon Workshop's own estimates (TD-122).
-- Panel orientation: the Saturn 4 Ultra 16K (revision 2) and the Photon P1 mirror in X and
-  Y, measured against the manufacturer's slicer output for the same model, whose stored
-  image they then match; their headers declare it as those slicers do (TD-104). The other
-  Anycubic panels keep no mirroring: no reference has been compared for them yet.
+- Panel orientation follows each manufacturer's slicer, stored image and declared
+  mirroring both, measured on a test model exported by ELEGOO SatelLite 1.0.2.43 and
+  Anycubic Photon Workshop 4.2.1.20 (TD-153; the Photon P1 by TD-104, the Saturn 3 by
+  ELEGOO's test file, TD-143). The Saturn 3 Ultra and Mars 4 Max mirror in X and Y; the
+  Mars 4, Mars 4 Ultra and Saturn 4 Ultra 16K no longer do (revision 3). The Photon,
+  Photon S, Photon Zero, Photon Mono and Photon Mono SQ have upright panels, the short side
+  as the image width and the plate's X (revision 2), as Photon Workshop's files.
 
 **Known limits:**
 
@@ -250,8 +253,10 @@ with every value as published.
 - Not included: the Photon X and the Photon Mono SE, whose official specifications could
   not be read; the Photon S and other Photon Workshop printers keep their own entries.
 - The ELEGOO printers added on 2026-11-10 (phase 2) come from the official manuals (E3);
-  ELEGOO's product pages could not be read that day. None has been tried on the printer,
-  and their panel orientation is not verified (only the Saturn 4 Ultra 16K's is). GOO is
+  ELEGOO's product pages could not be read that day. None has been tried on the printer;
+  their panel orientation is verified against SatelLite except the Jupiter 2's, for which
+  SatelLite 1.0.2.43 writes GOO version 5.2, a layout karasu-slicer does not read or
+  write (TD-153). GOO is
   stated for the Mars 4, Mars 4 Max, Mars 4 Ultra, Saturn 3, Saturn 3 Ultra, Saturn 4 Ultra
   and Jupiter 2 (official .goo test files or pages); for the Mars 5, Mars 5 Ultra, Saturn 4
   and Jupiter SE it is inferred from their manuals' slicer, ELEGOO SatelLite, which writes

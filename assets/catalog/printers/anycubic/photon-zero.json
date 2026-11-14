@@ -4,15 +4,15 @@
     "schema_version": 2,
     "id": "anycubic-photon-zero",
     "name": "Photon Zero",
-    "revision": 1,
+    "revision": 2,
     "build_size_mm": [
-      98.637,
       55.44,
+      98.637,
       150.0
     ],
     "resolution_px": [
-      854,
-      480
+      480,
+      854
     ],
     "origin_xy_mm": [
       0.0,

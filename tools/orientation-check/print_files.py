@@ -4,7 +4,8 @@ Each reader takes from a file, written by any slicer, the panel's size, the laye
 layer's pixels (one byte per pixel, 0 unlit) and what the file declares about its stored image's
 orientation. They check nothing else, so that other slicers' files load too. Supported: GOO V3,
 the Anycubic Photon Workshop family (`.pwmx`, `.pwma`, `.pm3`, `.pws` and the others, with PW0 or
-bit-plane images), PP1, the original Photon's `.photon` and plain CTB (encrypted CTB is not read).
+bit-plane images), PP1 with PW0 layer images, the original Photon's `.photon` and plain CTB. GOO
+versions other than 3.0, PP1 vector layers (`pwszImg`) and encrypted CTB are named, not read.
 """
 import json
 import struct
@@ -141,6 +142,9 @@ def read_pp1(path):
     machine = manifest['machine_type']
     width, height = machine['res_x'], machine['res_y']
     count = len(json.loads(archive.read('layers_controller.conf'))['paras'])
+    if f'layer_images/layer_{count // 2}.pw0Img' not in archive.namelist():
+        # Photon Workshop 4.2.1 writes each layer as outlines (`pwszImg`), not as an image.
+        raise ValueError(f'{Path(path).name}: layers are not PW0 images (vector layers?)')
     declared = {'rotate_z': machine.get('rotate_z')}
     software = ''
     if 'software_info.conf' in archive.namelist():
@@ -155,11 +159,15 @@ def read_pp1(path):
 def read(path):
     """The print file at `path`, whatever slicer wrote it."""
     path = Path(path)
-    if path.suffix.lower() == '.pp1':
+    if path.suffix.lower() in ('.pp1', '.pp1m'):
         return read_pp1(path)
     b = path.read_bytes()
     if b[:4] == b'V3.0':
         return read_goo(path, b)
+    if b[:1] == b'V' and b[2:3] == b'.':
+        raise ValueError(f'{path.name}: GOO version {b[1:4].decode("latin-1")} is not read')
+    if struct.unpack_from('<I', b, 0)[0] == 0x12FD0107:
+        raise ValueError(f'{path.name}: encrypted CTB is not read')
     if b[:8] == b'ANYCUBIC':
         return read_workshop(path, b)
     if struct.unpack_from('<I', b, 0)[0] in (0x12FD0019, 0x12FD0086, 0x12FD0106):

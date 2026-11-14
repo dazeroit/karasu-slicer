@@ -1674,7 +1674,8 @@ exposure); counting islands walks the shown layer's runs once.
 ## TD-104 — Panel orientation verified for the Saturn 4 Ultra 16K, and GOO mirror flags
 
 **Status:** Implemented on 2026-10-26 after the owner found a GOO export that looked mirrored in
-UVTools.
+UVTools. The Saturn 4 Ultra 16K's orientation is superseded by TD-153 (2026-11-14), which follows
+ELEGOO SatelLite instead of ChiTuBox.
 
 **Observation (2026-10-26):** the same model (HillGiant_32mm.stl, turned 90° about X, centred,
 hollowed with 1.2 mm walls) was exported for the ELEGOO Saturn 4 Ultra 16K by karasu-slicer
@@ -5311,7 +5312,8 @@ tests.
 ## TD-143 — Panel orientation of four ELEGOO printers, verified from ELEGOO's test files
 
 **Status:** Implemented on 2026-11-10 at the owner's request, after the catalog's second phase
-added twelve ELEGOO printers whose orientation was unverified.
+added twelve ELEGOO printers whose orientation was unverified. The Mars 4, Mars 4 Ultra and
+Saturn 3 Ultra are superseded by TD-153 (2026-11-14), which follows ELEGOO SatelLite.
 
 **Evidence:** ELEGOO's download page (`https://www.elegoo.com/pages/download`) offers a test archive
 per printer; four of the catalog's printers come with the model and ELEGOO's sliced file side by
@@ -5752,6 +5754,87 @@ findings, so `cargo audit` stays part of the review before every release.
 
 **Tests:** the complete checks on Linux and CI on Linux and Windows build and test the updated
 lock file.
+
+## TD-153 — Panel orientation verified against the manufacturers' slicers
+
+**Status:** Implemented on 2026-11-14 at the owner's request, after ELEGOO SatelLite showed
+karasu-slicer's Saturn 4 Ultra 16K file mirrored.
+
+**Observation (2026-11-14):** the owner opened karasu-slicer 0.1.0's GOO for the Saturn 4 Ultra
+16K (HillGiant) in ELEGOO SatelLite 1.0.2.43, which showed the model mirrored in X. SatelLite
+showed ChiTuBox's file for the same printer (TD-104), whose stored image and mirror bytes are
+karasu-slicer's, mirrored too, and its own export of HillGiant, opened again, turned 180 degrees:
+what SatelLite shows of an opened GOO file is no guide to the printed part. Its own export
+(SHA-256 `27f48b45…53f5`) declares mirror X 0, Y 1 and stores Lychee's image, karasu-slicer's
+turned 180 degrees: the slicers compared all keep the part's handedness and differ in which side
+of the plate it faces and in the declaration. How each firmware reads that declaration is not
+known, so the owner decided that each printer follows its manufacturer's slicer exactly.
+
+**Method:** a chiral test model, an "F" 20 × 30 × 2 mm (`tools/orientation-check/make_f.py`),
+exported by the owner unrotated, centred, without supports, at 0.05 mm and without
+anti-aliasing from ELEGOO SatelLite 1.0.2.43 for its twelve printers and from Anycubic Photon
+Workshop 4.2.1.20 for its twenty-two, and by karasu-slicer from the catalog
+(`export_karasu.py`). `compare.py` scores one layer's silhouettes under the four panel flips, in
+place and centred (TD-143's method, every format). The files stay outside the repository; their
+SHA-256 begin as listed.
+
+| Printer | Manufacturer's file | Declared X, Y | karasu-slicer before | Change |
+| --- | --- | --- | --- | --- |
+| Jupiter SE, Mars 5, Mars 5 Ultra, Saturn 4, Saturn 4 Ultra | `059ff71f…`, `d6edbcd1…`, `78911984…`, `5b38bcfe…`, `273ae220…` | 0, 1 | same image (0.97–1.00), 0, 1 | none |
+| Mars 4, Mars 4 Ultra, Saturn 4 Ultra 16K | `12e4617a…`, `a7d7767d…`, `ad5e69e0…` | 0, 1 | turned 180° (1.00), 1, 0 | no mirroring (revision 3) |
+| Saturn 3 Ultra, Mars 4 Max | `d3a33a4e…`, `db74f104…` | 1, 0 | turned 180° (0.98–0.99), 0, 1 | mirror X and Y (revision 2) |
+| Saturn 3 | `9d8fc1f6…` (encrypted CTB) | — | not compared | none (TD-143) |
+| Jupiter 2 | `dbef15eb…` (GOO V5.2) | — | not compared | none, unverified |
+| 16 Anycubic printers¹ | `4b703b46…` and others | — | same image (0.99–1.00) | none |
+| Photon, Photon S, Photon Zero, Photon Mono, Photon Mono SQ | `1b43cad5…`, `38547ea5…`, `3b909a0a…`, `0f2a2381…`, `bfe32f61…` | — | same image on an upright panel (0.98–1.00) | upright panel (revision 2) |
+| Photon P1 | `5ca4ec0c…` (vector layers) | `rotate_z` 180 | not compared | none (TD-104) |
+
+¹ D2, M3, M3 Max, M3 Plus, M3 Premium, Mono 2, Mono 4, Mono 4K, Mono M5, M5s, M5s Pro, Mono X,
+Mono X 6K, Mono X 6Ks, Mono X2, Ultra. The other flips scored 0.59 at most everywhere.
+
+**Findings:**
+- No printer was mirrored. ELEGOO's own sources disagree by 180 degrees: SatelLite turns the
+  Mars 4 and Mars 4 Ultra the other way from ELEGOO's test files written with Voxeldance Tango and
+  CHITUBOX (TD-143), and the Mars 4 Max the other way from its test file's declaration; each file
+  declares its own image truthfully.
+- Photon Workshop declares five older panels upright: the image's width is the short side
+  (1440 × 2560 for the Photon and Photon S, 480 × 854 for the Zero, 1620 × 2560 for the Mono,
+  2400 × 2560 for the Mono SQ) and the plate's X lies along it, the part keeping its orientation
+  in the image. karasu-slicer declared them as the manufacturers list the panels, long side
+  first.
+- Photon Workshop 4.2.1.20 writes the Photon P1's layers (and the Photon P1 Max's, a `.pp1m`
+  not in the catalog: 11520 × 8640 pixels, 285.5 × 214 × 300 mm, `rotate_z` 180) as `pwszImg`
+  members whose first bytes are the part's outline box in millimetres, not as images. They were
+  not compared; the P1 stays verified by TD-104 and its print (TD-117).
+- SatelLite writes the Saturn 3's file as encrypted CTB (magic `0x12FD0107`), which is not read
+  (its encryption is not bypassed), and the Jupiter 2's as GOO version 5.2, whose layout
+  karasu-slicer neither reads nor writes. Whether the Jupiter 2 reads the GOO V3 files
+  karasu-slicer writes is not established.
+- Photon Workshop writes newer format revisions than karasu-slicer for seven printers (517 for
+  karasu-slicer's 516: D2, M3 Plus, M3 Premium, Mono X 6K, Mono X2; 516 for the Mono X's 1; 515
+  for the Mono's 1). Whether their firmware reads the older revisions is not established
+  (TD-063).
+
+**Decision (owner, 2026-11-14):**
+1. Each printer's panel orientation follows its manufacturer's slicer: the stored image and the
+   declaration (GOO mirror bytes, PP1 `rotate_z`), so that its files print as that slicer's do
+   however the firmware reads the declaration. ChiTuBox, Lychee and test files written by other
+   slicers no longer decide.
+2. The Mars 4, Mars 4 Ultra and Saturn 4 Ultra 16K keep no mirroring (revision 3); the Saturn 3
+   Ultra and Mars 4 Max mirror in X and Y (revision 2); the Photon, Photon S, Photon Zero, Photon
+   Mono and Photon Mono SQ exchange their panel's sides and the plate's X and Y (`UPRIGHT` in
+   `tools/assets/make_catalog.py`, revision 2). A new export of each matches the manufacturer's
+   file as stored (0.97–1.00), declaration included.
+3. 33 of the 34 printers are verified (the Saturn 3 by TD-143, the Photon P1 by TD-104); the
+   Jupiter 2 is not. The README's table says so.
+4. `tools/orientation-check/` is kept for the next printers and slicer versions; CI runs its
+   tests.
+
+**Consequences:** exports for the ten changed printers change. Library copies of their earlier
+revisions keep their orientation and are offered the new revision (TD-106), never changed on
+their own. The five upright plates show their short side along X. A manufacturer's file shows
+what that slicer writes, not what the printer does: a print on each printer remains the proof,
+and the README's table records the printers printed.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 

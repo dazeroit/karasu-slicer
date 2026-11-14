@@ -4,15 +4,15 @@
     "schema_version": 2,
     "id": "anycubic-photon-s",
     "name": "Photon S",
-    "revision": 1,
+    "revision": 2,
     "build_size_mm": [
-      120.32,
       67.68,
+      120.32,
       165.0
     ],
     "resolution_px": [
-      2560,
-      1440
+      1440,
+      2560
     ],
     "origin_xy_mm": [
       0.0,

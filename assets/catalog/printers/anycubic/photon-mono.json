@@ -4,15 +4,15 @@
     "schema_version": 2,
     "id": "anycubic-photon-mono",
     "name": "Photon Mono",
-    "revision": 1,
+    "revision": 2,
     "build_size_mm": [
-      130.56,
       82.62,
+      130.56,
       165.0
     ],
     "resolution_px": [
-      2560,
-      1620
+      1620,
+      2560
     ],
     "origin_xy_mm": [
       0.0,
