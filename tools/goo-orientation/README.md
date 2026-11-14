@@ -1,5 +1,8 @@
 # GOO orientation check
 
+[tools/orientation-check](../orientation-check/README.md) extends these scripts to every format the
+catalog uses (TD-153); they are kept for the records of TD-104 and TD-143.
+
 Standard-library Python scripts that compare the layer images of two GOO V3 files, to check a
 printer profile's panel orientation against a reference slicer's file for the same model
 (TD-104, TD-143). They read files; they write nothing but the PNG asked of `goo_layer.py`.

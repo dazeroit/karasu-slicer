@@ -1095,8 +1095,8 @@ environment but is not native Windows evidence. Record target triples and exact 
 
 CI (`.github/workflows/ci.yml`, TD-149) runs these checks on every pull request into `main` or a
 release branch: on Linux formatting, Clippy, tests, the build, the documentation builds, the
-CLA script's tests and the packaging script's tests; on Windows (MSVC, GitHub's runner) Clippy, tests and the build, both without
-debug information. Its Windows job is native test execution for each pull request; a release still
+CLA script's tests, the packaging script's tests and the orientation check's tests (TD-153); on
+Windows (MSVC, GitHub's runner) Clippy, tests and the build, both without debug information. Its Windows job is native test execution for each pull request; a release still
 needs the complete native validation of [tools/windows-native](../tools/windows-native/README.md)
 in both profiles and a run of the application on real hardware
 ([RELEASE-PROCESS.md](RELEASE-PROCESS.md#tags-and-releases)).

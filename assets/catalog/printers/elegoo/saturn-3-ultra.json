@@ -4,7 +4,7 @@
     "schema_version": 2,
     "id": "elegoo-saturn-3-ultra",
     "name": "Saturn 3 Ultra",
-    "revision": 1,
+    "revision": 2,
     "build_size_mm": [
       218.88,
       122.88,
@@ -19,8 +19,8 @@
       0.0
     ],
     "swap_xy": false,
-    "mirror_x": false,
-    "mirror_y": false,
+    "mirror_x": true,
+    "mirror_y": true,
     "format_ids": [
       "goo-v3"
     ],

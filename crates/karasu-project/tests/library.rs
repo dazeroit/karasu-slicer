@@ -254,10 +254,10 @@ fn a_newer_catalog_revision_is_offered_never_applied_on_its_own() {
     let temp = TempDirectory::new();
     let mut library = Library::open(Some(&temp.0)).unwrap();
     let saturn = library
-        .add_printer_from_catalog("elegoo-saturn-4-ultra-16k", "Saturn", &[])
+        .add_printer_from_catalog("elegoo-saturn-3-ultra", "Saturn", &[])
         .unwrap();
     assert!(library.update(ProfileKind::Printer, &saturn).is_none());
-    // A copy of revision 1, before the panel's orientation was verified (TD-104).
+    // A copy of revision 1, before the panel was mirrored as ELEGOO SatelLite's image (TD-153).
     let mut old = library.printer(&saturn).unwrap().clone();
     old.mirror_x = false;
     old.mirror_y = false;

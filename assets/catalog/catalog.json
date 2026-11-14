@@ -56,43 +56,43 @@
     {
       "file": "printers/anycubic/photon.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A1, A9"
     },
     {
       "file": "printers/anycubic/photon-s.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A2, A9"
     },
     {
       "file": "printers/anycubic/photon-mono-x.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A3, A9"
     },
     {
       "file": "printers/anycubic/photon-mono-sq.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A4, A9"
     },
     {
       "file": "printers/anycubic/photon-mono-4k.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A5, A9"
     },
     {
       "file": "printers/anycubic/photon-mono-m5.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A6"
     },
     {
       "file": "printers/anycubic/photon-mono-m5s.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A7"
     },
     {
@@ -104,85 +104,85 @@
     {
       "file": "printers/anycubic/photon-zero.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A13"
     },
     {
       "file": "printers/anycubic/photon-mono.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A14"
     },
     {
       "file": "printers/anycubic/photon-ultra.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A15"
     },
     {
       "file": "printers/anycubic/photon-m3.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A16"
     },
     {
       "file": "printers/anycubic/photon-m3-max.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A17"
     },
     {
       "file": "printers/anycubic/photon-m3-plus.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A18"
     },
     {
       "file": "printers/anycubic/photon-m3-premium.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A19"
     },
     {
       "file": "printers/anycubic/photon-mono-x-6k.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A20"
     },
     {
       "file": "printers/anycubic/photon-mono-x-6ks.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A21"
     },
     {
       "file": "printers/anycubic/photon-mono-x2.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A22"
     },
     {
       "file": "printers/anycubic/photon-mono-2.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A23"
     },
     {
       "file": "printers/anycubic/photon-mono-4.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A24"
     },
     {
       "file": "printers/anycubic/photon-d2.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A25"
     },
     {
       "file": "printers/anycubic/photon-mono-m5s-pro.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "A12, A26"
     },
     {
@@ -200,7 +200,7 @@
     {
       "file": "printers/elegoo/mars-4-max.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "E3, E4, E5, E8"
     },
     {
@@ -212,13 +212,13 @@
     {
       "file": "printers/elegoo/mars-5.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "E3, E6"
     },
     {
       "file": "printers/elegoo/mars-5-ultra.json",
       "release": "tilt",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "E3, E4, E6"
     },
     {
@@ -236,13 +236,13 @@
     {
       "file": "printers/elegoo/saturn-4.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "E3, E6"
     },
     {
       "file": "printers/elegoo/saturn-4-ultra.json",
       "release": "tilt",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "E3, E7"
     },
     {
@@ -254,7 +254,7 @@
     {
       "file": "printers/elegoo/jupiter-se.json",
       "release": "z_lift",
-      "orientation_verified": false,
+      "orientation_verified": true,
       "sources": "E3, E6"
     }
   ],
