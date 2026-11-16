@@ -22,7 +22,7 @@ geometric correctness, numerical robustness, deterministic output and memory saf
   or manual supports, braces and rafts; slice, preview the layers and export the printer's file.
   Projects are saved as `.karasu` files; prepared models can be exported as STL, 3MF or OBJ.
 - **Command line** (`karasu-cli`): inspect models and slice them headlessly into printer files or
-  reference images.
+  reference images, with the built-in catalog's printers, resins and print settings by id.
 - **Printers:** the built-in catalog below, and custom printers described by their panel and
   file format.
 
