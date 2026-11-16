@@ -117,7 +117,8 @@ The headless orchestration shared by `karasu-cli` and `karasu-app`. It depends o
   growing and merging both share, and `check`, the final check), `route` (supports routed clear
   of the model on a `RouteSurface`), `branches`, `trees` and `values` (weights, the user's
   presets, the next support's values). They work in world millimetres, take the caller's
-  cancellation flag and are deterministic; the application runs them on threads of its own and
+  cancellation flag and are deterministic on each platform (not across Linux and Windows: see
+  Determinism and concurrency); the application runs them on threads of its own and
   keeps the previews, Apply and the weights' names. TD-157 adds what the command line needs to
   plan as the Automatic tool's Generate and Apply do, which the application now calls too:
   `found` (a slice's unsupported regions as islands), `settings` (the tool's value set, from
@@ -472,6 +473,16 @@ Given identical normalized input, profile, configuration, and software version, 
 must be byte-identical unless a format contains an explicitly controlled timestamp or identifier.
 Canonical ordering and stable tie-breakers are required. Parallel algorithms must merge results in a
 defined order and may not expose nondeterministic floating-point reduction order.
+
+**Known exception, open (owner, 2026-11-16; TD-157 item 6, issue #21):** the automatic support
+planners (`karasu_project::support_plan`) and parts of the core's supports call the platform's math
+library (`f64::hypot`, `sin_cos`, `cos`, `tan`, `acos`), whose last bit differs between Linux and
+Windows. On one platform they are exact and repeatable — the application's Generate and Apply and
+the command line's `--auto-supports` give the same document and print file — but Linux and Windows
+can plan a few supports differently for the same model (a trunk merged a 0.25 mm step apart, a
+tilted tip's axis in the last bit). A support document already made slices identically on both.
+Fixed operations (TD-061's degree trigonometry) would make the platforms agree, at the cost of
+changing plans made today; the owner left it open.
 
 Cancellation is cooperative at bounded intervals. A cancelled stage must not publish a complete
 artifact. Temporary output should be finalized atomically where platform APIs permit.

@@ -6052,7 +6052,8 @@ state, its threads and its workspace.
    both (only PP1's `os` provenance differs). Fixed IEEE operations in those two places (TD-061's
    degree sine and cosine, the square root of the sum of squares) made both platforms plan the
    same document on that model, but changed about 70 of its 436 supports against either
-   platform's plan today: for the owner to decide.
+   platform's plan today. The owner left it open (2026-11-16): each platform stays consistent
+   with itself; issue #21 tracks it, and ARCHITECTURE.md records the exception.
 
 **Alternatives:** writing the model-frame document, which `--supports` would read as world
 coordinates, or a frame field in the document, a change to the format (TD-062, TD-108) for one
