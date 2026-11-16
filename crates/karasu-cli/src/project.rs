@@ -131,6 +131,7 @@ pub(super) fn slice(args: &ProjectArgs, out: &mut impl Write) -> Result<(), Slic
             progress: args.progress,
             log: args.log.clone(),
             print_setting: None,
+            image_options: false,
         },
         out,
     )

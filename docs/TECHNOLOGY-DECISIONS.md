@@ -5877,6 +5877,44 @@ accepts the archive, not what the printer does.
 **Tests:** an export for the P1 Max records the suffix `pp1m`, the machine name and PW0 layer
 members; the format is listed with the others, and the README's table lists the printer.
 
+## TD-155 — The built-in catalog on the command line
+
+**Status:** Implemented on 2026-11-16 at the owner's request, the first item of a comparison of
+the command line with the application (owner, 2026-11-15).
+
+**Problem:** `slice` took profiles only as JSON files, while the packages ship no
+`assets/catalog`: someone with a release had to export each profile from the application's
+library, or fetch it from the repository, before slicing for a catalog printer. The catalog is
+compiled into `karasu-project`, which the command line already uses.
+
+**Decision (owner, 2026-11-16):**
+1. `karasu-cli catalog` lists the printers (id, name, image orientation, number of resins with a
+   print setting, formats); `--printer <id>` shows one printer and its resins with their print
+   settings; `--resins` lists every resin and how many printers have a print setting for it.
+2. `--printer`, `--resin` and `--print-setting` take a catalog id where a file is not given. A
+   value reads as an id only when it is lowercase letters, digits and hyphens, as every catalog
+   id is, so a path (with a separator or an extension) never does; it is then looked up in its
+   option's section. A value that is both an existing file and a catalog id is refused, never
+   guessed, and `./name` names the file. An unknown id fails with up to five close ids.
+3. With a catalog printer and a catalog resin and no `--print-setting`, the catalog's print
+   setting for the pair is taken: the catalog holds one per pair, and none or several fail with
+   what to choose. A catalog resin holds no calibration, so with a printer file it needs
+   `--print-setting`.
+4. A taken print setting holds the anti-aliasing, minimum grey and XY compensation, as a given
+   one does (TD-106), so `--antialias`, `--min-gray` and the compensations are refused beside it.
+5. The summary opens with `Catalog profiles:` and what the catalog supplied, and the log records
+   it; a failed job prints no summary. Ids resolve when the job runs, as files are read, so their
+   errors exit with status 1.
+
+**Alternatives:** separate options (`--printer-id`) double every profile option; a prefix
+(`catalog:name`) is explicit but unlike any other value the command line takes. The
+lowercase-hyphen rule keeps one option per profile and cannot read a path as an id.
+
+**Tests:** the id rule, refusals and suggestions (unit tests); `catalog` and its two forms;
+slicing by catalog ids gives the bytes slicing by the catalog's own files gives; a file named as
+an id, an unknown id, an option the taken setting holds, and a resin without a setting for the
+printer are refused, writing nothing.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

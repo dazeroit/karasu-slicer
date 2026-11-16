@@ -1403,6 +1403,11 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
      - **Photon P1 Max (owner, 2026-11-14, TD-154):** added to the catalog, not verified: the
        `.pp1m` archive is the P1's under its own name and suffix (`anycubic-pp1m-v3`); no print
        settings, since Anycubic's resin table does not list it.
+     - **The catalog on the command line (owner, 2026-11-16, TD-155):** `karasu-cli catalog`
+       lists the printers, a printer's resins and every resin; `--printer`, `--resin` and
+       `--print-setting` take catalog ids, and a catalog printer and resin take the catalog's
+       print setting for them. The first item of the owner's comparison of the command line
+       with the application (2026-11-15); automatic supports and orientation come next.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

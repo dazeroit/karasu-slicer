@@ -4,6 +4,7 @@
 //! The first Ctrl-C (SIGINT, or the Windows console equivalent) sets a flag that every core
 //! cancellation checkpoint observes; the pipeline then fails through its ordinary error path, so
 //! export staging data is removed and nothing is published. A second Ctrl-C exits immediately.
+use super::catalog::{self, Kind, Source};
 use super::progress::{Progress, ProgressMode};
 use karasu_core::{
     cancellation::Checkpoint,
@@ -16,7 +17,7 @@ use karasu_core::{
         sampled::HoleSurface,
         HoleTilt, MAX_HOLE_TILT_DEG,
     },
-    profiles::{store::ProfileDocument, MAX_PROFILE_BYTES},
+    profiles::{store::ProfileDocument, PrintSettingProfile, ResinMaterial, MAX_PROFILE_BYTES},
 };
 use karasu_project::{
     pipeline,
@@ -85,8 +86,12 @@ pub(super) struct SliceArgs {
     /// The session log's file (`--log`, TD-096), or `None` for no log.
     pub(super) log: Option<PathBuf>,
     /// A library print setting (`--print-setting`, TD-106): `--resin` then names a library
-    /// resin, and the setting supplies the calibration, masks and compensation.
+    /// resin, and the setting supplies the calibration, masks and compensation. A file, or a
+    /// catalog id (TD-155).
     pub(super) print_setting: Option<PathBuf>,
+    /// Whether `--antialias`, `--min-gray` or an XY compensation was given, which a print
+    /// setting holds: refused beside one, the catalog's chosen one included (TD-155).
+    pub(super) image_options: bool,
 }
 
 /// Default gap between arranged footprints (TD-065 owner decision).
@@ -288,12 +293,11 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
     if min_vent.is_some() && suction_cups.is_none() {
         return Err("--min-vent is used only with --suction-cups".to_owned());
     }
-    if print_setting.is_some()
-        && (antialias.is_some()
-            || min_gray.is_some()
-            || xy_compensation.is_some()
-            || bottom_xy_compensation.is_some())
-    {
+    let image_options = antialias.is_some()
+        || min_gray.is_some()
+        || xy_compensation.is_some()
+        || bottom_xy_compensation.is_some();
+    if print_setting.is_some() && image_options {
         return Err(
             "--print-setting holds the anti-aliasing, minimum gray and XY compensation: edit \
              the print setting instead of giving --antialias, --min-gray or --xy-compensation"
@@ -353,40 +357,213 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         progress: progress.unwrap_or(ProgressMode::Auto),
         log,
         print_setting,
+        image_options,
     })
 }
 
-/// The request with the library print setting in `path` (TD-106): `--resin`'s library resin
-/// with that setting becomes the job's calibrated resin, and the setting's image settings
-/// replace the command line's defaults.
-fn with_print_setting(request: &SliceRequest, path: &Path) -> Result<SliceRequest, String> {
-    let read = |path: &Path, what: &str| {
-        let mut bytes = Vec::new();
-        File::open(path)
-            .and_then(|file| {
-                file.take(u64::try_from(MAX_PROFILE_BYTES).unwrap_or(u64::MAX) + 1)
-                    .read_to_end(&mut bytes)
-            })
-            .map_err(|e| format!("cannot read {what} {}: {e}", path.display()))?;
-        ProfileDocument::from_json(&bytes)
-            .map_err(|e| format!("invalid {what} {}: {e}", path.display()))
+/// A profile document read from `path`, at most `MAX_PROFILE_BYTES` long.
+fn read_document(path: &Path, what: &str) -> Result<ProfileDocument, String> {
+    let mut bytes = Vec::new();
+    File::open(path)
+        .and_then(|file| {
+            file.take(u64::try_from(MAX_PROFILE_BYTES).unwrap_or(u64::MAX) + 1)
+                .read_to_end(&mut bytes)
+        })
+        .map_err(|e| format!("cannot read {what} {}: {e}", path.display()))?;
+    ProfileDocument::from_json(&bytes)
+        .map_err(|e| format!("invalid {what} {}: {e}", path.display()))
+}
+
+/// The catalog compiled in, read only when a profile option reads as a catalog id.
+struct Profiles {
+    catalog: Option<karasu_project::library::Catalog>,
+}
+
+impl Profiles {
+    fn source(&self, path: &Path, kind: Kind) -> Result<Source, String> {
+        match &self.catalog {
+            Some(catalog) => catalog::source(path, kind, catalog, Path::exists),
+            None => Ok(Source::File(path.to_owned())),
+        }
+    }
+
+    fn catalog(&self) -> Result<&karasu_project::library::Catalog, String> {
+        self.catalog
+            .as_ref()
+            .ok_or_else(|| "the built-in catalog was not read".to_owned())
+    }
+
+    /// The print setting `source` names.
+    fn print_setting(&self, source: &Source) -> Result<PrintSettingProfile, String> {
+        match source {
+            Source::File(path) => match read_document(path, "print setting")? {
+                ProfileDocument::PrintSetting(setting) => Ok(setting),
+                _ => Err(format!(
+                    "{} is not a print setting; --print-setting requires kind \"print_setting\"",
+                    path.display()
+                )),
+            },
+            Source::Catalog(id) => self
+                .catalog()?
+                .setting(id)
+                .map(|s| s.profile.clone())
+                .ok_or_else(|| format!("no catalog print setting {id}")),
+        }
+    }
+
+    /// The library resin `source` names, for a print setting.
+    fn material(&self, source: &Source) -> Result<ResinMaterial, String> {
+        match source {
+            Source::File(path) => match read_document(path, "resin")? {
+                ProfileDocument::Material(material) => Ok(material),
+                _ => Err(format!(
+                    "{} is not a library resin; with --print-setting, --resin requires kind \"material\"",
+                    path.display()
+                )),
+            },
+            Source::Catalog(id) => self
+                .catalog()?
+                .material(id)
+                .map(|m| m.profile.clone())
+                .ok_or_else(|| format!("no catalog resin {id}")),
+        }
+    }
+
+    /// The catalog's one print setting for a catalog printer and resin.
+    fn chosen_setting(&self, printer: &str, resin: &str) -> Result<String, String> {
+        let settings: Vec<&str> = self
+            .catalog()?
+            .settings_for(printer, resin)
+            .map(|s| s.profile.id.as_str())
+            .collect();
+        match settings.as_slice() {
+            [id] => Ok((*id).to_owned()),
+            [] => Err(format!(
+                "the catalog has no print setting for resin {resin} on printer {printer}: \
+                 `karasu-cli catalog --printer {printer}` lists the resins it has settings for"
+            )),
+            ids => Err(format!(
+                "the catalog has {} print settings for resin {resin} on printer {printer} \
+                 ({}): choose one with --print-setting",
+                ids.len(),
+                ids.join(", ")
+            )),
+        }
+    }
+}
+
+/// The arguments with their profiles resolved (TD-155): catalog ids loaded from the built-in
+/// catalog, and the print setting given, or else the catalog's for a catalog printer and
+/// resin, made the job's calibrated resin. Also returns, when the catalog supplied a profile,
+/// the line that names what it supplied.
+fn resolve(args: &SliceArgs) -> Result<(SliceArgs, Option<String>), String> {
+    let (Input::File(printer_path), Input::File(resin_path)) =
+        (&args.request.printer, &args.request.resin)
+    else {
+        return Ok((args.clone(), None));
     };
-    let ProfileDocument::PrintSetting(setting) = read(path, "print setting")? else {
-        return Err(format!(
-            "{} is not a print setting; --print-setting requires kind \"print_setting\"",
-            path.display()
-        ));
+    let named = [
+        Some(printer_path.as_path()),
+        Some(resin_path.as_path()),
+        args.print_setting.as_deref(),
+    ];
+    let profiles = Profiles {
+        catalog: if named.into_iter().flatten().any(catalog::reads_as_id) {
+            Some(catalog::built_in()?)
+        } else {
+            None
+        },
     };
-    let Input::File(resin_path) = &request.resin else {
-        return Err("--print-setting needs --resin <resin.json>".to_owned());
+    let printer = profiles.source(printer_path, Kind::Printer)?;
+    let resin = profiles.source(resin_path, Kind::Resin)?;
+    let given = args
+        .print_setting
+        .as_deref()
+        .map(|path| profiles.source(path, Kind::PrintSetting))
+        .transpose()?;
+    let (setting, chosen) = match (given, &printer, &resin) {
+        (Some(setting), _, _) => (Some(setting), false),
+        (None, Source::Catalog(printer), Source::Catalog(resin)) => (
+            Some(Source::Catalog(profiles.chosen_setting(printer, resin)?)),
+            true,
+        ),
+        (None, Source::File(_), Source::Catalog(resin)) => {
+            return Err(format!(
+                "--resin {resin} is a catalog resin, which holds no calibration: give \
+                 --print-setting, or a catalog --printer, whose print setting for the resin is \
+                 then taken"
+            ))
+        }
+        (None, _, Source::File(_)) => (None, false),
     };
-    let ProfileDocument::Material(material) = read(resin_path, "resin")? else {
-        return Err(format!(
-            "{} is not a library resin; with --print-setting, --resin requires kind \"material\"",
-            resin_path.display()
-        ));
-    };
-    let resin = setting.job_resin(&material).map_err(|e| e.to_string())?;
+    let mut request = args.request.clone();
+    if let Source::Catalog(id) = &printer {
+        let entry = profiles
+            .catalog()?
+            .printer(id)
+            .ok_or_else(|| format!("no catalog printer {id}"))?;
+        request.printer = Input::Loaded {
+            name: entry
+                .profile
+                .model
+                .clone()
+                .unwrap_or_else(|| entry.profile.name.clone()),
+            value: entry.profile.clone(),
+        };
+    }
+    if let Some(setting) = &setting {
+        if chosen && args.image_options {
+            return Err(format!(
+                "the catalog's print setting {} holds the anti-aliasing, minimum gray and XY \
+                 compensation: give a print setting file of your own instead of --antialias, \
+                 --min-gray or --xy-compensation",
+                match setting {
+                    Source::Catalog(id) => id.as_str(),
+                    Source::File(_) => "",
+                }
+            ));
+        }
+        request = with_print_setting(
+            &request,
+            &profiles.print_setting(setting)?,
+            &profiles.material(&resin)?,
+        )?;
+    }
+    let mut supplied = Vec::new();
+    if let Source::Catalog(id) = &printer {
+        supplied.push(format!("printer {id}"));
+    }
+    if let Source::Catalog(id) = &resin {
+        supplied.push(format!("resin {id}"));
+    }
+    if let Some(Source::Catalog(id)) = &setting {
+        supplied.push(if chosen {
+            format!("print setting {id} (the catalog's for this printer and resin)")
+        } else {
+            format!("print setting {id}")
+        });
+    }
+    let note =
+        (!supplied.is_empty()).then(|| format!("Catalog profiles: {}\n", supplied.join(", ")));
+    Ok((
+        SliceArgs {
+            request,
+            print_setting: None,
+            ..args.clone()
+        },
+        note,
+    ))
+}
+
+/// The request with a library print setting (TD-106): the library resin `material` with that
+/// setting becomes the job's calibrated resin, and the setting's image settings replace the
+/// command line's defaults.
+fn with_print_setting(
+    request: &SliceRequest,
+    setting: &PrintSettingProfile,
+    material: &ResinMaterial,
+) -> Result<SliceRequest, String> {
+    let resin = setting.job_resin(material).map_err(|e| e.to_string())?;
     SliceRequest {
         resin: Input::Loaded {
             name: material.name.clone(),
@@ -1192,19 +1369,12 @@ pub(super) fn slice(args: &SliceArgs, out: &mut impl Write) -> Result<(), SliceF
     if let Some(path) = &args.log {
         start_log(path)?;
     }
-    let resolved;
-    let args = match &args.print_setting {
-        None => args,
-        Some(path) => {
-            resolved = SliceArgs {
-                request: with_print_setting(&args.request, path).map_err(SliceFailure::Error)?,
-                print_setting: None,
-                ..args.clone()
-            };
-            &resolved
-        }
-    };
-    let result = slice_logged(args, out);
+    let (resolved, note) = resolve(args).map_err(SliceFailure::Error)?;
+    let args = &resolved;
+    if let Some(note) = &note {
+        log::info!(target: "slice", "{}", note.trim_end());
+    }
+    let result = slice_logged(args, note.as_deref(), out);
     if let Err(SliceFailure::Error(message)) = &result {
         log::error!(target: "slice", "{message}");
     }
@@ -1234,7 +1404,12 @@ pub(super) fn start_log(path: &Path) -> Result<(), SliceFailure> {
     Ok(())
 }
 
-fn slice_logged(args: &SliceArgs, out: &mut impl Write) -> Result<(), SliceFailure> {
+/// `note`, when the catalog supplied profiles, opens the summary.
+fn slice_logged(
+    args: &SliceArgs,
+    note: Option<&str>,
+    out: &mut impl Write,
+) -> Result<(), SliceFailure> {
     let mut progress = Progress::new(args.progress);
     if let Err(e) = ctrlc::set_handler(on_interrupt) {
         // Without a handler Ctrl-C still terminates the process, only without staging cleanup.
@@ -1246,7 +1421,8 @@ fn slice_logged(args: &SliceArgs, out: &mut impl Write) -> Result<(), SliceFailu
     progress.finish();
     match result {
         Ok(outcome) => {
-            out.write_all(outcome.summary.as_bytes())
+            out.write_all(note.unwrap_or_default().as_bytes())
+                .and_then(|()| out.write_all(outcome.summary.as_bytes()))
                 .and_then(|()| out.flush())
                 .map_err(|e| SliceFailure::from(format!("cannot write slice summary: {e}")))?;
             // TD-095: the output is kept for inspection, but the job fails.
@@ -1351,6 +1527,7 @@ mod tests {
                 progress: ProgressMode::Auto,
                 log: None,
                 print_setting: None,
+                image_options: false,
             }
         );
     }

@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+mod catalog;
 mod inspect;
 mod models;
 mod progress;
@@ -23,6 +24,7 @@ enum Command {
     Help,
     Version,
     Inspect(inspect::InspectArgs),
+    Catalog(catalog::CatalogArgs),
     Slice(Box<slice::SliceArgs>),
     SliceProject(project::ProjectArgs),
     ExportModels(Box<models::ExportArgs>),
@@ -35,6 +37,9 @@ fn parse_command(
     let first = arguments.next();
     if first.as_deref() == Some(std::ffi::OsStr::new("inspect")) {
         return parse_inspect(arguments);
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("catalog")) {
+        return catalog::parse(arguments).map(Command::Catalog);
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("export-models")) {
         return models::parse(arguments).map(|args| Command::ExportModels(Box::new(args)));
@@ -167,15 +172,15 @@ fn version_text() -> String {
 fn help_text() -> String {
     format!(
         "{APPLICATION_NAME} {VERSION}\n{APPLICATION_DESCRIPTION}\n\n\
-         Usage: karasu-cli [OPTIONS]\n       karasu-cli inspect (--assume-mm <path> | --model <path> [--units <unit>]) [--diagnosis | --minima [--rotate <x> <y> <z>]]\n       \
+         Usage: karasu-cli [OPTIONS]\n       karasu-cli catalog [--printer <id> | --resins]\n       karasu-cli inspect (--assume-mm <path> | --model <path> [--units <unit>]) [--diagnosis | --minima [--rotate <x> <y> <z>]]\n       \
          karasu-cli slice --project <project.karasu> [--project-plate <number or name>] --output <path>\n         \
          \x20 [--progress | --no-progress] [--log <file>]\n       \
          karasu-cli export-models --project <project.karasu> [--project-plate <number or name> | --every-plate]\n         \
          \x20 [--model <n>] --format stl|3mf|obj [--per-model] [--no-supports] [--no-raft] [--separate-objects] [--replace]\n         \
          \x20 (--output <file> | --folder <folder> [--names <pattern>]) [--progress | --no-progress] [--log <file>]\n       \
          karasu-cli slice (--assume-mm <model> | --model <model> [--units <unit>] | --plate <plate.json>)\n         \
-         --printer <printer.json> \
-         --resin <resin.json> \
+         --printer <printer.json or id> \
+         --resin <resin.json or id> [--print-setting <setting.json or id>]\n         \
          --format <id> --output <path>\n         [--translate <x> <y> <z> | [--center] [--drop]] \
          [--rotate <x> <y> <z>] [--scale <x> <y> <z>]\n         [--mirror <axes>] [--job-id <id>] \
          [--fill union|strict] [--close-holes <mm> | --no-close-holes]\n         \
@@ -201,6 +206,10 @@ fn help_text() -> String {
          \x20   --minima reports instead the local minima (TD-107): where material starts in\n\
          \x20   mid-air and needs a support, with the model turned by --rotate (degrees, X then\n\
          \x20   Y then Z) and its lowest point on the plate.\n\
+         \n  catalog [--printer <id> | --resins]\n\
+         \x20   List the built-in catalog (TD-155): its printers, with their formats and whether\n\
+         \x20   their image orientation is verified; with --printer, one printer and the resins\n\
+         \x20   that have a print setting for it; with --resins, every resin.\n\
          \n  slice --project <project.karasu> --output <path>\n\
          \x20   Slice one plate of a karasu-slicer project (TD-130) with its own printer, resin,\n\
          \x20   print setting, settings and objects: placement, repair, hollowing, drain holes,\n\
@@ -222,7 +231,7 @@ fn help_text() -> String {
          \x20   any file was not written.\n\
          Reports show full-precision bounds and at most 100 details per diagnostic section,\n\
          with accurate totals and omitted counts. Closed topology does not prove printability.\n\
-         \n  slice (--assume-mm <model> | --model <model> [--units <unit>]) --printer <printer.json> --resin <resin.json> [--print-setting <setting.json>] --format <id> --output <path>\n\
+         \n  slice (--assume-mm <model> | --model <model> [--units <unit>]) --printer <printer.json or id> --resin <resin.json or id> [--print-setting <setting.json or id>] --format <id> --output <path>\n\
          \x20   Slice an STL, OBJ or 3MF model (chosen by extension) and export one new print file (or\n\
          \x20   reference directory). --assume-mm means --units mm and reads unknown extensions as STL;\n\
          \x20   3MF declares its unit, and a contradicting --units is an error.\n\
@@ -231,6 +240,11 @@ fn help_text() -> String {
          \x20   library resin (kind material): the setting supplies the calibration, anti-aliasing,\n\
          \x20   minimum gray and XY compensation, so --antialias, --min-gray and the compensations\n\
          \x20   are refused beside it.\n\
+         \x20   --printer, --resin and --print-setting also take a catalog id (TD-155; `catalog`\n\
+         \x20   lists them), for a value with no path separator or dot that names no file; a value\n\
+         \x20   that is both is refused (./<name> is the file). With a catalog printer and resin\n\
+         \x20   and no --print-setting, the catalog's print setting for them is taken, and the\n\
+         \x20   summary names what the catalog supplied.\n\
          \x20   --rotate (degrees, fixed X then Y then Z), --scale (positive factors) and --mirror\n\
          \x20   (axes such as x or xy) act about the source bounding-box centre. The model is then\n\
          \x20   translated by --translate (default 0 0 0), or --center centres it on the plate and\n\
@@ -365,6 +379,7 @@ pub(crate) fn main() -> ExitCode {
         Command::Version => Ok(writeln!(io::stdout().lock(), "{}", version_text())
             .map_err(|e| format!("cannot write version: {e}"))),
         Command::Inspect(args) => Ok(inspect::inspect_model(&args, &mut io::stdout().lock())),
+        Command::Catalog(args) => Ok(catalog::list(&args, &mut io::stdout().lock())),
         Command::Slice(args) => sliced(slice::slice(&args, &mut io::stdout().lock())),
         Command::SliceProject(args) => sliced(project::slice(&args, &mut io::stdout().lock())),
         Command::ExportModels(args) => sliced(models::export(&args, &mut io::stdout().lock())),

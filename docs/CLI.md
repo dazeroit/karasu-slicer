@@ -160,6 +160,36 @@ ordinary public APIs; it adds no cancellation controller, signal handling, worke
 STL, OBJ and 3MF are supported (see Model formats). No mesh repair or scene transformation
 command is added.
 
+## The built-in catalog (TD-155)
+
+The printers, resins and print settings compiled into karasu-slicer (TD-106) are listed, and
+`slice` takes their ids where it takes profile files:
+
+```console
+karasu-cli catalog
+karasu-cli catalog --printer elegoo-saturn-4-ultra-16k
+karasu-cli catalog --resins
+karasu-cli slice --assume-mm model.stl --printer elegoo-saturn-4-ultra-16k \
+  --resin elegoo-standard-resin --format goo-v3 --center --drop --output model.goo
+```
+
+- `catalog` lists every printer: its id, name, whether its image orientation is verified, how
+  many resins have a print setting for it, and its formats. `--printer <id>` shows one printer,
+  its panel and build volume, and its resins with their print settings; `--resins` lists every
+  resin and how many printers have a print setting for it.
+- `--printer`, `--resin` and `--print-setting` take a catalog id where a file is not given: a
+  value made of lowercase letters, digits and hyphens (no path separator, no dot) that names no
+  file is looked up in the catalog section of its option. A value that names both a file and a
+  catalog entry is refused, not guessed: `./name` names the file. An unknown id fails with the
+  closest ids.
+- With a catalog printer and a catalog resin and no `--print-setting`, the catalog's print
+  setting for them is taken; none, or several, fail with what to choose. A catalog resin with a
+  printer file needs `--print-setting`.
+- As a given print setting does, a taken one holds the anti-aliasing, minimum grey and XY
+  compensation, so those options are refused beside it.
+- The summary opens with `Catalog profiles:` and what the catalog supplied. A catalog id and the
+  catalog's own file slice to identical bytes.
+
 ## Headless slicing
 
 ```console
@@ -178,12 +208,13 @@ model import → optional topology gate → explicit placement → uniform layer
     without a known model extension as STL.
   - **Summary:** the `Model` line gives the format, unit, origin and objects, and `Import notes`
     lists what was ignored or converted.
-- `--printer <file>`, `--resin <file>`: typed profile JSON documents, exactly as written by
+- `--printer <file or id>`, `--resin <file or id>` (ids: see The built-in catalog): typed
+  profile JSON documents, exactly as written by
   `ProfileDocument::to_json` (`{"kind": "printer", "profile": {...}}` / `"kind": "resin"`).
   Unknown fields are rejected. The resin must contain a calibration whose `printer_id` equals the
   printer `id`; its `layer_height_mm`, bottom/transition counts and exposures define the job.
-- `--print-setting <file>` (TD-106): a library print setting (`"kind": "print_setting"`); `--resin`
-  is then a library resin (`"kind": "material"`), and the setting supplies the calibration, the
+- `--print-setting <file or id>` (TD-106): a library print setting (`"kind": "print_setting"`);
+  `--resin` is then a library resin (`"kind": "material"`), and the setting supplies the calibration, the
   anti-aliasing, the minimum grey and the XY compensation, so those options are refused beside
   it.
 - `--format <id>`: one of these identifiers. The output extension must match it.
@@ -542,5 +573,6 @@ itself, not as an interruption. Machine files are published atomically by hard l
 without hard links (FAT32/exFAT USB sticks and SD cards) they are copied into an exclusively created
 destination, which never replaces an existing file but is not atomic.
 
-Supports are not exposed through the CLI.
+Automatic supports, islands' supports and automatic braces are not exposed through the CLI:
+`--supports` reads supports already placed.
 Exported files are format-reader validated, not certified on physical printers.
