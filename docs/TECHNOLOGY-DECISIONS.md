@@ -6266,8 +6266,10 @@ settings.
 
 **Checks:** the policy is read back through the REST API
 (`GET /repos/dazeroit/karasu-slicer/actions/policies` and the policy by its id): its enforcement,
-its workflow path and its allowed events. Until 2026-12-02 a CLA run that fails to start during a
-brownout is run again with a `recheck` comment.
+its workflow path and its allowed events. **Verified** on 2026-11-16 at 17:42 UTC, inside the
+brownout: the CLA check of pull request #27 ran on `pull_request_target` and passed, where seven
+minutes earlier, before the event rule was added, a run of the same workflow had failed to start.
+Should a run fail to start all the same, a `recheck` comment runs it again.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
