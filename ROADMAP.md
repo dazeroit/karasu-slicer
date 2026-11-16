@@ -1433,6 +1433,9 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        as the application keeps them. Put off by the owner until a project can be made from the
        command line: blockers in plate documents, `export-models` from one model, and the Solid
        base (a box over the placed footprint).
+     - **Long names (owner, 2026-11-16, issue #18):** the sidebar's printer, resin and print
+       setting menus and the plates' menu cut a long name to their width, with the whole name
+       in the tooltip and for screen readers; the sidebar keeps its width.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the
