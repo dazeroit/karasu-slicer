@@ -5599,7 +5599,8 @@ token is an error, never a pass; comments on issues are ignored.
 **Setup (owner):** create the private repository `dazeroit/karasu-slicer-cla` with a `main`
 branch (the first acceptance creates the file); create a fine-grained token for that repository
 alone with Contents read and write; add it to karasu-slicer as the Actions secret
-`CLA_SIGNATURES_TOKEN`; optionally require the **CLA** check on `main`.
+`CLA_SIGNATURES_TOKEN`; optionally require the **CLA** check on `main`; allow the workflow
+`pull_request_target` with an Actions event policy (TD-161).
 
 ## TD-149 — Branches, versions and releases
 
@@ -6224,6 +6225,49 @@ hollowed at 2 mm keeps the volume of a 16 × 16 × 4 mm box over its cavity's fl
 (about 999 mm³ of the 15.9 mm cavity), the same when the model is centred, less when the box is
 turned and a sphere added, with the blockers counted; a blocker over the whole cavity leaves
 nothing to hollow.
+
+## TD-161 — The CLA workflow allowed `pull_request_target` by an Actions event policy
+
+**Status:** decided by the owner on 2026-11-16, who created the policy in the repository's
+settings.
+
+**Context:**
+- GitHub blocks workflows triggered by `pull_request_target` by default in public repositories
+  from 2026-12-02, unless an Actions event policy allows the event
+  ([changelog, 2026-11-02](https://github.blog/changelog/2026-11-02-pull_request_target-blocked-by-default-december-2);
+  [Securely using pull_request_target](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target)).
+  Until then the block runs in evaluation, except during brownouts on 2026-11-09 and 2026-11-16,
+  16:00 to 18:00 UTC.
+- During the brownout of 2026-11-16 the **CLA** check of pull requests #24 to #26 failed to start
+  (`startup_failure`, no job) with "Workflows are being blocked due to a scheduled brownout of the
+  default `pull_request_target` protection". A `recheck` comment ran it, since comments are not
+  blocked. The **Linux** and **Windows** checks run on `pull_request` and were not affected.
+
+**Decision:**
+1. **The CLA workflow keeps `pull_request_target`.** From a fork, only that event gives the
+   workflow a token that comments on the pull request and sets its status, and the
+   `CLA_SIGNATURES_TOKEN` secret that records acceptances (TD-148). The workflow already follows
+   GitHub's guidance for the event: it runs the default branch's script, never checks out or runs
+   the pull request's code (it reads it through the API), its token has only the permissions it
+   uses, and its actions are pinned to commits.
+2. **A repository Actions event policy allows it for that workflow alone** (Settings › Actions ›
+   Policies): `cla_pull_request_target_event`, enforcement active, workflow path
+   `.github/workflows/cla.yml`, an event rule allowing `pull_request_target` and `issue_comment`.
+   The event rule lists the events the targeted workflow may run on, so it names the comments
+   that accept the CLA and `recheck` too.
+3. No other workflow runs on `pull_request_target`. A new one would need its own decision and a
+   policy of its own.
+
+**Alternatives rejected:**
+- **`pull_request` with a `workflow_run` workflow** holding the token and the secret: two
+  workflows, artifacts from forks treated as untrusted data, and more to keep right, for no gain
+  while no code of the pull request runs.
+- **The hosted CLA Assistant:** rejected by TD-148.
+
+**Checks:** the policy is read back through the REST API
+(`GET /repos/dazeroit/karasu-slicer/actions/policies` and the policy by its id): its enforcement,
+its workflow path and its allowed events. Until 2026-12-02 a CLA run that fails to start during a
+brownout is run again with a `recheck` comment.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
