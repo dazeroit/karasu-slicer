@@ -1,6 +1,22 @@
 use super::*;
 use crate::{preparation_ui::PreparationUi, supports_ui::SupportsUi, workspace::Workspace};
-use std::time::{Duration, Instant};
+use karasu_core::{
+    analysis::unsupported::RegionKind,
+    supports::{BuildVolume, DrainCylinder, SupportOrigin},
+};
+use karasu_project::support_plan::{
+    auto::{candidates, edges::Rank, tilt},
+    islands::{check::distance, Island},
+    route::RouteSurface,
+    values::Weight,
+};
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::{Duration, Instant},
+};
 
 /// A slab 20 × 20 × 3 mm whose bottom is at 15 mm, on a pillar under its first 4 mm along X: an
 /// overhang of 16 × 20 mm with nothing under it. Placed on a preset printer, prepared, with its
@@ -318,22 +334,6 @@ fn a_plan_of_the_cavity_alone_leaves_the_outside_as_it_is() {
         assert_eq!([place.holds(false), place.holds(true)], held, "{place:?}");
     }
     let _ = std::fs::remove_dir_all(directory);
-}
-
-#[test]
-fn settings_that_knew_only_inside_read_as_a_place() {
-    let read = |json: &str| serde_json::from_str::<AutoSupports>(json).unwrap().place;
-    assert_eq!(read(r#"{"inside": true}"#), Place::Everywhere);
-    assert_eq!(read(r#"{"inside": false}"#), Place::Outside);
-    assert_eq!(read(r#"{"place": "cavity"}"#), Place::Cavity);
-    assert_eq!(read("{}"), Place::Everywhere);
-    let saved = serde_json::to_string(&AutoSupports {
-        place: Place::Cavity,
-        ..AutoSupports::default()
-    })
-    .unwrap();
-    assert!(saved.contains(r#""place":"cavity""#), "{saved}");
-    assert_eq!(read(&saved), Place::Cavity);
 }
 
 #[test]

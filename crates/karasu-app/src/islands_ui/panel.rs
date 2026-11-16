@@ -17,7 +17,7 @@ use crate::{
     preparation_ui::PreparationUi,
     supports_ui::{
         panel::{fit_fields, shape_field},
-        SupportPreset, SupportsUi, Weight,
+        SupportPreset, SupportsUi, Weight, WeightLabel,
     },
     theme,
     widgets::{

@@ -1,7 +1,7 @@
 //! New supports placed clear of the model (owner, 2026-10-29): where a shaft straight down
 //! would go through more of the model below its tip, the support a click adds goes aside (its
 //! shaft in the nearest clear column, the tip leaning to a knee) or, failing that, stands on
-//! the model below (see `karasu_core::supports::find_route`). The panel's switch "Avoid the
+//! the model below ([`karasu_project::support_plan::route`]). The panel's switch "Avoid the
 //! model" (on by default) turns it off: the shaft then goes straight down, as before.
 //!
 //! The route is found against the selected model's surface (its hollowed shell, or the placed
@@ -12,13 +12,15 @@ use crate::{preparation_ui::PreparationUi, workspace::Workspace};
 use karasu_core::{
     cancellation::Cancellation,
     geometry::ObjectTransform,
-    mesh::TriangleMesh,
-    supports::{
-        find_mini_foot, find_route, AxisSpec, BaseSpec, ManualSupport, MiniQuery, Route,
-        RouteQuery, SupportKind, SupportParameters, SurfaceGrid,
-    },
+    supports::{BaseSpec, ManualSupport, SurfaceGrid},
 };
-use karasu_project::pipeline::{placed_mesh, Preparation};
+pub(crate) use karasu_project::support_plan::route::{
+    axis_to_model, mini_routed, route_support, RouteSurface, Routed,
+};
+use karasu_project::{
+    pipeline::{placed_mesh, Preparation},
+    support_plan::route::SurfaceMesh,
+};
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -26,47 +28,6 @@ use std::{
     },
     time::Instant,
 };
-
-/// The surface routes are found against.
-enum SurfaceMesh {
-    /// The placed model, solid.
-    Placed(TriangleMesh),
-    /// The hollowed shell of object `index` in a preparation.
-    Hollow(Arc<Preparation>, usize),
-}
-
-impl SurfaceMesh {
-    /// Where the hollowed shell's cavity triangles start, for a hollowed model.
-    fn interior_from(&self) -> Option<usize> {
-        match self {
-            Self::Placed(_) => None,
-            Self::Hollow(preparation, index) => Some(
-                preparation
-                    .objects
-                    .get(*index)?
-                    .as_ref()
-                    .ok()?
-                    .hollowed()?
-                    .exterior_faces(),
-            ),
-        }
-    }
-
-    fn mesh(&self) -> Option<&TriangleMesh> {
-        match self {
-            Self::Placed(mesh) => Some(mesh),
-            Self::Hollow(preparation, index) => Some(
-                preparation
-                    .objects
-                    .get(*index)?
-                    .as_ref()
-                    .ok()?
-                    .hollowed()?
-                    .mesh(),
-            ),
-        }
-    }
-}
 
 /// What a surface is of: the object, its placement and the preparation's generation.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -76,202 +37,23 @@ struct Key {
     generation: u64,
 }
 
-/// The selected model's surface and its grid, shared with the threads that find routes on it.
-pub(crate) struct RouteSurface {
+/// The selected model's surface for routes, and what it is of.
+pub(super) struct Keyed {
     key: Key,
-    mesh: SurfaceMesh,
-    grid: SurfaceGrid,
-}
-
-impl RouteSurface {
-    /// The surface: the hollowed shell, or the placed model, in world millimetres.
-    pub(crate) fn mesh(&self) -> Option<&TriangleMesh> {
-        self.mesh.mesh().filter(|m| self.grid.fits(m))
-    }
-
-    /// Its grid.
-    pub(crate) fn grid(&self) -> &SurfaceGrid {
-        &self.grid
-    }
-
-    /// The surface's outward normal at `point` as a support's build measures it (TD-124): the
-    /// mean within `radius` of the triangles facing the `facet` normal's way; `facet` itself
-    /// without the surface. Planned supports are built alone against a triangle facing this
-    /// way, so they take the shape the whole surface gives them.
-    pub(crate) fn normal_at(&self, point: [f64; 3], facet: [f64; 3], radius: f64) -> [f64; 3] {
-        self.mesh()
-            .map_or(facet, |m| self.grid.surface_normal(m, point, facet, radius))
-    }
-
-    /// Whether triangle `t` of the surface is one of a hollowed shell's cavity triangles.
-    pub(crate) fn is_cavity(&self, t: u32) -> bool {
-        self.mesh
-            .interior_from()
-            .is_some_and(|first| t as usize >= first)
-    }
+    surface: Arc<RouteSurface>,
 }
 
 /// A surface being gridded on its own thread.
 pub(super) struct RouteJob {
     key: Key,
     stop: Arc<AtomicBool>,
-    receiver: mpsc::Receiver<Option<RouteSurface>>,
+    receiver: mpsc::Receiver<Option<Keyed>>,
 }
 
 impl Drop for RouteJob {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
     }
-}
-
-/// A support in world coordinates, with the surfaces it stands on: its tip's, and its foot's
-/// when it stands on the model (point and outward normal), for its preview.
-pub(crate) struct Routed {
-    pub(crate) support: ManualSupport,
-    pub(crate) anchors: Vec<([f64; 3], [f64; 3])>,
-}
-
-/// The support of `parameters` with its tip at `tip` (outward `normal`) on `surface`, in world
-/// coordinates, routed clear of the model (see [`find_route`]): straight down, aside with a
-/// knee, or standing on the model below; with the way found. `document` gives the clearance,
-/// the floor and the axis limit, its defaults without one.
-pub(crate) fn route_support(
-    surface: &RouteSurface,
-    parameters: &SupportParameters,
-    axis: AxisSpec,
-    document: Option<&karasu_core::supports::SupportDocument>,
-    tip: [f64; 3],
-    normal: [f64; 3],
-) -> (Routed, Route) {
-    let mut routed = Routed {
-        support: ManualSupport {
-            id: 1,
-            tip_mm: tip,
-            tip_axis: axis,
-            bends: Vec::new(),
-            base: BaseSpec::Vertical,
-            parameters: parameters.clone(),
-            accept_collision: false,
-            origin: karasu_core::supports::SupportOrigin::Placed,
-            kind: karasu_core::supports::SupportKind::Standard,
-        },
-        anchors: vec![(
-            tip,
-            surface.normal_at(tip, normal, parameters.footprint_radius_mm()),
-        )],
-    };
-    let Some(mesh) = surface.mesh() else {
-        return (routed, Route::None);
-    };
-    let query = RouteQuery {
-        tip_mm: tip,
-        normal,
-        tip: karasu_core::supports::TipCone::of(
-            parameters,
-            document.map_or(karasu_core::supports::DEFAULT_ANCHOR_TOLERANCE_MM, |d| {
-                d.anchor_tolerance_mm
-            }),
-        ),
-        radius_mm: widest(parameters) + document.map_or(0.3, |d| d.clearance_mm),
-        floor_mm: document
-            .and_then(|d| d.raft)
-            .map_or(0.0, |r| r.thickness_mm),
-        foot_length_mm: parameters.foot_length_mm,
-        foot_radius_mm: parameters.foot_contact_diameter_mm / 2.0,
-        max_axis_deviation_deg: document.map_or(60.0, |d| d.max_axis_deviation_deg),
-        towards_shaft: axis == AxisSpec::Straight,
-    };
-    let route = find_route(mesh, &surface.grid, &query);
-    match route {
-        Route::Straight | Route::None => {}
-        Route::Tilted(axis) => routed.support.tip_axis = AxisSpec::Direction(axis),
-        Route::Aside(knee) => {
-            routed.support.bends = vec![knee];
-            routed.support.tip_axis = AxisSpec::Straight;
-        }
-        Route::OnModel {
-            point_mm,
-            normal,
-            axis,
-        } => {
-            // Towards its shaft, as the route checked it (TD-132).
-            routed.support.base = BaseSpec::Model {
-                point_mm,
-                axis: AxisSpec::Direction(axis),
-            };
-            let radius = parameters.foot_contact_diameter_mm / 2.0;
-            routed
-                .anchors
-                .push((point_mm, surface.normal_at(point_mm, normal, radius)));
-        }
-    }
-    (routed, route)
-}
-
-/// The mini support of `parameters` with its tip at `tip` (outward `normal`) on `surface`, in
-/// world coordinates, standing on the model (see [`find_mini_foot`]): straight below its tip,
-/// or, when `clear` (the Islands and Automatic tools, TD-126), where its rod keeps off the model.
-/// `None` when it finds nowhere to stand. `document` gives the floor, the plate without one.
-pub(crate) fn mini_routed(
-    surface: &RouteSurface,
-    parameters: &SupportParameters,
-    document: Option<&karasu_core::supports::SupportDocument>,
-    tip: [f64; 3],
-    normal: [f64; 3],
-    clear: bool,
-) -> Option<Routed> {
-    let mesh = surface.mesh()?;
-    let query = MiniQuery {
-        tip_mm: tip,
-        normal,
-        diameter_mm: parameters.mini_diameter_mm,
-        penetration_mm: parameters.mini_penetration_mm,
-        floor_mm: document
-            .and_then(|d| d.raft)
-            .map_or(0.0, |r| r.thickness_mm),
-        clear,
-    };
-    let (point_mm, foot_normal) = find_mini_foot(mesh, &surface.grid, &query)?;
-    Some(Routed {
-        support: ManualSupport {
-            id: 1,
-            tip_mm: tip,
-            tip_axis: AxisSpec::Normal,
-            bends: Vec::new(),
-            base: BaseSpec::Model {
-                point_mm,
-                axis: AxisSpec::Normal,
-            },
-            parameters: parameters.clone(),
-            accept_collision: false,
-            origin: karasu_core::supports::SupportOrigin::Placed,
-            kind: SupportKind::Mini,
-        },
-        anchors: {
-            let radius = parameters.mini_diameter_mm / 2.0;
-            vec![
-                (tip, surface.normal_at(tip, normal, radius)),
-                (point_mm, surface.normal_at(point_mm, foot_normal, radius)),
-            ]
-        },
-    })
-}
-
-/// `axis`, a tip's or a foot's in world coordinates, in the model frame `to_model` maps to: a
-/// direction turns with the model (a tilted tip, TD-124); the others are the model's own.
-pub(crate) fn axis_to_model(axis: AxisSpec, to_model: &crate::gizmo::Affine) -> AxisSpec {
-    match axis {
-        AxisSpec::Direction(d) => AxisSpec::Direction(to_model.vector(d)),
-        other => other,
-    }
-}
-
-/// The widest radius of a support's parts along its path, in mm.
-pub(super) fn widest(p: &SupportParameters) -> f64 {
-    p.shaft_diameter_mm
-        .max(p.tip_body_diameter_mm)
-        .max(p.shaft_bottom_diameter_mm.unwrap_or(0.0))
-        / 2.0
 }
 
 impl SupportsUi {
@@ -305,7 +87,7 @@ impl SupportsUi {
         if let Some(job) = &self.route_job {
             match job.receiver.try_recv() {
                 Ok(surface) => {
-                    self.route = surface.map(Arc::new);
+                    self.route = surface;
                     self.route_job = None;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -373,7 +155,10 @@ impl SupportsUi {
                         started.elapsed().as_secs_f64() * 1000.0
                     );
                 }
-                let _ = sender.send(grid.map(|grid| RouteSurface { key, mesh, grid }));
+                let _ = sender.send(grid.map(|grid| Keyed {
+                    key,
+                    surface: Arc::new(RouteSurface::new(mesh, grid)),
+                }));
             });
         self.route_job = spawned.ok().map(|_| RouteJob {
             key,
@@ -386,8 +171,8 @@ impl SupportsUi {
     /// The support the next values make with its tip at `tip` (outward `normal`) on object
     /// `index`, in world coordinates: routed clear of the model when it can be (the switch on,
     /// the surface gridded), otherwise straight down. A mini support stands on the model
-    /// straight below its tip (see [`find_mini_foot`]); `None` when it finds nowhere to stand,
-    /// or before the surface is gridded.
+    /// straight below its tip (see [`karasu_core::supports::find_mini_foot`]); `None` when it
+    /// finds nowhere to stand, or before the surface is gridded.
     pub(super) fn routed(
         &self,
         workspace: &Workspace,
@@ -415,7 +200,8 @@ impl SupportsUi {
             .route
             .as_ref()
             .filter(|r| r.key.object == index && Some(r.key.placement) == current)
-            .filter(|_| !self.straight_only || self.on_cavity);
+            .filter(|_| !self.straight_only || self.on_cavity)
+            .map(|r| &r.surface);
         Some(match surface {
             Some(surface) => {
                 route_support(
@@ -453,8 +239,9 @@ impl SupportsUi {
     ) -> Option<&RouteSurface> {
         let current = workspace.placement_of(index).map(|p| p.transform);
         self.route
-            .as_deref()
+            .as_ref()
             .filter(|r| r.key.object == index && Some(r.key.placement) == current)
+            .map(|r| &*r.surface)
     }
 
     /// The selected model `index`'s surface for routes, when it is ready for the model as it
@@ -466,7 +253,10 @@ impl SupportsUi {
         index: usize,
     ) -> Option<Arc<RouteSurface>> {
         let (key, _) = Self::route_key(workspace, preparation, index)?;
-        self.route.as_ref().filter(|r| r.key == key).cloned()
+        self.route
+            .as_ref()
+            .filter(|r| r.key == key)
+            .map(|r| Arc::clone(&r.surface))
     }
 }
 
@@ -478,23 +268,8 @@ pub(in crate::supports_ui) mod tests {
         hollowing_ui::tests::placed,
         workspace::{tests::box_stl, SurfaceHit},
     };
+    use karasu_core::supports::AxisSpec;
     use std::time::Duration;
-
-    #[test]
-    fn a_tilted_tip_turns_with_the_model_and_the_others_are_its_own() {
-        // A model turned a quarter about Z: world +X is its -Y.
-        let to_model = crate::gizmo::Affine {
-            linear: [[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
-            translation: [3.0, 4.0, 0.0],
-        };
-        assert_eq!(
-            axis_to_model(AxisSpec::Direction([1.0, 0.0, -1.0]), &to_model),
-            AxisSpec::Direction([0.0, -1.0, -1.0])
-        );
-        for own in [AxisSpec::Normal, AxisSpec::Straight] {
-            assert_eq!(axis_to_model(own, &to_model), own);
-        }
-    }
 
     /// A slab over a block under its left part, resting on the block: an overhang with more of
     /// the model below it.

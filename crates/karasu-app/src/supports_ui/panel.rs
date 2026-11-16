@@ -8,7 +8,7 @@
 //! its penetration, from zero.
 use super::{
     describe, errors, Candidate, NextSupport, SupportPreset, SupportValues, SupportsUi, Weight,
-    MERGE_KEYS,
+    WeightLabel, MERGE_KEYS,
 };
 use crate::{
     i18n::tr,

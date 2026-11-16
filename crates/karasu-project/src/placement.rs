@@ -3,7 +3,8 @@
 //!
 //! The pipeline places every object through [`place`] and then checks the placement against the
 //! printer. The desktop application uses the same function to show objects where they will
-//! print.
+//! print. [`Affine`] maps points and directions between a model's frame and the world, as the
+//! support planners and the desktop application's picking do.
 //!
 //! **Exactness:** dropping negates the lowest placed Z, so a dropped model rests exactly on
 //! Z = 0. The identity pose keeps the exact translation-only evaluation.
@@ -167,4 +168,56 @@ pub fn source_bounds(mesh: &TriangleMesh) -> Option<(Point3, Point3)> {
             Point3::new(max.x.max(p.x), max.y.max(p.y), max.z.max(p.z)),
         )
     }))
+}
+
+/// An affine map `linear * p + translation`, and its inverse when it exists.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Affine {
+    /// Rows of the linear part.
+    pub linear: [[f64; 3]; 3],
+    /// Translation.
+    pub translation: [f64; 3],
+}
+
+impl Affine {
+    /// The inverse map, or `None` for a singular one.
+    #[must_use]
+    pub fn inverse(&self) -> Option<Self> {
+        let m = &self.linear;
+        let cofactor = |r: usize, c: usize| {
+            let (r1, r2) = ((r + 1) % 3, (r + 2) % 3);
+            let (c1, c2) = ((c + 1) % 3, (c + 2) % 3);
+            m[r1][c1] * m[r2][c2] - m[r1][c2] * m[r2][c1]
+        };
+        let det: f64 = (0..3).map(|c| m[0][c] * cofactor(0, c)).sum();
+        if det == 0.0 || !det.is_finite() {
+            return None;
+        }
+        // The inverse is the transposed cofactor matrix over the determinant.
+        let linear: [[f64; 3]; 3] =
+            std::array::from_fn(|r| std::array::from_fn(|c| cofactor(c, r) / det));
+        let t = self.translation;
+        let translation =
+            std::array::from_fn(|r| -(0..3).map(|c| linear[r][c] * t[c]).sum::<f64>());
+        Some(Self {
+            linear,
+            translation,
+        })
+    }
+
+    /// The image of a point.
+    #[must_use]
+    pub fn point(&self, p: [f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|r| dot(self.linear[r], p) + self.translation[r])
+    }
+
+    /// The image of a direction.
+    #[must_use]
+    pub fn vector(&self, v: [f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|r| dot(self.linear[r], v))
+    }
+}
+
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }

@@ -303,34 +303,6 @@ fn an_island_on_the_cavity_ceiling_is_held_from_the_cavity_floor() {
 }
 
 #[test]
-fn islands_closer_than_the_join_distance_share_a_support_under_the_lowest() {
-    let island = |x: f64, z: f64| {
-        (
-            0,
-            Island {
-                point: [x, 0.0, z],
-                layers: [1, 1],
-                heights: [z - 0.05, z],
-                area_mm2: 0.1,
-                footprint: [[x - 0.1, -0.1], [x + 0.1, 0.1]],
-                inside: false,
-            },
-        )
-    };
-    let islands = [
-        island(0.0, 5.0),
-        island(0.6, 4.9),
-        island(1.5, 5.0),
-        island(9.0, 5.0),
-    ];
-    // 0.6 mm apart: one group, led by the lower; 1.5 is within 1 mm of 0.6, so it joins too.
-    let found = plan::groups(&islands, 1.0);
-    assert_eq!(found, [vec![1, 0, 2], vec![3]]);
-    // No joining: every island its own.
-    assert_eq!(plan::groups(&islands, 0.0).len(), 4);
-}
-
-#[test]
 #[ignore = "finds and supports the islands of a local large model; see the documentation"]
 fn a_local_model_s_islands_are_found_and_supported() {
     let Ok(path) = std::env::var("KARASU_INTERFACE_MODEL") else {
