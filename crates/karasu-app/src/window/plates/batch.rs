@@ -24,12 +24,12 @@ use crate::{
     i18n::{decimal, tr},
     messages::{Level, Message},
     settings::DEFAULT_EXPORT_PATTERN,
-    slicing_ui::{extension, format_label, format_of, switch_row, SlicingUi},
+    slicing_ui::{format_label, switch_row, SlicingUi},
     widgets::text_field,
     window::MainWindow,
 };
 use eframe::egui;
-use karasu_project::{project::PlateId, request::REFERENCE_FORMAT};
+use karasu_project::project::{batch::plate_files, PlateId};
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
@@ -110,37 +110,6 @@ pub(in crate::window) struct Planned {
     shown: Shown,
 }
 
-/// `pattern` with `{project}`, `{number}` and `{plate}` replaced, made a file name every system
-/// accepts: no separator or reserved character, no control character, no dot or space at the
-/// end, never empty.
-pub(in crate::window) fn file_name(
-    pattern: &str,
-    project: &str,
-    number: usize,
-    plate: &str,
-) -> String {
-    let named = pattern
-        .replace("{project}", project)
-        .replace("{number}", &number.to_string())
-        .replace("{plate}", plate);
-    let clean: String = named
-        .chars()
-        .map(|c| {
-            if c.is_control() || matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') {
-                '_'
-            } else {
-                c
-            }
-        })
-        .collect();
-    let clean = clean.trim().trim_end_matches(['.', ' ']).to_owned();
-    if clean.is_empty() {
-        format!("{number}")
-    } else {
-        clean
-    }
-}
-
 impl MainWindow {
     /// The project's name for the files: its file's, else its own, else "Untitled".
     pub(in crate::window) fn project_label(&self) -> String {
@@ -156,41 +125,19 @@ impl MainWindow {
             .unwrap_or_else(|| tr!("project-untitled"))
     }
 
-    /// Every plate's row, as the dialog's choices name its file, the same name never twice.
+    /// Every plate's row, as the dialog's choices name its file, the same name never twice
+    /// (shared with the command line, TD-159).
     pub(in crate::window) fn planned(&self) -> Vec<Planned> {
-        let project = self.project_label();
         let pattern = &self.plates.choices.export_pattern;
-        let mut taken = HashSet::new();
-        self.workspace
-            .plates()
-            .iter()
-            .enumerate()
-            .map(|(k, plate)| {
-                let content = plate.content();
-                let format = &if content.settings.format == REFERENCE_FORMAT {
-                    content.settings.format.clone()
-                } else {
-                    format_of(content).unwrap_or_else(|| content.settings.format.clone())
-                };
-                let base = file_name(pattern, &project, k + 1, &content.name);
-                let with = |stem: &str| match extension(format) {
-                    Some(ext) => format!("{stem}.{ext}"),
-                    None => stem.to_owned(),
-                };
-                let mut file = with(&base);
-                let mut copy = 2;
-                while !taken.insert(file.to_lowercase()) {
-                    file = with(&format!("{base} ({copy})"));
-                    copy += 1;
-                }
-                Planned {
-                    id: plate.id(),
-                    number: k + 1,
-                    name: content.name.clone(),
-                    file,
-                    format: format_label(format),
-                    shown: self.plate_slice(plate.id()),
-                }
+        plate_files(self.workspace.project(), &self.project_label(), pattern)
+            .into_iter()
+            .map(|plate| Planned {
+                id: plate.id,
+                number: plate.number,
+                name: plate.name,
+                file: plate.file,
+                format: format_label(&plate.format),
+                shown: self.plate_slice(plate.id),
             })
             .collect()
     }
@@ -723,7 +670,7 @@ fn summary(batch: &Batch, cancelled: bool) -> Message {
 
 #[cfg(test)]
 mod tests {
-    use super::{file_name, Step};
+    use super::Step;
     use crate::{actions::Action, i18n::tr, window::MainWindow};
     use eframe::egui;
     use std::time::{Duration, Instant};
@@ -910,7 +857,7 @@ mod tests {
             .workspace
             .edit(|plate| plate.settings.format = "goo-v3".to_owned());
         assert_ne!(settled, "goo-v3");
-        let ext = super::extension(&settled).unwrap();
+        let ext = crate::slicing_ui::extension(&settled).unwrap();
         assert!(window.planned()[0].file.ends_with(&ext));
         window.perform(Action::SliceEveryPlate);
         run_batch(&mut window, &ctx);
@@ -954,18 +901,5 @@ mod tests {
         crate::slicing_ui::tests::finish(slicing);
         assert_eq!(slicing.take_messages().len(), 0);
         let _ = std::fs::remove_dir_all(&folder);
-    }
-
-    #[test]
-    fn file_names_follow_the_pattern_and_every_system_accepts_them() {
-        let pattern = "{project} {number} {plate}";
-        assert_eq!(
-            file_name(pattern, "venom_figure", 2, "Torso"),
-            "venom_figure 2 Torso"
-        );
-        assert_eq!(file_name(pattern, "a/b", 1, "c:d?"), "a_b 1 c_d_");
-        assert_eq!(file_name("{plate}. ", "p", 3, "Arms"), "Arms");
-        assert_eq!(file_name("{plate}", "p", 4, " "), "4");
-        assert_eq!(file_name("{plate}", "p", 5, "tab\there"), "tab_here");
     }
 }

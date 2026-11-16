@@ -927,3 +927,64 @@ fn several_plates_added_with_an_edit_are_one_step() {
     assert_eq!(names(&project), after);
     assert_eq!(project.plate(added[1]).unwrap().content().objects.len(), 1);
 }
+
+#[test]
+fn every_plate_is_sliced_in_a_format_its_printer_writes_under_a_name_of_its_own() {
+    // TD-159: the format and the files of slicing every plate, shared by the application's
+    // Export every plate and the command line's `slice --project --every-plate`.
+    use karasu_project::project::batch::{
+        plate_file_name, plate_files, slice_format, DEFAULT_PLATE_FILES,
+    };
+    let (mut project, model, first) = project();
+    let content = project.plate(first).unwrap().content().clone();
+    let plate = |name: &str, format: &str| PlateContent {
+        name: name.into(),
+        settings: PlateSettings::new(format),
+        objects: vec![PlateObject::new("box", model)],
+        ..content.clone()
+    };
+    // The same name again; a format the printer does not write (a printer changed); the
+    // reference format, chosen to check a slice.
+    let twin = project.add_plate(plate("Plate 1", "goo-v3"));
+    let other = project.add_plate(plate("Other", "ctb-v4"));
+    let reference = project.add_plate(plate("Check", REFERENCE_FORMAT));
+    let format = |id| slice_format(project.plate(id).unwrap().content());
+    assert_eq!(format(first), "goo-v3");
+    assert_eq!(format(other), "goo-v3", "the printer's first format");
+    assert_eq!(format(reference), REFERENCE_FORMAT);
+    let files = plate_files(&project, "job", DEFAULT_PLATE_FILES);
+    let names: Vec<&str> = files.iter().map(|f| f.file.as_str()).collect();
+    assert_eq!(
+        names,
+        [
+            "job 1 Plate 1.goo",
+            "job 2 Plate 1.goo",
+            "job 3 Other.goo",
+            "job 4 Check"
+        ]
+    );
+    assert_eq!(
+        files.iter().map(|f| (f.id, f.number)).collect::<Vec<_>>(),
+        [(first, 1), (twin, 2), (other, 3), (reference, 4)]
+    );
+    // Without the number, the second of a name gets one, whatever the case.
+    project
+        .edit_plate(twin, |p| p.name = "PLATE 1".into())
+        .unwrap();
+    let names: Vec<String> = plate_files(&project, "job", "{plate}")
+        .into_iter()
+        .map(|f| f.file)
+        .collect();
+    assert_eq!(
+        names,
+        ["Plate 1.goo", "PLATE 1 (2).goo", "Other.goo", "Check"]
+    );
+    // A name every file system takes.
+    let pattern = "{project} {number} {plate}";
+    assert_eq!(
+        plate_file_name(pattern, "venom_figure", 2, "Torso"),
+        "venom_figure 2 Torso"
+    );
+    assert_eq!(plate_file_name(pattern, "a/b", 1, "c:d?"), "a_b 1 c_d_");
+    assert_eq!(plate_file_name("{plate}", "p", 4, " "), "4");
+}

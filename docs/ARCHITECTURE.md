@@ -87,7 +87,10 @@ the Orient tool's search (`orient`, TD-158).
   - plates, each with printer, resin, settings and objects, and a revision that every edit
     increments;
   - `request(plate)` builds the pipeline request over embedded data, and `freshness` says whether
-    a result still describes its plate.
+    a result still describes its plate;
+  - `batch` (TD-159): the format a plate is sliced in (its own when its printer writes it, else
+    the printer's first) and the names of the plates' print files, which the application's
+    Export every plate and the command line's `slice --project --every-plate` share.
 - **`jobs` (TD-071):** plate requests sliced on their own threads, with progress events,
   cancellation and the revision they were built from.
 - **Supports follow their object (TD-072):** a support document bound to a pose moves rigidly

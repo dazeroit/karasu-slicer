@@ -625,7 +625,9 @@ guarantee. A request after the final publication checkpoint can still complete s
 second Ctrl-C exits immediately with status 130 and may leave a hidden staging entry
 (`.<name>.karasu-partial-…`) next to the output; other termination signals are not intercepted.
 An error after the output is published (for example a closed standard output) is reported as
-itself, not as an interruption. Machine files are published atomically by hard link; on media
+itself, not as an interruption. Slicing every plate of a project, the plates already sliced stay
+published: the command prints their summaries and `error: interrupted by Ctrl-C; <n> of <m> plates
+were sliced and published before it; the plate being sliced was not`, and exits **130**. Machine files are published atomically by hard link; on media
 without hard links (FAT32/exFAT USB sticks and SD cards) they are copied into an exclusively created
 destination, which never replaces an existing file but is not atomic.
 
@@ -633,3 +635,33 @@ The Automatic tool's supports and braces are planned from the command line with
 `--auto-supports` and `--auto-braces` (TD-157), for one model; Support the islands and the Grid
 mode stay in the application, as does planning the supports of a plate or a project.
 Exported files are format-reader validated, not certified on physical printers.
+
+## Slicing a project (TD-130, TD-159)
+
+```console
+karasu-cli slice --project job.karasu --project-plate 2 --output plate.goo
+karasu-cli slice --project job.karasu --every-plate --folder prints
+```
+
+A project saved by the application holds each plate's printer, resin, print setting, settings
+and objects (placement, repairs, hollowing, drain holes, blockers, supports), so `--project`
+takes no other slicing option. A plate is sliced in the format the application slices it in:
+its own when its printer writes it, otherwise the first its printer writes (a plate whose printer
+changed may still hold the format of the one before); the reference format, when chosen, stays.
+
+- **One plate:** `--project-plate <number or name>` (numbers from 1; a project of one plate
+  needs none) and `--output <path>`, which must not exist.
+- **Every plate** (`--every-plate`), as the application's Export every plate:
+  - the plates with a model, in project order, one after another; plates without one are listed
+    as left out;
+  - each into its own file of `--folder <folder>`, which must exist, named by `--names
+    <pattern>`: `{project}` (the project file's name), `{number}` (the plate's, from 1) and
+    `{plate}` (its name), `{project} {number} {plate}` by default, with the format's extension.
+    Characters no file system takes become `_`; a name a plate before took, whatever the case,
+    gets ` (2)`, ` (3)` and so on;
+  - files that exist already are refused before any plate is sliced, naming them, unless
+    `--replace`: each plate is then sliced into a sibling and renamed into place once whole, so a
+    failed plate leaves the file it would have replaced;
+  - a plate whose slice fails is reported and the next one sliced; the summaries of the plates
+    sliced, each opened by `Plate number: <n>`, end with `Plates sliced: <k> of <m>`, and the
+    command exits **1** naming every plate that failed.

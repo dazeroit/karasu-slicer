@@ -58,11 +58,14 @@ pub(super) fn interrupted(_: Checkpoint) -> bool {
     INTERRUPTED.load(Ordering::Acquire)
 }
 
-/// Terminal outcome of a failed slice; interrupted runs never publish output.
+/// Terminal outcome of a failed slice; an interrupted job never publishes its output.
 #[derive(Debug, PartialEq, Eq)]
 pub(super) enum SliceFailure {
     /// The user pressed Ctrl-C and the pipeline stopped at a cancellation checkpoint.
     Interrupted,
+    /// Ctrl-C stopped a run of several jobs after some had published their output (TD-159):
+    /// what was published.
+    InterruptedAfter(String),
     /// Ordinary processing, validation, I/O or export failure.
     Error(String),
 }

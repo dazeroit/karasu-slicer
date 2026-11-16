@@ -1424,6 +1424,11 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        orientation stays off the command line for now (owner); the search, the tool's values
        and its candidates moved, unchanged, from the application to `karasu_project::orient`.
        The same model gives the same candidates to the last bit before and after the move.
+     - **Every plate from the command line (owner, 2026-11-16, TD-159):** `slice --project
+       --every-plate --folder <folder>` slices every plate with a model into its own file, named
+       and formatted as the application's Export every plate does (`--names`, `--replace`); a
+       plate is sliced in the format its printer writes, as the application slices it. Blockers
+       in plate documents and `export-models` from one model remain open.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the
