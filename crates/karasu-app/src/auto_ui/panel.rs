@@ -20,7 +20,7 @@ use crate::{
     },
     list_window::{self, Event, Row, Spec},
     supports_ui::{
-        braces::{brace_fields, NewBraces},
+        braces::{brace_fields, NewBraces, PatternLabel},
         panel::{fit_fields, shape_field},
         SupportPreset, SupportsUi,
     },

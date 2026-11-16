@@ -1982,15 +1982,8 @@ pub fn map_hole(hole: DrainHole, map: &Affine) -> DrainHole {
     }
 }
 
-/// The placement as an affine map.
-#[must_use]
-pub fn affine(placement: &Placement) -> Option<Affine> {
-    let affine = placement.transform.to_affine().ok()?;
-    Some(Affine {
-        linear: affine.linear(),
-        translation: affine.translation().components(),
-    })
-}
+/// The placement as an affine map (shared with the command line's automatic supports, TD-157).
+pub use karasu_project::placement::affine;
 
 /// The matrix from GPU vertices (relative to `origin`) to world: the placement after the
 /// translation by `origin`.

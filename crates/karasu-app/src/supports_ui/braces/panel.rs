@@ -5,7 +5,7 @@
 use super::{
     super::{describe, errors, list::short, SupportsUi},
     auto::Outcome,
-    NewBraces, Pattern, DIAMETER_MM, DISTANCE_MM, LOWEST_MM, STEP_MM,
+    NewBraces, Pattern, PatternLabel, DIAMETER_MM, DISTANCE_MM, LOWEST_MM, STEP_MM,
 };
 use crate::{
     appearance::Appearance,

@@ -36,19 +36,17 @@ use std::{
 pub const FILE_NAME: &str = "settings.json";
 /// The settings file's schema.
 pub const SCHEMA_VERSION: u32 = 4;
-/// The islands' join distance's default before schema 2, in mm.
-const OLD_JOIN_MM: f64 = 1.0;
 /// The blockers' colours before schema 3.
 const OLD_BLOCKER: [u8; 4] = [0xB8, 0xB4, 0xC8, 0x48];
 const OLD_BLOCKER_NEW: [u8; 4] = [0xF2, 0x9B, 0x2E, 0x48];
 const OLD_BLOCKER_SELECTED: [u8; 4] = [0xF5, 0xF4, 0xF8, 0x60];
-/// The new braces' diameter before schema 4, in mm.
-const OLD_BRACE_DIAMETER_MM: f64 = 0.8;
-/// The critical angle's default, in degrees from the plate's plane (owner, TD-107).
-pub const DEFAULT_OVERHANG_ANGLE_DEG: f64 = 45.0;
-/// The critical angles the user may set, in degrees: a surface level with the plate always
-/// needs support, and a vertical one never.
-pub const OVERHANG_ANGLE_RANGE: std::ops::RangeInclusive<f64> = 1.0..=89.0;
+/// The critical angle's default and the angles the user may set, shared with the command line
+/// (TD-157).
+pub use karasu_project::support_plan::settings::{
+    DEFAULT_OVERHANG_ANGLE_DEG, OVERHANG_ANGLE_RANGE,
+};
+// The islands' join distance's default before schema 2, in mm.
+use karasu_project::support_plan::settings::OLD_JOIN_MM;
 
 /// Every setting the user keeps.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -928,7 +926,6 @@ fn migrated(mut settings: Settings, schema: u32) -> Settings {
             }
         };
         old(&mut settings.tools.island_join_mm);
-        old(&mut settings.tools.auto_supports.join_mm);
     }
     if schema < 3 {
         // The blockers' first colours, too faint (owner, 2026-11-02), take the new defaults
@@ -952,20 +949,16 @@ fn migrated(mut settings: Settings, schema: u32) -> Settings {
             }
         }
     }
-    if schema < 4 {
-        // The support test prints (TD-136): the Automatic tool starts from Medium without
-        // braces, and an automatic brace is at most 1.0 mm thick, where the user kept the
-        // first defaults.
-        let t = &mut settings.tools;
-        if t.auto_supports.weight == crate::supports_ui::Weight::Light {
-            t.auto_supports.weight = crate::auto_ui::plan::DEFAULT_AUTO_SUPPORTS.weight;
-        }
-        t.auto_supports.braces = crate::auto_ui::plan::DEFAULT_AUTO_SUPPORTS.braces;
-        #[allow(clippy::float_cmp)] // The old default, exactly as it was saved.
-        if t.brace_diameter_mm == OLD_BRACE_DIAMETER_MM {
-            t.brace_diameter_mm = crate::supports_ui::braces::DEFAULT_BRACES.diameter_mm;
-        }
-    }
+    // The Automatic tool's join distance (schema 2), and the support test prints (schema 4,
+    // TD-136): the Automatic tool starts from Medium without braces, and an automatic brace is
+    // at most 1.0 mm thick, where the user kept the first defaults. Shared with the command
+    // line, which reads this file the same way (TD-157).
+    let t = &mut settings.tools;
+    karasu_project::support_plan::settings::migrate(
+        schema,
+        &mut t.auto_supports,
+        &mut t.brace_diameter_mm,
+    );
     settings.schema_version = SCHEMA_VERSION;
     settings
 }

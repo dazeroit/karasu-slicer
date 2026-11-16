@@ -40,7 +40,7 @@ use karasu_core::raster::{
 use karasu_project::{
     jobs::{Event, Job, JobError, LayerMask, Progress},
     pipeline::{SliceOutcome, Verification},
-    request::{machine_exporter, REFERENCE_FORMAT},
+    request::REFERENCE_FORMAT,
 };
 use std::{
     path::{Path, PathBuf},
@@ -233,10 +233,7 @@ pub fn end_session() {
 
 /// The extension of a format's file, or `None` for the reference format (a folder).
 pub(crate) fn extension(format: &str) -> Option<String> {
-    machine_exporter(format)
-        .ok()
-        .flatten()
-        .map(|exporter| karasu_core::export::MachineExporter::extension(&exporter).to_owned())
+    karasu_project::request::format_extension(format)
 }
 
 impl SlicingUi {

@@ -30,6 +30,7 @@ use karasu_core::supports::{
     SupportParameters,
 };
 use karasu_project::support_plan::branches::{junction_on, Junction};
+pub use karasu_project::support_plan::branches::{with_branches, without};
 
 /// A branch's tip, clicked, waiting for the shaft it joins.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -38,37 +39,6 @@ pub(super) struct BranchTip {
     /// On the surface, in world coordinates, and its outward normal there.
     pub(super) point: [f64; 3],
     pub(super) normal: [f64; 3],
-}
-
-/// The supports of `document` that `ids` are, and every support standing on any of them,
-/// directly or through others: what deleting them deletes.
-#[must_use]
-pub fn with_branches(document: &SupportDocument, ids: &[u64]) -> Vec<u64> {
-    let mut gone: Vec<u64> = ids.to_vec();
-    loop {
-        let more: Vec<u64> = document
-            .supports
-            .iter()
-            .filter(|s| !gone.contains(&s.id))
-            .filter(
-                |s| matches!(s.base, BaseSpec::Support { parent, .. } if gone.contains(&parent)),
-            )
-            .map(|s| s.id)
-            .collect();
-        if more.is_empty() {
-            return gone;
-        }
-        gone.extend(more);
-    }
-}
-
-/// `document` without the supports `ids`, the branches on them, and the braces on any of them.
-pub fn without(document: &mut SupportDocument, ids: &[u64]) {
-    let gone = with_branches(document, ids);
-    document.supports.retain(|s| !gone.contains(&s.id));
-    document
-        .braces
-        .retain(|b| !gone.contains(&b.from.0) && !gone.contains(&b.to.0));
 }
 
 /// How thick a support of `parameters` is along its path: its shaft, top or bottom, or its tip's

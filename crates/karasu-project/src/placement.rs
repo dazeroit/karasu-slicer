@@ -221,3 +221,55 @@ impl Affine {
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
+
+/// The map from a placed object's model frame to world coordinates, or `None` for a placement
+/// that has no affine form.
+#[must_use]
+pub fn affine(placement: &Placement) -> Option<Affine> {
+    let affine = placement.transform.to_affine().ok()?;
+    Some(Affine {
+        linear: affine.linear(),
+        translation: affine.translation().components(),
+    })
+}
+
+/// The model frame's `[x, y]` that `to_world` carries, at Z 0, to the world's `[wx, wy]` (a foot
+/// on the plate, see `SupportDocument::placed`), or `None` for a placement standing the frame's
+/// plane on edge.
+#[must_use]
+pub fn plate_point(to_world: &Affine, [wx, wy]: [f64; 2]) -> Option<[f64; 2]> {
+    let l = to_world.linear;
+    let det = l[0][0] * l[1][1] - l[0][1] * l[1][0];
+    if det.abs() < 1e-12 || !det.is_finite() {
+        return None;
+    }
+    let (rx, ry) = (wx - to_world.translation[0], wy - to_world.translation[1]);
+    Some([
+        (l[1][1] * rx - l[0][1] * ry) / det,
+        (l[0][0] * ry - l[1][0] * rx) / det,
+    ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_foot_on_the_plate_comes_back_to_the_model_frame() {
+        // Turned a quarter about Z, scaled twice in X and moved: the world point maps back to
+        // the model frame's point the placement carries there.
+        let to_world = Affine {
+            linear: [[0.0, -1.0, 0.0], [2.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            translation: [10.0, 20.0, 5.0],
+        };
+        let model = plate_point(&to_world, [7.0, 26.0]).unwrap();
+        let back = to_world.point([model[0], model[1], 0.0]);
+        assert!((back[0] - 7.0).abs() < 1e-12 && (back[1] - 26.0).abs() < 1e-12);
+        // A frame stood on edge has no point on the plate's plane to give.
+        let edge = Affine {
+            linear: [[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]],
+            translation: [0.0; 3],
+        };
+        assert!(plate_point(&edge, [1.0, 1.0]).is_none());
+    }
+}

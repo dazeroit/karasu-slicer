@@ -12,14 +12,11 @@ use crate::{preparation_ui::PreparationUi, workspace::Workspace};
 use karasu_core::{
     cancellation::Cancellation,
     geometry::ObjectTransform,
-    supports::{BaseSpec, ManualSupport, SurfaceGrid},
+    supports::{BaseSpec, ManualSupport},
 };
+use karasu_project::pipeline::Preparation;
 pub(crate) use karasu_project::support_plan::route::{
     axis_to_model, mini_routed, route_support, RouteSurface, Routed,
-};
-use karasu_project::{
-    pipeline::{placed_mesh, Preparation},
-    support_plan::route::SurfaceMesh,
 };
 use std::{
     sync::{
@@ -110,11 +107,6 @@ impl SupportsUi {
         {
             return self.route_job.is_some();
         }
-        let hollow = shared
-            .objects
-            .get(key.object)
-            .and_then(|o| o.as_ref().ok())
-            .is_some_and(|o| o.hollowed().is_some());
         let source = workspace
             .plate()
             .objects
@@ -131,23 +123,23 @@ impl SupportsUi {
             .name("support-routes".to_owned())
             .spawn(move || {
                 let started = Instant::now();
-                let mesh = if hollow {
-                    SurfaceMesh::Hollow(shared, key.object)
-                } else {
-                    match placed_mesh(&source, &key.placement) {
-                        Ok(mesh) => SurfaceMesh::Placed(mesh),
-                        Err(error) => {
-                            log::warn!(target: "supports", "no surface for routes: {error}");
-                            let _ = sender.send(None);
-                            return;
-                        }
+                let mut stop = |_| cancelled.load(Ordering::Relaxed);
+                let built = RouteSurface::build(
+                    &source,
+                    &key.placement,
+                    shared,
+                    key.object,
+                    &mut Cancellation::new(&mut stop),
+                );
+                let surface = match built {
+                    Ok(surface) => surface,
+                    Err(error) => {
+                        log::warn!(target: "supports", "no surface for routes: {error}");
+                        let _ = sender.send(None);
+                        return;
                     }
                 };
-                let mut stop = |_| cancelled.load(Ordering::Relaxed);
-                let grid = mesh
-                    .mesh()
-                    .and_then(|m| SurfaceGrid::build(m, &mut Cancellation::new(&mut stop)).ok());
-                if let Some(m) = mesh.mesh() {
+                if let Some(m) = surface.as_ref().and_then(RouteSurface::mesh) {
                     log::debug!(
                         target: "supports",
                         "gridded {} triangles for routes in {:.0} ms",
@@ -155,9 +147,9 @@ impl SupportsUi {
                         started.elapsed().as_secs_f64() * 1000.0
                     );
                 }
-                let _ = sender.send(grid.map(|grid| Keyed {
+                let _ = sender.send(surface.map(|surface| Keyed {
                     key,
-                    surface: Arc::new(RouteSurface::new(mesh, grid)),
+                    surface: Arc::new(surface),
                 }));
             });
         self.route_job = spawned.ok().map(|_| RouteJob {
