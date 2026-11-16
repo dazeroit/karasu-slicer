@@ -6076,6 +6076,60 @@ line: a lifted model sliced and reported, the values said, the written document 
 identical bytes (and generating over it too), an application `settings.json` and an own document
 read, braces joining given supports, and every misuse refused.
 
+## TD-158 — The Orient tool's search in `karasu-project`
+
+**Status:** Implemented on 2026-11-16 at the owner's request. The owner left automatic
+orientation off the command line for now (third item of the comparison of the command line with
+the application, 2026-11-15) and asked for the move alone, after an evaluation of it.
+
+**Problem:** the Orient tool's search (TD-119) lived in the desktop application, mixed with its
+thread, its preview and its notifications: the rough pass is the core's, but the check of the best
+tilts by slicing, the second ranking, the tool's values and its candidates were the application's
+own. The processing stays headless elsewhere (TD-070, TD-156).
+
+**Decision:**
+1. The module `karasu_project::orient` holds, moved unchanged from the application:
+   - the tool's values: `Axes`, `Priority`, `WeightValues`, `OrientValues`, `DEFAULT_ORIENT`,
+     their ranges (`LIMIT_DEG`, `KEEP_AWAY_MM`, `WEIGHT`) and `OrientValues::valid`; their
+     serialized form is unchanged, so the application's `settings.json` reads as before;
+   - `CHECKED` and `SHOWN`, the candidates checked and proposed, the 8-degree spacing and the
+     0.5 mm sections;
+   - `Candidate`, `Found` and `Stage`, and `search(inputs, report, stop)` with what it calls: the
+     check of a tilt by slicing the model alone, the suction cups the Drain holes tool shows, the
+     model placed, and the turn (`turned`, and `turn_rows`, the world map the preview draws).
+2. Two things changed shape, not behaviour:
+   - progress goes to the caller's `Report` (the stage, then each check's share of layers), where
+     it went to the application's channel; the search tells its first stage itself;
+   - failures are a `SearchError` (stopped, or failed with the cause) where they were translated
+     text: the headless crates are not localized; the application words them as before.
+3. Two helpers the search shares moved to `karasu-project`, unchanged: the placement's
+   fixed-axis angles and their matrix (`placement::euler_matrix` and `matrix_euler`), which the
+   application's gizmos re-export; and the suction cups' defaults
+   (`pipeline::DEFAULT_MIN_VENT_MM2`, `DEFAULT_SHOW_FROM_MM2`, `DEFAULT_SHOW_TALLER_MM`), which
+   the Drain holes tool re-exports and the command line's `--suction-cups` default now names.
+   `request::blocker_axes` builds the same rotation by products in another order, so it is left
+   as it is: merging them could change the last bit of the rotations.
+4. The application keeps what reads or writes its state: the inputs built from the workspace
+   and the preparation, the thread and its channel, the candidates kept for the plate's
+   revision, the preview, the protected points' markers and edits, the confirmation before
+   supports are removed, Apply as one step, and the words (`describe`, the notifications).
+
+**Tests:** the application's Orient tests pass unchanged (they now import `turned` and keep the
+3 × 3 product they check Apply against). New headless tests: a flat box proposed as it lies, about
+X only within 30 degrees, with every stage told in order and each check's slice removed; a
+protected point refusing the tilts that turn its surface to the plate; a stopped search proposing
+nothing; the turn keeping its pivot; the Euler angles agreeing with the placement's rotation and
+coming back. On the owner's `HillGiant_32mm.stl` (Linux, release), the search before and after
+the move gives the same candidates to the last bit — every tilt, rotation, lift and measure — for
+the model as imported, turned 80 degrees about X, and hollowed at 2 mm turned 80 degrees, each
+within 30 degrees and unlimited.
+
+**Consequences:** `karasu-project` owns a second algorithm after the support planners. The
+candidates are deterministic on each platform; the search uses the platform's math library
+(`sin_cos`, `atan2`, `asin`), so equal candidates are not promised across platforms, as for the
+support planners (TD-157 item 6). Automatic orientation on the command line would now need only
+its options, the input built from a request, and a parity check against the application.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

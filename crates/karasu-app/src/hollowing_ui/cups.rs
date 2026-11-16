@@ -51,20 +51,19 @@ use std::{
     time::Instant,
 };
 
+// The defaults live with the suction cups, where the Orient tool's search reads them too
+// (TD-158).
+pub use karasu_project::pipeline::{
+    DEFAULT_MIN_VENT_MM2, DEFAULT_SHOW_FROM_MM2, DEFAULT_SHOW_TALLER_MM,
+};
+
 /// The viewport mesh key of the cups' marker.
 const MARKER_KEY: u64 = 0x5355_4354_494F_4E4D; // "SUCTIONM"
 /// The smallest vents the search takes, in mm².
 pub const MIN_VENT_MM2: std::ops::RangeInclusive<f64> = 0.0..=100.0;
-/// The smallest vent a search credits until the user sets one, in mm²: a circle about 1.1 mm
-/// across (TD-114).
-pub const DEFAULT_MIN_VENT_MM2: f64 = 1.0;
 /// The display filter's widths, in mm², and heights, in mm.
 pub const SHOW_FROM_MM2: std::ops::RangeInclusive<f64> = 0.0..=1000.0;
 pub const SHOW_TALLER_MM: std::ops::RangeInclusive<f64> = 0.0..=100.0;
-/// The display filter until the user sets one (owner, 2026-10-31): on the owner's hollowed
-/// `HillGiant_32mm.stl` it shows 9 of 1319 cups.
-pub const DEFAULT_SHOW_FROM_MM2: f64 = 1.0;
-pub const DEFAULT_SHOW_TALLER_MM: f64 = 0.5;
 /// How far a vent reaches past the cap into its cup, in mm.
 const INTO_CUP_MM: f64 = 0.5;
 /// How far above a cup's first layer's bottom a vent's way starts, in mm: inside its resin.

@@ -4,7 +4,10 @@
 //! Everything here is plain `f64` geometry in the world frame (millimetres, Z up), independent of
 //! the GPU, so it is tested headless.
 use crate::camera::Ray;
+// The placement's fixed-axis angles and their matrix, shared with the Orient tool's search
+// (TD-158).
 use karasu_core::mesh::TriangleMesh;
+pub use karasu_project::placement::{euler_matrix, matrix_euler};
 
 fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
@@ -161,36 +164,6 @@ pub fn on_plane(ray: &Ray, point: [f64; 3], normal: [f64; 3]) -> Option<[f64; 3]
 pub fn angle_about(centre: [f64; 3], normal: [f64; 3], from: [f64; 3], to: [f64; 3]) -> f64 {
     let (a, b) = (sub(from, centre), sub(to, centre));
     dot(cross(a, b), normal).atan2(dot(a, b)).to_degrees()
-}
-
-/// A rotation matrix (rows) for fixed-axis X, then Y, then Z angles in degrees: `Rz * Ry * Rx`,
-/// as placements apply them.
-#[must_use]
-pub fn euler_matrix([x, y, z]: [f64; 3]) -> [[f64; 3]; 3] {
-    let (sx, cx) = x.to_radians().sin_cos();
-    let (sy, cy) = y.to_radians().sin_cos();
-    let (sz, cz) = z.to_radians().sin_cos();
-    [
-        [cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx],
-        [sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx],
-        [-sy, cy * sx, cy * cx],
-    ]
-}
-
-/// The fixed-axis X, Y, Z angles in degrees of a rotation matrix (rows), with Y in -90..=90.
-#[must_use]
-pub fn matrix_euler(m: [[f64; 3]; 3]) -> [f64; 3] {
-    let y = (-m[2][0]).clamp(-1.0, 1.0).asin();
-    if y.cos() > 1e-9 {
-        [
-            m[2][1].atan2(m[2][2]).to_degrees(),
-            y.to_degrees(),
-            m[1][0].atan2(m[0][0]).to_degrees(),
-        ]
-    } else {
-        // Gimbal lock: X and Z turn about the same axis; put it all in X.
-        [(-m[1][2]).atan2(m[1][1]).to_degrees(), y.to_degrees(), 0.0]
-    }
 }
 
 /// The Euler angles after turning by `degrees` about the world `axis` (0, 1, 2 for X, Y, Z).

@@ -43,9 +43,9 @@ pub(super) use karasu_project::request::format_ids;
 const DEFAULT_OVERHANG_ANGLE_DEG: f64 =
     karasu_project::support_plan::settings::DEFAULT_OVERHANG_ANGLE_DEG;
 
-/// The smallest vent `--suction-cups` credits without `--min-vent`, in mm² (TD-114): a circle
-/// about 1.1 mm across.
-const DEFAULT_MIN_VENT_MM2: f64 = 1.0;
+/// The smallest vent `--suction-cups` credits without `--min-vent`, in mm² (TD-114): the
+/// application's.
+const DEFAULT_MIN_VENT_MM2: f64 = karasu_project::pipeline::DEFAULT_MIN_VENT_MM2;
 
 /// Set by the first Ctrl-C; read by every cancellation predicate of the pipeline.
 pub(super) static INTERRUPTED: AtomicBool = AtomicBool::new(false);

@@ -250,6 +250,36 @@ pub fn plate_point(to_world: &Affine, [wx, wy]: [f64; 2]) -> Option<[f64; 2]> {
     ])
 }
 
+/// A rotation matrix (rows) for fixed-axis X, then Y, then Z angles in degrees: `Rz * Ry * Rx`,
+/// as placements apply them.
+#[must_use]
+pub fn euler_matrix([x, y, z]: [f64; 3]) -> [[f64; 3]; 3] {
+    let (sx, cx) = x.to_radians().sin_cos();
+    let (sy, cy) = y.to_radians().sin_cos();
+    let (sz, cz) = z.to_radians().sin_cos();
+    [
+        [cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx],
+        [sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx],
+        [-sy, cy * sx, cy * cx],
+    ]
+}
+
+/// The fixed-axis X, Y, Z angles in degrees of a rotation matrix (rows), with Y in -90..=90.
+#[must_use]
+pub fn matrix_euler(m: [[f64; 3]; 3]) -> [f64; 3] {
+    let y = (-m[2][0]).clamp(-1.0, 1.0).asin();
+    if y.cos() > 1e-9 {
+        [
+            m[2][1].atan2(m[2][2]).to_degrees(),
+            y.to_degrees(),
+            m[1][0].atan2(m[0][0]).to_degrees(),
+        ]
+    } else {
+        // Gimbal lock: X and Z turn about the same axis; put it all in X.
+        [(-m[1][2]).atan2(m[1][1]).to_degrees(), y.to_degrees(), 0.0]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,5 +301,43 @@ mod tests {
             translation: [0.0; 3],
         };
         assert!(plate_point(&edge, [1.0, 1.0]).is_none());
+    }
+
+    #[test]
+    fn euler_angles_give_the_placement_rotation_and_come_back() {
+        for angles in [
+            [0.0, 0.0, 0.0],
+            [10.0, 20.0, 30.0],
+            [-45.0, 60.0, 170.0],
+            [80.0, 0.0, 0.0],
+        ] {
+            // The matrix turns as the placement's rotation does.
+            let m = euler_matrix(angles);
+            let r =
+                Rotation3::from_euler_xyz_degrees(Vector3::new(angles[0], angles[1], angles[2]))
+                    .unwrap()
+                    .matrix();
+            for (row, expected) in m.iter().zip(r) {
+                for (a, b) in row.iter().zip(expected) {
+                    assert!((a - b).abs() < 1e-12, "{angles:?}: {m:?} {r:?}");
+                }
+            }
+            let back = matrix_euler(m);
+            for k in 0..3 {
+                assert!((back[k] - angles[k]).abs() < 1e-9, "{angles:?} {back:?}");
+            }
+        }
+        // Gimbal lock: Y at 90 degrees puts the turn about X and Z all in X.
+        let locked = matrix_euler(euler_matrix([30.0, 90.0, 20.0]));
+        assert!(
+            (locked[1] - 90.0).abs() < 1e-6 && locked[2] == 0.0,
+            "{locked:?}"
+        );
+        let (a, b) = (euler_matrix(locked), euler_matrix([30.0, 90.0, 20.0]));
+        for r in 0..3 {
+            for c in 0..3 {
+                assert!((a[r][c] - b[r][c]).abs() < 1e-6);
+            }
+        }
     }
 }
