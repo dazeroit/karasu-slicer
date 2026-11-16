@@ -54,8 +54,11 @@ pub const SIDE_STEEPEST_DEG: f64 = 75.0;
 /// hollowed model's cavity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Seen {
+    /// The point met, in world millimetres.
     pub point: [f64; 3],
+    /// The surface's outward normal there.
     pub normal: [f64; 3],
+    /// It lies on a hollowed model's cavity.
     pub cavity: bool,
     /// A drain hole removes the material there.
     pub cut: bool,
@@ -76,19 +79,28 @@ pub trait Probe {
 /// How a tip's place was found: corners and edges are taken before the inside.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rank {
+    /// In from two edges, one along X and one along Y.
     Corner,
+    /// In from an edge.
     Edge,
+    /// On the probe grid, inside the underside.
     Inside,
 }
 
 /// The grid an underside is probed on: `nx` × `ny` points `step` apart from `start`, with what
 /// each saw and whether it wants a tip.
 pub struct Grid {
+    /// The first point, in world millimetres in plan.
     pub start: [f64; 2],
+    /// The points' spacing along X and Y, in mm.
     pub step: f64,
+    /// The points along X.
     pub nx: usize,
+    /// The points along Y.
     pub ny: usize,
+    /// What each point saw, row after row along X.
     pub seen: Vec<Option<Seen>>,
+    /// Whether each point wants a tip, in the same order.
     pub wanted: Vec<bool>,
 }
 
@@ -103,7 +115,9 @@ impl Grid {
 /// The places along the outline: corner and edge tips, and side tips beside leading edges.
 #[derive(Default)]
 pub struct Outline {
+    /// The corner and edge tips, with their rank.
     pub tips: Vec<(Seen, Rank)>,
+    /// The side tips beside leading edges.
     pub sides: Vec<Seen>,
 }
 

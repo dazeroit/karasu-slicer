@@ -141,7 +141,8 @@ Pull requests run these checks on Linux and Windows (`.github/workflows/ci.yml`)
 ## Repository layout
 
 - `crates/karasu-core`: the headless geometry, slicing, preparation and export engine.
-- `crates/karasu-project`: projects, plates, the shared pipeline and the profile library.
+- `crates/karasu-project`: projects, plates, the shared pipeline, the profile library and the
+  support planners.
 - `crates/karasu-app`: the desktop application (egui, wgpu).
 - `crates/karasu-cli`: the command line.
 - `assets/`: interface images, icons, translations and the printer catalog.

@@ -2257,7 +2257,8 @@ day.
    0.44 s), 193 of 707 hollowed (0.72 s). Trunks on the model merge as well; in the
    Supports tool, "Merge trunks" merges any supports standing on their own (a mode, applied as
    one step), and "Join a support" joins the selected one to a shaft clicked, both below what
-   hangs from the shaft (branches and braces); the merging is shared (`supports_ui::trees`).
+   hangs from the shaft (branches and braces); the merging is shared (`supports_ui::trees`;
+   `karasu_project::support_plan::trees` since TD-156).
    Islands done (2026-10-29): the selected model alone, without its supports, sliced in the
    background with the unsupported regions (TD-107; `SliceRequest::allow_floating` slices a
    lifted model where it stands, for an analysis only), held islands told by the supports'
@@ -2396,7 +2397,8 @@ the same day. Weight by load is a later phase, after M6.4j.
    leave later. Feet on the model are on by default.
 2. **What it plans:**
    - **Islands** are supported as Support the islands supports them; its planning is shared,
-     not copied (`islands_ui::plan::grow` and `merge`).
+     not copied (`islands_ui::plan::grow` and `merge`; `karasu_project::support_plan::islands`
+     since TD-156).
    - **Overhangs:** each region found is probed on a grid half the tip spacing apart. A point is
      a candidate when its surface faces the plate less steeply than the critical angle, and it
      wants a tip within its reach. The reach is the tip spacing under a level surface and grows
@@ -2499,9 +2501,10 @@ the same day. Weight by load is a later phase, after M6.4j.
     Supports are not shortened to fit: the owner chose the message.
   - *The islands list filters by place:* Everywhere, Outside or In the cavity. An island on the
     cavity's ceiling cures in the vat as one outside does, and needs its support as much.
-  - *The final check is shared* (`islands_ui::plan::check`). Support the islands and Support it
-    here build their supports as a slice would and drop those with errors, a drain hole cutting
-    them included (`Skip::DrainHole`). The notification says why an island got no support.
+  - *The final check is shared* (`islands_ui::plan::check`; `support_plan::islands::check`
+    since TD-156). Support the islands and Support it here build their supports as a slice
+    would and drop those with errors, a drain hole cutting them included (`Skip::DrainHole`).
+    The notification says why an island got no support.
   - *Where on a hollowed model* (owner, 2026-10-30): "Everywhere", "Outside" or "Cavity only"
     replaces the "Inside the cavity" switch (`Place`). Islands and overhang candidates elsewhere
     are left out, and Generate replaces only the automatic supports of the place covered: a
@@ -4340,11 +4343,12 @@ E-SUP-01, and the two test plates E-SUP-02 and E-SUP-03). Implemented the same d
 4. **The Automatic tool** starts from Medium (Light before) and without braces (on before);
    the tip spacing stays 2.5 mm. Settings schema 4 turns the old defaults to the new ones; a
    Light preset or braces chosen before cannot be told from them and are turned too.
-5. **Tips along the outline** (`auto_ui::plan::edges`): where an underside ends (nothing beyond
-   it, a drain hole, a step over 0.5 mm or a turn over 30°), found by bisection between the
-   probe grid's points, its outline takes candidates 0.4 mm in from the edge along the grid's
-   axes, and from both edges at a corner. Corners are taken first, then edges, then the inside.
-   A smooth surface growing steeper than the critical angle has no edge.
+5. **Tips along the outline** (`auto_ui::plan::edges`; `support_plan::auto::edges` since
+   TD-156): where an underside ends (nothing beyond it, a drain hole, a step over 0.5 mm or a
+   turn over 30°), found by bisection between the probe grid's points, its outline takes
+   candidates 0.4 mm in from the edge along the grid's axes, and from both edges at a corner.
+   Corners are taken first, then edges, then the inside. A smooth surface growing steeper than
+   the critical angle has no edge.
 6. **A leading edge is held from below and from its side** (owner: an edge standing on
    supports is also held on one side, and its tips go close to it, as supports placed by hand
    are): where the underside rises away from an edge by more than 10°, its edge tips stand the
@@ -4519,10 +4523,11 @@ third, supports on a grid, is TD-138). Implemented the same day.
   no steeper than 75°) the radius from the edge; the grid centred on the face, each point on
   the face, clear of the outline by the inset (the radius with the edges off) and of its tips by
   half the smaller spacing.
-- **The supports** (`auto_ui::plan::plan_tips`): the tips grown as the Automatic tool grows its
-  own (no merging of trunks, no braces), placed supports (`SupportOrigin::Placed`), with the
-  Automatic tool's defaults for feet on the model and mini supports; then built against the
-  model, those with an error going; a tip left without a support is counted as left.
+- **The supports** (`auto_ui::plan::plan_tips`; `support_plan::auto::plan_tips` since TD-156):
+  the tips grown as the Automatic tool grows its own (no merging of trunks, no braces), placed
+  supports (`SupportOrigin::Placed`), with the Automatic tool's defaults for feet on the model
+  and mini supports; then built against the model, those with an error going; a tip left
+  without a support is counted as left.
 - **Values:** in the settings (`grid`, `grid_preset` by name), the tools' values starting from
   them; a value changed in the panel, or the plate's revision, plans the picked face again.
 
@@ -5914,6 +5919,40 @@ lowercase-hyphen rule keeps one option per profile and cannot read a path as an 
 slicing by catalog ids gives the bytes slicing by the catalog's own files gives; a file named as
 an id, an unknown id, an option the taken setting holds, and a resin without a setting for the
 printer are refused, writing nothing.
+
+## TD-156 — The support planners in `karasu-project`
+
+**Status:** Implemented on 2026-11-16 at the owner's request: the first of two steps towards
+automatic supports on the command line, which come next in the owner's comparison of the command
+line with the application (2026-11-15).
+
+**Problem:** the planners of the Automatic tool (TD-112, TD-127, TD-136, TD-137), of Support the
+islands and of the Grid mode's supports (TD-138) lived in the desktop application, mixed with its
+state, its threads and its interface, so the command line could not plan supports.
+
+**Decision:**
+1. The module `karasu_project::support_plan` holds them, headless:
+   - `auto`: the Automatic tool's plan, its outline tips (`edges`), and `plan_tips`, which grows
+     the Grid mode's tips;
+   - `islands`: Support the islands' plan, the growing and merging the Automatic tool shares,
+     and `check`, the final check;
+   - `route`: supports routed clear of the model on a model's `RouteSurface`;
+   - `branches`: where a branch joins its trunk; `trees`: trunks merging;
+   - `values`: the weights, the user's presets and the next support's values.
+   `placement::Affine` maps between a model's frame and the world for them; the application's
+   `gizmo::Affine` is the same type.
+2. The move changes no algorithm, constant, default, order or message: the application plans
+   exactly as before. The application keeps what reads or writes its state: gridding the selected
+   model's surface on a thread and keying it to the model, the plans' threads, previews and
+   Apply, the model as the final check takes it, and the weights' names in the interface's words
+   (`WeightLabel`).
+3. `karasu-project` so owns algorithms for the first time (TD-070 gave it none): they compose the
+   core's routing, building and bracing, as the pipeline composes its slicing.
+
+**Tests:** the seven tests that use only the moved code moved with it (the values, the axis turned
+to a model's frame, three of the trees, the islands' grouping, the Automatic tool's saved place);
+those that need the application's workspace stay in the application. The workspace runs the same
+tests as before.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 

@@ -12,6 +12,7 @@ use crate::{
     messages::{Level, Message},
     section_ui::SectionStep,
     settings::OpenAs,
+    supports_ui::WeightLabel,
     theme,
     viewport::Pattern,
     widgets::{icon_button, range_slider, switch, text_field, Unit, UnitField},

@@ -40,6 +40,7 @@ use karasu_core::{
     mesh::TriangleMesh,
     supports::SurfaceGrid,
 };
+pub use karasu_project::support_plan::islands::{Island, PROBE_MM};
 use karasu_project::{
     pipeline::{slice_with, Observer, Preparation, Unsupported},
     request::Subject,
@@ -57,37 +58,12 @@ use std::{
 const MARKER_KEY: u64 = 0x4953_4C41_4E44_4D4B; // "ISLANDMK"
 /// The viewport mesh key of the supports planned under the islands.
 const PLAN_KEY: u64 = 0x4953_4C41_4E44_504C; // "ISLANDPL"
-/// How far beyond an island's footprint a support's tip still holds it, in mm: a contact's
-/// radius and a pixel's rounding.
-pub(crate) const HOLD_REACH_MM: f64 = 0.6;
-/// How far under an island's first layer a ray starts to find the surface there, in mm.
-pub(crate) const PROBE_MM: f64 = 1.0;
 /// The room around an island the view is brought to, in mm.
 const AROUND_MM: f64 = 4.0;
 /// The critical angles the search takes, in degrees from the plate.
 pub const ANGLE_DEG: std::ops::RangeInclusive<f64> = 1.0..=89.0;
 /// The smallest islands' areas whose markers can be hidden, in mm².
 pub const HIDE_UNDER_MM2: std::ops::RangeInclusive<f64> = 0.0..=100.0;
-
-/// One island of a search, where a piece starts in mid-air (owner, 2026-10-30), in world
-/// millimetres. The Automatic tool tells its regions the same way, over all their layers.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Island {
-    /// The centroid of its first layer, at that layer's height: where it starts.
-    pub point: [f64; 3],
-    /// Its first and last layers, from the plate up.
-    pub layers: [usize; 2],
-    /// The height of the layer under its first one (its underside lies between), and of its
-    /// last layer.
-    pub heights: [f64; 2],
-    /// Its first layer's area, in mm² (a region's: over its layers).
-    pub area_mm2: f64,
-    /// Its first layer's footprint on the plate (a region's: over its layers): lowest and
-    /// highest corners.
-    pub footprint: [[f64; 2]; 2],
-    /// It starts on the hollowed model's cavity ceiling, inside the model.
-    pub inside: bool,
-}
 
 /// A finished search: the model, the plate's revision it describes and its islands, lowest
 /// first.

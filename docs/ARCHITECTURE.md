@@ -72,7 +72,7 @@ Since M6.1 (TD-070) that orchestration lives in `karasu-project`. The CLI parses
 ### `karasu-project` (M6.1, TD-070)
 
 The headless orchestration shared by `karasu-cli` and `karasu-app`. It depends only on
-`karasu-core` and owns no algorithm.
+`karasu-core` and owns no algorithm, apart from the support planners (`support_plan`, TD-156).
 - **`request`:** `SliceRequest`, the validated description of one job: a model or a plate
   document, the profiles, the format and output, and every processing option.
 - **`pipeline`:** `slice(request, observer, stop)`:
@@ -111,6 +111,14 @@ The headless orchestration shared by `karasu-cli` and `karasu-app`. It depends o
   fails with its position.
 - **Errors (TD-078):** a `PipelineError` carries the command line's message, the reason without
   options, and the remedies, so an interface can word failures itself and offer fixes.
+- **`support_plan` (TD-156):** the planners of the automatic supports, moved unchanged from the
+  desktop application so the command line can use them: `auto` (the Automatic tool's plan, and
+  `plan_tips`, which grows the Grid mode's tips), `islands` (Support the islands' plan, the
+  growing and merging both share, and `check`, the final check), `route` (supports routed clear
+  of the model on a `RouteSurface`), `branches`, `trees` and `values` (weights, the user's
+  presets, the next support's values). They work in world millimetres, take the caller's
+  cancellation flag and are deterministic; the application runs them on threads of its own and
+  keeps the previews, Apply and the weights' names.
 - **Still to come:** the project file (M6.6).
 
 ### `karasu-app` (M6.0, TD-068)
@@ -211,7 +219,7 @@ The desktop application crate runs eframe and egui on wgpu (TD-042).
     pseudo-locale; the headless crates and the command line stay in English.
 - **What it does not have yet:** preparation tools (M6.4), layout and settings (M6.5), the
   project file and plate overview (M6.6). All algorithms stay in `karasu-core`, orchestrated by
-  `karasu-project`.
+  `karasu-project`, apart from the support planners, which are `karasu-project`'s (TD-156).
 
 ## Planned responsibility boundaries
 

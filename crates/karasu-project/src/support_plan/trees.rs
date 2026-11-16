@@ -45,7 +45,7 @@ const MOST_THICKER: f64 = 2.0;
 
 /// A support as merging sees it.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Stem {
+pub struct Stem {
     /// Its shaft as built, in world millimetres, from its tip's join down to its base join.
     pub shaft: Vec<[f64; 3]>,
     /// Its shaft's diameter at its top.
@@ -61,16 +61,19 @@ pub(crate) struct Stem {
 /// A stem merged: its place, the bend its shaft turns at, and the main trunk it joins (its
 /// place) and the height where.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Merge {
+pub struct Merge {
+    /// The stem merged, by its place.
     pub stem: usize,
+    /// Where its shaft turns towards the main trunk, in world millimetres.
     pub bend: [f64; 3],
+    /// The main trunk it joins (its place) and the height where, in mm.
     pub joins: (usize, f64),
 }
 
 /// End `bends`, a shaft's bends from its tip down, at `bend` on that shaft, where it leaves
 /// for another: the bends below it come after it along the shaft and are dropped. `height`
 /// tells a bend's height on the plate (bends may be kept in a model's frame).
-pub(crate) fn end_at(bends: &mut Vec<[f64; 3]>, bend: [f64; 3], height: impl Fn([f64; 3]) -> f64) {
+pub fn end_at(bends: &mut Vec<[f64; 3]>, bend: [f64; 3], height: impl Fn([f64; 3]) -> f64) {
     let z = height(bend);
     bends.retain(|&b| height(b) > z);
     bends.push(bend);
@@ -79,38 +82,48 @@ pub(crate) fn end_at(bends: &mut Vec<[f64; 3]>, bend: [f64; 3], height: impl Fn(
 /// What merging stems does: the stems merged, and the main trunks' new feet (place and shaft
 /// bottom diameter).
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct Merged {
+pub struct Merged {
+    /// The stems merged, in the order they were merged.
     pub merges: Vec<Merge>,
+    /// The main trunks widened at their feet: each one's place and its shaft's bottom diameter,
+    /// in mm.
     pub wider: Vec<(usize, f64)>,
 }
 
 /// How stems merge: within `merge_mm` in plan, `per_group` at most a group, `levels` times,
 /// each leaning at most `aside_mm` aside.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct MergeValues {
+pub struct MergeValues {
+    /// Stems closer than this in plan merge, in mm; zero, none.
     pub merge_mm: f64,
+    /// The stems a group takes at most, its main trunk included.
     pub per_group: u32,
+    /// How many times stems merge, each level on the main trunks of the one before.
     pub levels: u32,
+    /// How far aside a merged stem leans at most, in mm.
     pub aside_mm: f64,
 }
 
 /// How far aside a merged trunk leans at most for a branch distance of `branch_mm`: that
 /// distance, or the default one's without branches.
 #[must_use]
-pub(crate) fn aside_for(branch_mm: f64) -> f64 {
+pub fn aside_for(branch_mm: f64) -> f64 {
     if branch_mm > 0.0 {
         branch_mm
     } else {
-        crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.branch_mm
+        super::islands::DEFAULT_ISLAND_SUPPORTS.branch_mm
     }
 }
 
 /// What the slanted parts are kept clear of, and the room they keep.
-pub(crate) struct Room<'a> {
+pub struct Room<'a> {
+    /// The model's surface for routes.
     pub surface: &'a RouteSurface,
+    /// Its mesh, as [`RouteSurface::mesh`] gives it.
     pub mesh: &'a TriangleMesh,
     /// The plate's height, or the raft's top.
     pub floor: f64,
+    /// How far the slanted parts keep from the model, in mm.
     pub clearance: f64,
 }
 
@@ -135,12 +148,7 @@ fn span(shaft: &[[f64; 3]]) -> Option<[f64; 2]> {
 }
 
 /// Merge `stems`, level after level: see the module.
-pub(crate) fn merge(
-    stems: &[Stem],
-    values: MergeValues,
-    room: &Room<'_>,
-    stop: &AtomicBool,
-) -> Merged {
+pub fn merge(stems: &[Stem], values: MergeValues, room: &Room<'_>, stop: &AtomicBool) -> Merged {
     let mut merged = Merged::default();
     if values.merge_mm <= 0.0 {
         return merged;
@@ -235,7 +243,7 @@ fn nearest_middle(group: &[usize], foot: &dyn Fn(usize) -> [f64; 2]) -> usize {
 /// Where stem `other` would bend and join stem `main` (as merging joins them; `joins` tells
 /// what hangs from `other`), leaning at most `aside_mm` aside when given: the bend and the
 /// junction's height, if any. Also the manual "Join a support", where the user chose the shaft.
-pub(crate) fn join_onto(
+pub fn join_onto(
     stems: &[Stem],
     joins: &[Option<(usize, f64)>],
     other: usize,

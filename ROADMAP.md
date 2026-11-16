@@ -1408,6 +1408,10 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        `--print-setting` take catalog ids, and a catalog printer and resin take the catalog's
        print setting for them. The first item of the owner's comparison of the command line
        with the application (2026-11-15); automatic supports and orientation come next.
+     - **The support planners headless (owner, 2026-11-16, TD-156):** the planners of the
+       Automatic tool, Support the islands and the Grid mode moved, unchanged, from the
+       application to `karasu_project::support_plan`, the first step towards automatic supports
+       on the command line.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the
