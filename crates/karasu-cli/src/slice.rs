@@ -23,8 +23,8 @@ use karasu_core::{
 use karasu_project::{
     pipeline,
     request::{
-        machine_exporter, Coordinates, DrainHole, Fill, Input, ModelSource, Pose, Simplify,
-        SliceRequest, Subject, DEFAULT_CLOSE_HOLES_MM, DEFAULT_JOB_ID, DEFAULT_REPAIR,
+        machine_exporter, Blocker, Coordinates, DrainHole, Fill, Input, ModelSource, Pose,
+        Simplify, SliceRequest, Subject, DEFAULT_CLOSE_HOLES_MM, DEFAULT_JOB_ID, DEFAULT_REPAIR,
     },
 };
 use std::{
@@ -111,6 +111,8 @@ const MAX_COPIES: u32 = karasu_core::plate::MAX_COPIES;
 /// cavity wall (TD-066).
 const SURFACE_HOLE_MARGIN_MM: f64 = 1.0;
 
+/// Maximum `--hollow-blocker` options, the core's bound on blockers (TD-115).
+const MAX_HOLLOW_BLOCKERS: usize = karasu_core::preparation::MAX_HOLLOW_BLOCKERS;
 /// Maximum `--drain-hole` options, matching the core's bound on holes (TD-089).
 const MAX_DRAIN_HOLES: usize = karasu_core::preparation::sampled::MAX_HOLES;
 
@@ -274,6 +276,12 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         || hollowing != Hollowing::default()
         || processing.supports.is_some()
         || processing.accept_support_collisions.is_some();
+    if plate.plate.is_some() && !hollowing.blockers.is_empty() {
+        return Err(
+            "--hollow-blocker works on one model (--model): plate documents hold no blockers"
+                .to_owned(),
+        );
+    }
     let arranged = plate.check(per_object, placement.pose.center)?;
     let automatic = support_options.automatic();
     let mut support_job = support_options.check(&supports::Context {
@@ -367,7 +375,7 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         hole_coordinates: Coordinates::World,
         support_coordinates: Coordinates::World,
         hollow_simplify: hollowing.simplify,
-        hollow_blockers: Vec::new(),
+        hollow_blockers: hollowing.blockers,
         supports: supports.map(Input::File),
         accept_support_collisions,
         layer_plan: layer_plan.map(Input::File),
@@ -609,7 +617,7 @@ fn with_print_setting(
     .checked()
 }
 
-/// Hollowing options: the wall and grid cell at most once, drain holes repeatable.
+/// Hollowing options: the wall and grid cell at most once, drain holes and blockers repeatable.
 #[derive(Default, PartialEq)]
 struct Hollowing {
     wall: Option<f64>,
@@ -618,6 +626,10 @@ struct Hollowing {
     simplify: Option<Simplify>,
     /// The hole modifiers given for the last `--surface-drain-hole`, each at most once.
     modifiers: Vec<&'static str>,
+    /// Regions left solid (TD-160), in the model's own frame.
+    blockers: Vec<Blocker>,
+    /// Whether `--blocker-rotate` was given for the last `--hollow-blocker`.
+    blocker_rotated: bool,
 }
 
 impl Hollowing {
@@ -724,6 +736,40 @@ impl Hollowing {
                 self.modifiers.clear();
             }
             "--hole-depth" | "--hole-from" | "--hole-tilt" => self.modify(name, arguments)?,
+            "--hollow-blocker" => {
+                if self.blockers.len() == MAX_HOLLOW_BLOCKERS {
+                    return Err(format!(
+                        "at most {MAX_HOLLOW_BLOCKERS} --hollow-blocker options are supported"
+                    ));
+                }
+                self.blockers.push(hollow_blocker(name, arguments)?);
+                self.blocker_rotated = false;
+            }
+            "--blocker-rotate" => {
+                let Some(Blocker::Frustum { rotation_deg, .. }) = self.blockers.last_mut() else {
+                    return Err(format!(
+                        "{name} applies to the --hollow-blocker box or frustum just before it"
+                    ));
+                };
+                if std::mem::replace(&mut self.blocker_rotated, true) {
+                    return Err(format!(
+                        "{name} may be given only once per --hollow-blocker"
+                    ));
+                }
+                for (axis, value) in ["X", "Y", "Z"].into_iter().zip(rotation_deg) {
+                    *value = arguments
+                        .next()
+                        .as_deref()
+                        .and_then(OsStr::to_str)
+                        .and_then(|v| v.parse::<f64>().ok())
+                        .filter(|v| v.is_finite())
+                        .ok_or_else(|| {
+                            format!(
+                                "{name} requires three finite angles in degrees; {axis} is invalid"
+                            )
+                        })?;
+                }
+            }
             "--hollow-simplify" => {
                 let text = text_value(name, arguments.next())?;
                 let value = if text == "auto" {
@@ -958,6 +1004,69 @@ impl Processing {
         }
         Ok(true)
     }
+}
+
+/// `--hollow-blocker sphere <x> <y> <z> <diameter>`, `box <x> <y> <z> <width> <depth> <height>` or
+/// `frustum <x> <y> <z> <bottom width> <bottom depth> <top width> <top depth> <height>` (TD-160):
+/// a region the hollowing leaves solid, centred on the point, in the model's own frame (its file's
+/// coordinates in millimetres), unturned until `--blocker-rotate`. A frustum's top may be zero, a
+/// pyramid's apex.
+fn hollow_blocker(
+    option: &str,
+    arguments: &mut impl Iterator<Item = OsString>,
+) -> Result<Blocker, String> {
+    let shape = arguments.next();
+    let shape = shape
+        .as_deref()
+        .and_then(OsStr::to_str)
+        .unwrap_or_default()
+        .to_owned();
+    if !matches!(shape.as_str(), "sphere" | "box" | "frustum") {
+        return Err(format!(
+            "{option} takes sphere, box or frustum, then its centre and sizes, not {shape:?}"
+        ));
+    }
+    let mut centre_mm = [0.0; 3];
+    for (axis, value) in ["X", "Y", "Z"].into_iter().zip(&mut centre_mm) {
+        *value = millimeters(option, axis, arguments.next().as_deref())?;
+    }
+    let mut size = |what: &str, zero: bool| {
+        arguments
+            .next()
+            .as_deref()
+            .and_then(OsStr::to_str)
+            .and_then(|v| v.parse::<f64>().ok())
+            .filter(|v| v.is_finite() && (*v > 0.0 || (zero && *v == 0.0)))
+            .ok_or_else(|| {
+                format!(
+                    "{option} {shape} requires a finite {} {what} in mm",
+                    if zero { "non-negative" } else { "positive" }
+                )
+            })
+    };
+    Ok(match shape.as_str() {
+        "sphere" => Blocker::Sphere {
+            centre_mm,
+            diameter_mm: size("diameter", false)?,
+        },
+        "box" => {
+            let base = [size("width", false)?, size("depth", false)?];
+            Blocker::Frustum {
+                centre_mm,
+                rotation_deg: [0.0; 3],
+                bottom_mm: base,
+                top_mm: base,
+                height_mm: size("height", false)?,
+            }
+        }
+        _ => Blocker::Frustum {
+            centre_mm,
+            rotation_deg: [0.0; 3],
+            bottom_mm: [size("bottom width", false)?, size("bottom depth", false)?],
+            top_mm: [size("top width", true)?, size("top depth", true)?],
+            height_mm: size("height", false)?,
+        },
+    })
 }
 
 /// `--surface-drain-hole <x> <y> <z> <diameter>`: perpendicular to the surface nearest the point.
@@ -1528,6 +1637,242 @@ mod tests {
             .map(OsString::from)
             .collect::<Vec<_>>()
             .into_iter()
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)] // Every form of the option and every refusal.
+    fn hollow_blockers_are_read_in_the_model_frame_and_checked() {
+        // TD-160: spheres, boxes and frustums, a box or frustum turned by --blocker-rotate.
+        use super::Blocker;
+        let base = [
+            "--assume-mm",
+            "m.stl",
+            "--printer",
+            "p.json",
+            "--resin",
+            "r.json",
+            "--format",
+            "goo-v3",
+            "--output",
+            "o.goo",
+        ];
+        let with = |extra: &[&str]| {
+            let all: Vec<&str> = base.iter().chain(extra).copied().collect();
+            parse(arguments(&all))
+        };
+        let parsed = with(&[
+            "--hollow",
+            "2",
+            "--hollow-blocker",
+            "sphere",
+            "1",
+            "2",
+            "3",
+            "4",
+            "--hollow-blocker",
+            "box",
+            "5",
+            "6",
+            "-7",
+            "8",
+            "9",
+            "10",
+            "--blocker-rotate",
+            "0",
+            "0",
+            "45",
+            "--hollow-blocker",
+            "frustum",
+            "0",
+            "0",
+            "1.5",
+            "6",
+            "4",
+            "0",
+            "0",
+            "3",
+        ])
+        .unwrap();
+        assert_eq!(
+            parsed.request.hollow_blockers,
+            [
+                Blocker::Sphere {
+                    centre_mm: [1.0, 2.0, 3.0],
+                    diameter_mm: 4.0
+                },
+                Blocker::Frustum {
+                    centre_mm: [5.0, 6.0, -7.0],
+                    rotation_deg: [0.0, 0.0, 45.0],
+                    bottom_mm: [8.0, 9.0],
+                    top_mm: [8.0, 9.0],
+                    height_mm: 10.0
+                },
+                Blocker::Frustum {
+                    centre_mm: [0.0, 0.0, 1.5],
+                    rotation_deg: [0.0; 3],
+                    bottom_mm: [6.0, 4.0],
+                    top_mm: [0.0, 0.0],
+                    height_mm: 3.0
+                },
+            ]
+        );
+        let sphere = ["--hollow-blocker", "sphere", "1", "2", "3", "4"];
+        for (extra, refused) in [
+            (&sphere[..], "--hollow-blocker requires --hollow"),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "cone",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                ],
+                "sphere, box or frustum",
+            ),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "sphere",
+                    "1",
+                    "2",
+                    "3",
+                    "0",
+                ],
+                "positive diameter",
+            ),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "box",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "-5",
+                    "6",
+                ],
+                "positive depth",
+            ),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "frustum",
+                    "0",
+                    "0",
+                    "0",
+                    "4",
+                    "4",
+                    "-1",
+                    "0",
+                    "2",
+                ],
+                "non-negative top width",
+            ),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "sphere",
+                    "x",
+                    "2",
+                    "3",
+                    "4",
+                ],
+                "X is invalid",
+            ),
+            (
+                &["--hollow", "2", "--blocker-rotate", "0", "0", "1"],
+                "box or frustum",
+            ),
+            (
+                &[
+                    &["--hollow", "2"][..],
+                    &sphere,
+                    &["--blocker-rotate", "0", "0", "1"],
+                ]
+                .concat(),
+                "box or frustum",
+            ),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "box",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "1",
+                    "1",
+                    "--blocker-rotate",
+                    "0",
+                    "0",
+                    "1",
+                    "--blocker-rotate",
+                    "0",
+                    "0",
+                    "2",
+                ],
+                "only once per --hollow-blocker",
+            ),
+            (
+                &[
+                    "--hollow",
+                    "2",
+                    "--hollow-blocker",
+                    "box",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "1",
+                    "1",
+                    "--blocker-rotate",
+                    "0",
+                    "inf",
+                    "1",
+                ],
+                "Y is invalid",
+            ),
+        ] {
+            let error = with(extra).unwrap_err();
+            assert!(error.contains(refused), "{extra:?}: {error}");
+        }
+        // Plate documents hold no blockers.
+        let error = parse(arguments(&[
+            "--plate",
+            "plate.json",
+            "--printer",
+            "p.json",
+            "--resin",
+            "r.json",
+            "--format",
+            "goo-v3",
+            "--output",
+            "o.goo",
+            "--hollow-blocker",
+            "sphere",
+            "1",
+            "2",
+            "3",
+            "4",
+        ]))
+        .unwrap_err();
+        assert!(
+            error.contains("plate documents hold no blockers"),
+            "{error}"
+        );
     }
 
     #[test]

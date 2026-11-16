@@ -199,7 +199,7 @@ karasu-cli slice --assume-mm model.stl --printer printer.json --resin resin.json
 
 `slice` connects existing core contracts without adding geometry policy (TD-043):
 model import → optional topology gate → explicit placement → uniform layer schedule → M3 layer engine
-→ M4 binary LCD masks → M5 create-only export. Options may appear in any order; each at most once, except the repeatable `--drain-hole`.
+→ M4 binary LCD masks → M5 create-only export. Options may appear in any order; each at most once, except the repeatable `--drain-hole`, `--surface-drain-hole` and `--hollow-blocker`.
 
 - `--model <path>` with `--units <unit>`, or `--assume-mm <path>`:
   - **The model:** STL, OBJ or 3MF, chosen by extension (see Model formats).
@@ -590,6 +590,27 @@ model import → optional topology gate → explicit placement → uniform layer
     its axis by up to 60° towards a direction measured around the normal. Example:
     `--surface-drain-hole 20 30 20 4 --hole-depth 5 --hole-tilt 30 0`.
   - A tilted hole must also be at least two layer heights times the sine of its tilt wide.
+- `--hollow-blocker` (repeatable up to 1024 times, requires `--hollow`, TD-160) leaves a region
+  solid: the hollowing takes no cavity inside it (TD-115), for a base that takes the peel force, a
+  thin limb, or a part cut or drilled later.
+  - **Shapes,** each centred on `x y z`:
+    - `sphere <x> <y> <z> <diameter>`;
+    - `box <x> <y> <z> <width> <depth> <height>`: width along X, depth along Y, height along Z;
+    - `frustum <x> <y> <z> <bottom width> <bottom depth> <top width> <top depth> <height>`: two
+      rectangular bases a height apart, a truncated pyramid; a top of `0 0` is a pyramid's apex.
+  - **`--blocker-rotate <x> <y> <z>`** after a box or frustum turns it about the model's fixed X,
+    then Y, then Z axes, in degrees, at most once per blocker.
+  - **The model's own frame:** unlike the drain holes, which are world points after placement,
+    a blocker is given in the model file's coordinates in millimetres (after `--units`), as the
+    application and project files keep blockers. It follows `--rotate`, `--scale`, `--center`,
+    `--drop` and `--translate`, and every copy. `inspect` reports the file's bounds.
+  - Sizes are positive (a frustum's top may be zero); values out of range are usage errors. A
+    blocker over the whole cavity leaves nothing to hollow, and the job fails as it does for a
+    model too thin to hollow.
+  - The summary adds `Hollow blockers: <n>` after the wall lines, as it does for a project's
+    object with blockers. Plate documents (`--plate`) hold no blockers.
+  - Example: `--hollow 2 --hollow-blocker box 20 30 4 16 16 4` keeps the lowest 4 mm of a 20 mm
+    cube's cavity solid, the cube lying from Z 0 in its file.
 - `--hollow-simplify <mm|auto>` (with `--hollow`, TD-066) simplifies the cavity surface.
   - **Bounds:** the surface moves at most the tolerance, and the walls never get thinner than the
     thinnest original wall, proven exactly for every new face.

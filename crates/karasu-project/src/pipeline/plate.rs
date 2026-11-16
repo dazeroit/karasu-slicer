@@ -558,7 +558,12 @@ pub(super) fn write_summary(
                 writeln!(out, "{line}")?;
             }
         }
-        write_preparation(out, &object.prepared, object.holes.as_ref())?;
+        write_preparation(
+            out,
+            &object.prepared,
+            object.holes.as_ref(),
+            object.args.hollow_blockers.len(),
+        )?;
     }
     if layout.overlaps.is_empty() {
         writeln!(out, "Overlapping footprints: none")

@@ -1427,8 +1427,12 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
      - **Every plate from the command line (owner, 2026-11-16, TD-159):** `slice --project
        --every-plate --folder <folder>` slices every plate with a model into its own file, named
        and formatted as the application's Export every plate does (`--names`, `--replace`); a
-       plate is sliced in the format its printer writes, as the application slices it. Blockers
-       in plate documents and `export-models` from one model remain open.
+       plate is sliced in the format its printer writes, as the application slices it.
+     - **Hollowing blockers on the command line (owner, 2026-11-16, TD-160):** `slice
+       --hollow-blocker sphere|box|frustum` with `--blocker-rotate`, in the model's own frame,
+       as the application keeps them. Put off by the owner until a project can be made from the
+       command line: blockers in plate documents, `export-models` from one model, and the Solid
+       base (a box over the placed footprint).
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

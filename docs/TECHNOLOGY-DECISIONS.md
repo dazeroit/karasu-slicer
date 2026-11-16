@@ -6185,6 +6185,46 @@ them and identical to `--project-plate`'s, the empty plate left out, the failing
 with exit status 1, existing files refused, then replaced with the summaries naming the final
 paths.
 
+## TD-160 — Hollowing blockers on the command line
+
+**Status:** Implemented on 2026-11-16 at the owner's request ("procedi come proposto, solid base
+dopo"). The owner put off the rest of the fourth item of the comparison of the command line with
+the application: blockers in plate documents and `export-models` from one model wait until a
+project can be made from the command line too.
+
+**Problem:** the application leaves regions solid when it hollows (TD-115), and a project slices
+with them from the command line (TD-130); `slice --model` hollowed without them.
+
+**Decision:**
+1. `--hollow-blocker`, repeatable as the drain holes are, up to the core's 1024, with
+   `--hollow`:
+   - `sphere <x> <y> <z> <diameter>`;
+   - `box <x> <y> <z> <width> <depth> <height>`, a frustum with its two bases alike, the common
+     case (a base kept solid);
+   - `frustum <x> <y> <z> <bottom width> <bottom depth> <top width> <top depth> <height>`, its top
+     zero for a pyramid's apex.
+   `--blocker-rotate <x> <y> <z>` after a box or frustum turns it about the model's fixed axes,
+   as `--hole-tilt` shapes the surface hole before it, so no option takes eleven numbers.
+2. **The model's own frame**, the file's coordinates in millimetres after `--units`, as the
+   application and the project file keep blockers (TD-115, which rejected world coordinates:
+   a blocker would stay behind when the model moves). A box given in world coordinates would not
+   stay a box in the model's frame under a turn and an uneven scale, so it could not be kept
+   exactly. The drain holes stay world points; the help and `docs/CLI.md` say the difference.
+3. Values out of range are usage errors (exit status 2): non-finite coordinates or angles,
+   sizes not positive (a frustum's top may be zero), an unknown shape, `--blocker-rotate` before
+   a box or frustum or twice for one, blockers without `--hollow` (the request's check) or with
+   `--plate`, whose documents hold none. The core checks them again (TD-115).
+4. The summary adds `Hollow blockers: <n>` after the hollow wall lines when there are any, for a
+   project's object too.
+5. **Not now (owner):** the application's "Solid base up to", a box over the placed footprint,
+   which needs the placement before the request; it can come later as its own option.
+
+**Tests:** the options read into the request's blockers exactly, and each refusal; a 20 mm cube
+hollowed at 2 mm keeps the volume of a 16 × 16 × 4 mm box over its cavity's floor solid
+(about 999 mm³ of the 15.9 mm cavity), the same when the model is centred, less when the box is
+turned and a sphere added, with the blockers counted; a blocker over the whole cavity leaves
+nothing to hollow.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are
