@@ -9,7 +9,17 @@
 //! The menu stays open while the search field is clicked; choosing an entry or an action closes
 //! it (the caller calls `ui.close()`). The query lives in egui's temporary memory while the menu
 //! is open and is cleared when it closes.
-use crate::{i18n::tr, widgets::text_field};
+//!
+//! **Long names** (issue #18, design rule "Fixed size"): the button keeps the width it is given
+//! and the menu that width, so a long name never widens the sidebar. A name that does not fit is
+//! cut with an ellipsis, shows in full in its tooltip, and is given in full to screen readers
+//! ([`crate::widgets::menu_entry`] for the menu's entries).
+use crate::{
+    i18n::tr,
+    widgets::{text_field, wider},
+};
+
+pub(super) use crate::widgets::menu_entry as entry;
 use eframe::egui;
 
 /// A list longer than this gets a search field.
@@ -37,26 +47,37 @@ impl Query {
     }
 }
 
-/// A profile menu named `id_salt`, showing `selected` on its button, with `count` entries.
-/// `list` adds the entries the query matches and returns how many it added; `actions` adds the
-/// menu's actions.
+/// A profile menu named `id_salt`, showing `selected` on its button, `full` being its whole text,
+/// with `count` entries. `list` adds the entries the query matches and returns how many it added;
+/// `actions` adds the menu's actions. The button and the menu keep the width available.
 pub(super) fn show(
     ui: &mut egui::Ui,
     id_salt: &str,
     selected: impl Into<egui::WidgetText>,
+    full: &str,
     count: usize,
     list: impl FnOnce(&mut egui::Ui, &Query) -> usize,
     actions: impl FnOnce(&mut egui::Ui),
 ) -> egui::Response {
     let query_id = egui::Id::new(("profile-menu-query", id_salt));
+    let width = ui.available_width();
+    let selected = selected.into();
+    // The button's text has its width less the padding and the arrow.
+    let spacing = ui.spacing();
+    let room = width - 2.0 * spacing.button_padding.x - spacing.icon_width - spacing.icon_spacing;
+    let cut = wider(ui, &selected, room);
     let combo = egui::ComboBox::from_id_salt(id_salt)
         .selected_text(selected)
-        .width(ui.available_width())
+        .width(width)
+        .wrap_mode(egui::TextWrapMode::Truncate)
         // The list scrolls on its own; the whole menu scrolls only when the window is too short
         // to hold it.
         .height(ui.ctx().content_rect().height())
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .show_ui(ui, |ui| {
+            // Entries are cut to the button's width rather than widening the menu.
+            ui.set_max_width(width);
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
             let opened = ui.data(|d| d.get_temp::<String>(query_id)).is_none();
             let mut text = ui
                 .data(|d| d.get_temp::<String>(query_id))
@@ -90,12 +111,20 @@ pub(super) fn show(
     if combo.inner.is_none() {
         ui.data_mut(|d| d.remove::<String>(query_id));
     }
-    combo.response
+    // Screen readers get the whole name; the widget's own name (Printer, Resin) is the caller's.
+    let full_value = full.to_owned();
+    ui.ctx()
+        .accesskit_node_builder(combo.response.id, |node| node.set_value(full_value));
+    if cut {
+        combo.response.on_hover_text(full)
+    } else {
+        combo.response
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{show, Query, SEARCH_FROM};
+    use super::{entry, show, Query, SEARCH_FROM};
     use eframe::egui;
 
     #[test]
@@ -132,6 +161,7 @@ mod tests {
                 let response = show(
                     ui,
                     "resins",
+                    "Resin 00",
                     "Resin 00",
                     names.len(),
                     |ui, q| {
@@ -182,6 +212,57 @@ mod tests {
         assert!(texts.contains("Add resin"), "{texts}");
         let none = painted(Some("zzz"), 30);
         assert!(none.contains(&crate::i18n::tr!("menu-no-match")), "{none}");
+    }
+
+    #[test]
+    fn a_long_entry_is_cut_to_the_menu_and_named_in_full() {
+        // Issue #18: the open menu keeps the button's width; a long entry is cut, with its whole
+        // name for screen readers.
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let long = format!("Resin {}", "with a very long name ".repeat(12).trim_end());
+        let (mut button, mut entry_width, mut nodes) = (None::<egui::Id>, 0.0f32, Vec::new());
+        for _ in 0..4 {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                if let Some(id) = button {
+                    egui::Popup::open_id(ui.ctx(), id.with("popup"));
+                }
+                ui.allocate_ui_with_layout(
+                    egui::vec2(200.0, 400.0),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.set_width(200.0);
+                        let response = show(
+                            ui,
+                            "long",
+                            long.clone(),
+                            &long,
+                            1,
+                            |ui, _| {
+                                entry_width = entry(ui, true, long.clone(), &long).rect.width();
+                                1
+                            },
+                            |_| {},
+                        );
+                        button = Some(response.id);
+                    },
+                );
+            });
+            output.textures_delta.clear();
+            nodes = output
+                .platform_output
+                .accesskit_update
+                .map_or_default(|update| update.nodes);
+        }
+        assert!(entry_width > 0.0 && entry_width <= 200.0, "{entry_width}");
+        let named = |name: &str| {
+            nodes
+                .iter()
+                .filter(|(_, n)| n.label() == Some(name) || n.value() == Some(name))
+                .count()
+        };
+        // The button and the entry.
+        assert!(named(&long) >= 2, "{}", named(&long));
     }
 
     #[test]

@@ -372,7 +372,8 @@ impl ProfilesUi {
         let combo = menu::show(
             ui,
             "printer",
-            label,
+            label.clone(),
+            &label,
             library.printers().len(),
             |ui, query| {
                 let mut shown = 0;
@@ -388,7 +389,7 @@ impl ProfilesUi {
                     }
                     shown += 1;
                     let selected = plate_printer.as_ref().is_some_and(|p| p.id == printer.id);
-                    if ui.selectable_label(selected, text).clicked() {
+                    if menu::entry(ui, selected, text.clone(), &text).clicked() {
                         picked.set(Some(Request::Printer(printer.id.clone())));
                         ui.close();
                     }
@@ -453,11 +454,15 @@ impl ProfilesUi {
             let combo = menu::show(
                 ui,
                 "resin",
-                label,
+                label.clone(),
+                &label,
                 ready.len() + other.len(),
                 |ui, query| {
                     if ready.is_empty() {
-                        ui.label(tr!("resin-none-set-up", printer = &printer.name));
+                        ui.add(
+                            egui::Label::new(tr!("resin-none-set-up", printer = &printer.name))
+                                .wrap(),
+                        );
                     }
                     let mut shown = 0;
                     for resin in ready.iter().filter(|r| query.matches(&r.name)) {
@@ -466,7 +471,7 @@ impl ProfilesUi {
                         let clicked = ui
                             .horizontal(|ui| {
                                 swatch(ui, Some(resin));
-                                ui.selectable_label(selected, &resin.name).clicked()
+                                menu::entry(ui, selected, &resin.name, &resin.name).clicked()
                             })
                             .inner;
                         if clicked {
@@ -477,17 +482,21 @@ impl ProfilesUi {
                     let unset: Vec<_> = other.iter().filter(|r| query.matches(&r.name)).collect();
                     if !unset.is_empty() {
                         ui.separator();
-                        ui.label(
-                            egui::RichText::new(tr!("resin-not-set-up", printer = &printer.name))
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new(tr!(
+                                    "resin-not-set-up",
+                                    printer = &printer.name
+                                ))
                                 .small()
                                 .color(ui.visuals().weak_text_color()),
+                            )
+                            .wrap(),
                         );
                         for resin in unset {
                             shown += 1;
-                            if ui
-                                .selectable_label(false, tr!("resin-set-up", name = &resin.name))
-                                .clicked()
-                            {
+                            let text = tr!("resin-set-up", name = &resin.name);
+                            if menu::entry(ui, false, text.clone(), &text).clicked() {
                                 picked.set(Some(Request::SetUp(resin.id.clone())));
                                 ui.close();
                             }
@@ -518,16 +527,17 @@ impl ProfilesUi {
                 current
                     .as_ref()
                     .map_or_else(|| tr!("setting-choose").into(), setting_text),
+                &current
+                    .as_ref()
+                    .map_or_else(|| tr!("setting-choose"), setting_full),
                 settings.len(),
                 |ui, query| {
                     let mut shown = 0;
                     for setting in settings.iter().filter(|s| query.matches(&label_of(s))) {
                         shown += 1;
                         let selected = current.as_ref().is_some_and(|c| c.id == setting.id);
-                        if ui
-                            .selectable_label(selected, setting_text(setting))
-                            .clicked()
-                        {
+                        let full = setting_full(setting);
+                        if menu::entry(ui, selected, setting_text(setting), &full).clicked() {
                             picked.set(Some(Request::Setting(setting.id.clone())));
                             ui.close();
                         }
@@ -731,6 +741,11 @@ fn round1(value: f64) -> String {
     text.strip_suffix(".0").map_or(text.clone(), str::to_owned)
 }
 
+/// A print setting's name and its status in words, as a screen reader and a tooltip give it.
+fn setting_full(setting: &PrintSettingProfile) -> String {
+    format!("{}, {}", label_of(setting), status(setting.status).0)
+}
+
 /// A print setting's name and, in its colour, its status: an entry of the print setting menu.
 fn setting_text(setting: &PrintSettingProfile) -> egui::WidgetText {
     let (text, colour) = status(setting.status);
@@ -822,6 +837,71 @@ mod tests {
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).unwrap();
         path
+    }
+
+    #[test]
+    fn long_names_are_cut_to_the_sidebar_and_named_in_full() {
+        // Issue #18: a long printer, resin or print setting name never widens the sidebar; it is
+        // cut there, and screen readers get it in full.
+        let data = folder("long-names");
+        let mut profiles = ProfilesUi::open(Some(&data));
+        let mut workspace = Workspace::new();
+        let long =
+            |what: &str| format!("{what} {}", "with a very long name ".repeat(12).trim_end());
+        let library = profiles.library.as_mut().unwrap();
+        let printer = library
+            .add_printer_from_catalog(
+                "anycubic-photon-p1",
+                &long("Printer"),
+                &["anycubic-standard-resin"],
+            )
+            .unwrap();
+        profiles.choose_printer(&mut workspace, &printer);
+        let library = profiles.library.as_mut().unwrap();
+        let mut resin = workspace.plate().resin.clone().unwrap();
+        resin.name = long("Resin");
+        library.save_material(resin).unwrap();
+        let mut setting = workspace.plate().setting().unwrap().clone();
+        setting.name = long("Setting");
+        setting.source = Some(long("Converted from"));
+        library.save_setting(setting).unwrap();
+        profiles.sync_plate(&mut workspace);
+        assert_eq!(
+            workspace.plate().resin.as_ref().unwrap().name,
+            long("Resin")
+        );
+        let width = 260.0_f32;
+        let ctx = egui::Context::default();
+        let mut used = 0.0f32;
+        let (nodes, _) = crate::accessibility_check::settled(&ctx, |ui| {
+            let layout = egui::Layout::top_down(egui::Align::Min);
+            used = ui
+                .allocate_ui_with_layout(egui::vec2(width, 2000.0), layout, |ui| {
+                    ui.set_width(width);
+                    profiles.selectors(ui, &mut workspace);
+                })
+                .response
+                .rect
+                .width();
+        });
+        assert!(
+            used <= width + 0.5,
+            "the sidebar's content is {used} points wide"
+        );
+        let text = |node: &egui::accesskit::Node| {
+            [node.label(), node.value()]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        for name in [long("Printer"), long("Resin"), long("Setting")] {
+            assert!(
+                nodes.iter().any(|(_, node)| text(node).contains(&name)),
+                "{name:?} is not named in full"
+            );
+        }
+        let _ = std::fs::remove_dir_all(&data);
     }
 
     #[test]

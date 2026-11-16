@@ -73,6 +73,40 @@ pub fn name(response: &egui::Response, label: &str) {
         .accesskit_node_builder(response.id, |node| node.set_label(label));
 }
 
+/// Whether `text` laid out on one line is wider than `room`, in `ui`'s button font.
+pub fn wider(ui: &egui::Ui, text: &egui::WidgetText, room: f32) -> bool {
+    let galley = text.clone().into_galley(
+        ui,
+        Some(egui::TextWrapMode::Extend),
+        f32::INFINITY,
+        egui::TextStyle::Button,
+    );
+    galley.size().x > room
+}
+
+/// One entry of a menu: `text`, cut to the menu's width with an ellipsis when it does not fit
+/// (issue #18: a long name never widens a menu), with `full`, its whole text, in its tooltip then
+/// and for screen readers always.
+pub fn menu_entry(
+    ui: &mut egui::Ui,
+    selected: bool,
+    text: impl Into<egui::WidgetText>,
+    full: &str,
+) -> egui::Response {
+    let text = text.into();
+    let room = ui.available_width() - 2.0 * ui.spacing().button_padding.x;
+    let cut = wider(ui, &text, room);
+    let response = ui.add(egui::Button::selectable(selected, text).truncate());
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, full)
+    });
+    if cut {
+        response.on_hover_text(full)
+    } else {
+        response
+    }
+}
+
 /// Give the control `id` the name `label` for screen readers, as [`name`] does, for a control
 /// egui draws without handing back its response: a collapsing section's arrow, whose id is the
 /// section's (`egui::collapsing_header::CollapsingState::id`).

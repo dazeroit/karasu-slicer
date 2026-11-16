@@ -343,12 +343,17 @@ pub fn row_menu(
     chosen
 }
 
+/// The widest the plates' menu grows, in points: a longer plate name is cut.
+const PLATE_MENU_WIDTH: f32 = 240.0;
+
 /// The plates an object can go to: every plate but the one shown, numbered as the overview
 /// numbers them, then a new plate. Returns the chosen one, `Some(None)` for a new plate.
 #[allow(clippy::option_option)] // No choice yet, or a plate that may be a new one.
 fn plate_menu(ui: &mut egui::Ui, workspace: &Workspace) -> Option<Option<PlateId>> {
     let mut chosen = None;
     let shown = workspace.plate_id();
+    // A long plate name is cut rather than widening the menu (issue #18).
+    ui.set_max_width(PLATE_MENU_WIDTH);
     for (index, plate) in workspace.plates().iter().enumerate() {
         if plate.id() == shown {
             continue;
@@ -358,7 +363,7 @@ fn plate_menu(ui: &mut egui::Ui, workspace: &Workspace) -> Option<Option<PlateId
             number = index + 1,
             name = &plate.content().name
         );
-        if ui.button(label).clicked() {
+        if crate::widgets::menu_entry(ui, false, label.clone(), &label).clicked() {
             chosen = Some(Some(plate.id()));
         }
     }

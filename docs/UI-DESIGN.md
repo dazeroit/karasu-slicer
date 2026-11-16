@@ -77,6 +77,12 @@ shows exactly the configured colour; the light follows the view.
 2. **Fixed size.** A panel keeps its width whatever its content: a long title is cut with an
    ellipsis, and long labels, texts and translations wrap or are cut. Nothing widens or
    deforms a panel.
+   - A name in a place of fixed width (a menu's button and its entries, a list's row) is cut to
+     the width available with an ellipsis, by the room it has rather than a number of
+     characters, so it holds for every font size and translation. Cut, it shows in full in its
+     tooltip; screen readers get it in full always (`widgets::menu_entry`, the profile menus and
+     the models list; issue #18). Menus keep their button's width, or a width of their own.
+   - Descriptive values (a print setting's source, a path) wrap within the panel instead.
 3. **The title is the tool's name only.** No file or object name: a name can be very long and
    would break the design.
 4. **No messages in tool panels.** Information, warnings, errors and confirmations do not
@@ -1140,7 +1146,8 @@ A tooltip explains what a parameter or an action of the slicer does, and nothing
 printer models, no values a particular printer uses, no notes on a printer's settings. The only
 exception is a short clarification against another slicer where it helps (the name the same
 parameter has in Photon Workshop, CHITUBOX or Lychee). Printer-specific facts belong in the
-catalog and its sources.
+catalog and its sources. A name cut to fit (a printer's, a resin's, a plate's) shows its whole
+text on hover: that is the name itself, not an explanation.
 
 ## Accessibility (design rule, TD-142; owner 2026-11-10)
 
