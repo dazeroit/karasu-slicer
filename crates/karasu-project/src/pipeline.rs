@@ -40,7 +40,9 @@ pub use models::{
     export_models, model_file_name, DrilledReport, ExportedModelFile, ModelExport,
     ModelExportOutcome, ModelFiles, ModelLabel, ModelObjects, NameFields,
 };
-pub use suction::SuctionCups;
+pub use suction::{
+    SuctionCups, DEFAULT_MIN_VENT_MM2, DEFAULT_SHOW_FROM_MM2, DEFAULT_SHOW_TALLER_MM,
+};
 pub use unsupported::Unsupported;
 pub use verification::{Verification, Walls, UNHOLLOWED_WALL_MM};
 

@@ -13,13 +13,15 @@
 //!   with it;
 //! - [`jobs`]: plate requests sliced in the background, with progress events and cancellation;
 //! - [`library`]: the built-in printer and resin presets and the user's profile library;
-//! - [`support_plan`]: the planners of the automatic supports and of the islands' supports.
+//! - [`support_plan`]: the planners of the automatic supports and of the islands' supports;
+//! - [`orient`]: the Orient tool's search for tilts of a model that need fewer supports.
 //!
 //! The crate has no GUI or terminal dependency: callers render progress and report errors.
 pub mod diagnosis;
 pub mod jobs;
 pub mod library;
 pub mod logging;
+pub mod orient;
 pub mod pipeline;
 pub mod placement;
 pub mod project;

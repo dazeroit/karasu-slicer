@@ -1,4 +1,10 @@
 use super::*;
+use crate::gizmo::euler_matrix;
+use karasu_project::orient::{turned, WeightValues, SHOWN};
+
+fn product(a: [[f64; 3]; 3], b: [[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    std::array::from_fn(|r| std::array::from_fn(|c| (0..3).map(|k| a[r][k] * b[k][c]).sum()))
+}
 
 #[test]
 fn values_out_of_range_take_the_defaults_and_priorities_set_the_weights() {

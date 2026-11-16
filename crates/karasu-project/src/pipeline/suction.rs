@@ -17,6 +17,16 @@ use std::fmt::{self, Write};
 /// Cups listed at most in the summary, the largest first; the totals count every one.
 const LISTED: usize = 20;
 
+/// The smallest vent a search credits until the user sets one, in mm²: a circle about 1.1 mm
+/// across (TD-114).
+pub const DEFAULT_MIN_VENT_MM2: f64 = 1.0;
+/// The Drain holes tool's display filter until the user sets one (owner, 2026-10-31): cups at
+/// least this wide, in mm², and this tall, in mm. On the owner's hollowed `HillGiant_32mm.stl`
+/// it shows 9 of 1319 cups.
+pub const DEFAULT_SHOW_FROM_MM2: f64 = 1.0;
+/// See [`DEFAULT_SHOW_FROM_MM2`].
+pub const DEFAULT_SHOW_TALLER_MM: f64 = 0.5;
+
 /// The print's suction cups, with how to place them in the world.
 #[derive(Clone, Debug)]
 pub struct SuctionCups {

@@ -72,7 +72,8 @@ Since M6.1 (TD-070) that orchestration lives in `karasu-project`. The CLI parses
 ### `karasu-project` (M6.1, TD-070)
 
 The headless orchestration shared by `karasu-cli` and `karasu-app`. It depends only on
-`karasu-core` and owns no algorithm, apart from the support planners (`support_plan`, TD-156).
+`karasu-core` and owns no algorithm, apart from the support planners (`support_plan`, TD-156) and
+the Orient tool's search (`orient`, TD-158).
 - **`request`:** `SliceRequest`, the validated description of one job: a model or a plate
   document, the profiles, the format and output, and every processing option.
 - **`pipeline`:** `slice(request, observer, stop)`:
@@ -128,6 +129,13 @@ The headless orchestration shared by `karasu-cli` and `karasu-app`. It depends o
   a request: lift, analysis slice, plan, Apply's document in the model frame and in world
   coordinates). `ObjectPreparation` gives the placement slicing uses and the support document it
   builds.
+- **`orient` (TD-158):** the Orient tool's search (TD-119), moved unchanged from the desktop
+  application: the tool's values, `search` (the core's rough pass, the best tilts checked by
+  slicing the model alone, ranked again) and the turn of a candidate. It reports its stages to
+  the caller's `Report`, stops at the caller's flag and returns a `SearchError` without
+  localized text; the application runs it on a thread of its own and keeps the preview, the
+  protected points and Apply. `placement::euler_matrix` and `matrix_euler` are the placement's
+  fixed-axis angles and their matrix.
 - **Still to come:** the project file (M6.6).
 
 ### `karasu-app` (M6.0, TD-068)
@@ -262,8 +270,8 @@ additional crates.
   (TD-119, `analysis::orientation`): tilts sampled under the user's constraints, each scored
   from the mesh on every core (area facing the plate, lowest points, height, protected
   surfaces); the largest layer from oriented section segments; candidates ranked by normalized
-  weighted measures. The app's Orient tool checks the best by slicing the model alone in each
-  pose (islands, suction cups).
+  weighted measures. The Orient tool's search (`karasu_project::orient`, TD-158) checks the
+  best by slicing the model alone in each pose (islands, suction cups).
 - **Advanced geometry (Post-MVP):** automatic supports, advanced island/overhang optimization,
   auto-orientation, advanced repair and generalized 3D Boolean workflows beyond required M5.5
   operations. Necessary MVP shell/intersection/subtraction or equivalent geometry is not deferred
@@ -482,7 +490,9 @@ the command line's `--auto-supports` give the same document and print file — b
 can plan a few supports differently for the same model (a trunk merged a 0.25 mm step apart, a
 tilted tip's axis in the last bit). A support document already made slices identically on both.
 Fixed operations (TD-061's degree trigonometry) would make the platforms agree, at the cost of
-changing plans made today; the owner left it open.
+changing plans made today; the owner left it open. The Orient tool's search
+(`karasu_project::orient`, TD-158) calls the same library (`sin_cos`, `atan2`, `asin`) and
+promises its candidates on each platform only.
 
 Cancellation is cooperative at bounded intervals. A cancelled stage must not publish a complete
 artifact. Temporary output should be finalized atomically where platform APIs permit.

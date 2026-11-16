@@ -55,8 +55,8 @@ See [ROADMAP.md](../ROADMAP.md), TD-020 and PREP-001–009 for requirements, sta
 - `karasu-project` is the headless orchestration shared by the command line and the desktop
   application: the slicing request and the complete pipeline, with caller-supplied progress and
   cancellation (TD-070); the in-memory project model (library of embedded models, plates with
-  their own printer, resin and settings, revisions) and background jobs (TD-071); and the
-  planners of the automatic supports (TD-156).
+  their own printer, resin and settings, revisions) and background jobs (TD-071); the
+  planners of the automatic supports (TD-156); and the Orient tool's search (TD-158).
 - `karasu-cli` is the headless command-line adapter (`inspect` and `slice`); `slice` parses its
   options into a `karasu-project` request and runs the shared pipeline, after planning automatic
   supports with `karasu-project`'s `support_plan::generate` when asked (TD-157).

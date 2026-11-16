@@ -1420,6 +1420,10 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        placement and values give the application's document on the same platform; Linux and
        Windows can plan a few supports differently, the planners using the platform's math
        library (open, for the owner, TD-157). The Grid mode and plates stay in the application.
+     - **The Orient tool's search headless (owner, 2026-11-16, TD-158):** automatic
+       orientation stays off the command line for now (owner); the search, the tool's values
+       and its candidates moved, unchanged, from the application to `karasu_project::orient`.
+       The same model gives the same candidates to the last bit before and after the move.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

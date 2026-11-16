@@ -2,13 +2,17 @@
 //! 2026-11-03): tilts of the selected model proposed under the user's constraints, previewed,
 //! and applied as one step.
 //!
-//! **Find orientations** runs on a thread of its own:
+//! **Find orientations** runs [`karasu_project::orient::search`] on a thread of its own (TD-158):
 //! - the rough pass ([`karasu_core::analysis::orientation::rough`]) scores every tilt the
 //!   constraints allow from the prepared mesh (the hollowed shell when hollowed);
-//! - the best [`CHECKED`] distinct tilts are checked as a slice would: the model alone is
-//!   sliced in that pose, as the Islands tool's search does, for its islands and, hollowed, its
-//!   suction cups; its largest layer comes from the mesh's sections;
-//! - the checked ones are ranked again with every measure, and the best [`SHOWN`] proposed.
+//! - the best [`CHECKED`](karasu_project::orient::CHECKED) distinct tilts are checked as a slice
+//!   would: the model alone is sliced in that pose, as the Islands tool's search does, for its
+//!   islands and, hollowed, its suction cups; its largest layer comes from the mesh's sections;
+//! - the checked ones are ranked again with every measure, and the best
+//!   [`SHOWN`](karasu_project::orient::SHOWN) proposed.
+//!
+//! The search, the tool's values and the candidates live in [`karasu_project::orient`]; this
+//! module keeps the thread, the preview, the protected points and Apply.
 //!
 //! **Preview.** Hovering a candidate, or else the chosen one, draws the model turned to it, in
 //! place of the model, its overhangs tinted when they are shown; the scene is not changed.
@@ -23,7 +27,6 @@ pub mod panel;
 
 use crate::{
     camera::Mat4,
-    gizmo::{euler_matrix, matrix_euler},
     i18n::tr,
     islands_ui::alone_request,
     messages::{Level, Message},
@@ -33,22 +36,14 @@ use crate::{
     workspace::Workspace,
 };
 use eframe::egui_wgpu;
-use karasu_core::{
-    analysis::orientation::{
-        distinct, largest_section_mm2, rank, rough, Measures, Protected, RoughRequest, Tilt,
-        TiltAxes, Weights, LOWEST_POINT_MM2,
-    },
-    analysis::unsupported::RegionKind,
-    cancellation::{Cancellation, Checkpoint},
-    geometry::{ObjectTransform, Point3},
-    mesh::TriangleMesh,
+use karasu_core::analysis::orientation::{Protected, Tilt};
+pub use karasu_project::orient::{
+    Axes, Candidate, OrientValues, Priority, Stage, DEFAULT_ORIENT, KEEP_AWAY_MM, LIMIT_DEG, WEIGHT,
 };
 use karasu_project::{
-    pipeline::{slice_with, Observer, Preparation},
+    orient::{search, turn_rows, Found, Inputs, Report, SearchError},
     project::ProtectedPoint,
-    request::{SliceRequest, Subject},
 };
-use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,
     sync::{
@@ -58,197 +53,8 @@ use std::{
     time::Instant,
 };
 
-/// The most tilt from the pose now a user may set, in degrees.
-pub const LIMIT_DEG: std::ops::RangeInclusive<f64> = 1.0..=180.0;
-/// How far round a protected point its surface is kept clean, in mm.
-pub const KEEP_AWAY_MM: std::ops::RangeInclusive<f64> = 0.0..=50.0;
-/// A weight of the score.
-pub const WEIGHT: std::ops::RangeInclusive<f64> = 0.0..=10.0;
-/// The tilts checked as a slice would, after the rough pass.
-pub const CHECKED: usize = 6;
-/// The candidates proposed.
-pub const SHOWN: usize = 5;
-/// Candidates are at least this far apart, in degrees.
-const APART_DEG: f64 = 8.0;
-/// The sections measuring the largest layer are this far apart, in mm.
-const SECTION_STEP_MM: f64 = 0.5;
 /// The viewport mesh key of the protected points' markers.
 const MARKER_KEY: u64 = 0x4F52_4945_4E54_4D4B; // "ORIENTMK"
-
-/// The plate axes a tilt may turn about.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Axes {
-    #[default]
-    Any,
-    X,
-    Y,
-}
-
-impl Axes {
-    /// The axes, as the panel lists them.
-    pub const ALL: [Self; 3] = [Self::Any, Self::X, Self::Y];
-
-    fn core(self) -> TiltAxes {
-        match self {
-            Self::Any => TiltAxes::Any,
-            Self::X => TiltAxes::X,
-            Self::Y => TiltAxes::Y,
-        }
-    }
-}
-
-/// What the score favours: each sets the weights.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Priority {
-    FewerSupports,
-    #[default]
-    Balanced,
-    Faster,
-}
-
-impl Priority {
-    /// The priorities, as the panel lists them.
-    pub const ALL: [Self; 3] = [Self::FewerSupports, Self::Balanced, Self::Faster];
-
-    /// The weights it sets.
-    #[must_use]
-    pub const fn weights(self) -> WeightValues {
-        let [facing, islands, cups, height, largest] = match self {
-            Self::FewerSupports => [2.0, 2.0, 2.0, 0.25, 0.25],
-            Self::Balanced => [1.0, 1.0, 2.0, 0.5, 0.5],
-            Self::Faster => [0.5, 0.5, 1.0, 2.0, 0.5],
-        };
-        WeightValues {
-            facing,
-            islands,
-            cups,
-            height,
-            largest,
-            protected: 4.0,
-        }
-    }
-}
-
-/// The weights of the score, as the user keeps them.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct WeightValues {
-    pub facing: f64,
-    pub islands: f64,
-    pub cups: f64,
-    pub height: f64,
-    pub largest: f64,
-    pub protected: f64,
-}
-
-impl Default for WeightValues {
-    fn default() -> Self {
-        Priority::Balanced.weights()
-    }
-}
-
-impl WeightValues {
-    fn core(self) -> Weights {
-        Weights {
-            facing: self.facing,
-            islands: self.islands,
-            cups: self.cups,
-            height: self.height,
-            largest: self.largest,
-            protected: self.protected,
-        }
-    }
-}
-
-/// The tool's values (owner mockup): constraints and priority, kept while the user works, from
-/// the defaults in Settings.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct OrientValues {
-    /// The plate axes a tilt may turn about.
-    pub axes: Axes,
-    /// The tilt is limited to `limit_deg` from the pose now (owner: on at 30° by default).
-    pub limited: bool,
-    pub limit_deg: f64,
-    /// How far round a protected point its surface is kept clean, in mm.
-    pub keep_away_mm: f64,
-    /// What the score favours; it sets `weights`.
-    pub priority: Priority,
-    pub weights: WeightValues,
-}
-
-/// The values the tool starts from when the settings hold none.
-pub const DEFAULT_ORIENT: OrientValues = OrientValues {
-    axes: Axes::Any,
-    limited: true,
-    limit_deg: 30.0,
-    keep_away_mm: 5.0,
-    priority: Priority::Balanced,
-    weights: Priority::Balanced.weights(),
-};
-
-impl Default for OrientValues {
-    fn default() -> Self {
-        DEFAULT_ORIENT
-    }
-}
-
-impl OrientValues {
-    /// These values with each one out of its range replaced by the built-in one.
-    #[must_use]
-    pub fn valid(self) -> Self {
-        let d = DEFAULT_ORIENT;
-        let weight = |v: f64, d: f64| if WEIGHT.contains(&v) { v } else { d };
-        let w = self.weights;
-        Self {
-            limit_deg: if LIMIT_DEG.contains(&self.limit_deg) {
-                self.limit_deg
-            } else {
-                d.limit_deg
-            },
-            keep_away_mm: if KEEP_AWAY_MM.contains(&self.keep_away_mm) {
-                self.keep_away_mm
-            } else {
-                d.keep_away_mm
-            },
-            weights: WeightValues {
-                facing: weight(w.facing, d.weights.facing),
-                islands: weight(w.islands, d.weights.islands),
-                cups: weight(w.cups, d.weights.cups),
-                height: weight(w.height, d.weights.height),
-                largest: weight(w.largest, d.weights.largest),
-                protected: weight(w.protected, d.weights.protected),
-            },
-            ..self
-        }
-    }
-}
-
-/// A candidate orientation, with its measures.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Candidate {
-    /// The tilt from the pose the search started from.
-    pub tilt: Tilt,
-    /// The model's rotation once turned, in degrees (fixed X, then Y, then Z).
-    pub rotate_deg: [f64; 3],
-    /// How far it moves up to rest where it rested, in mm (world Z).
-    pub dz: f64,
-    /// Area facing the plate past the critical angle, in mm².
-    pub facing_mm2: f64,
-    /// Islands, where the print starts in mid-air.
-    pub islands: usize,
-    /// Suction cups as the Drain holes tool shows them, for a hollowed model.
-    pub cups: Option<usize>,
-    /// Height, in mm.
-    pub height_mm: f64,
-    /// The largest layer's area, in mm².
-    pub largest_mm2: f64,
-    /// Area facing the plate and islands near protected points.
-    pub protected_mm2: f64,
-    pub protected_islands: usize,
-}
 
 /// What a search is of: the model, the plate's revision, the values, the critical angle and the
 /// protected points. A search for another is out of date.
@@ -261,28 +67,10 @@ struct Key {
     points: Vec<ProtectedPoint>,
 }
 
-/// What a search is doing.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Stage {
-    /// Scoring every tilt from the mesh.
-    Rough,
-    /// Checking the best ones as a slice would: this one of so many.
-    Checking(usize, usize),
-}
-
 enum Update {
     Stage(Stage),
     Progress(f32),
     Done(Box<Result<Found, String>>),
-}
-
-/// A search's result.
-struct Found {
-    candidates: Vec<Candidate>,
-    /// Tilts scored in the rough pass.
-    scored: usize,
-    /// The model's centre then (the turn's pivot), in world mm.
-    anchor: [f64; 3],
 }
 
 struct Job {
@@ -307,23 +95,16 @@ struct Searched {
     seconds: f64,
 }
 
-/// Turns a slice's progress into a share of the work done.
-struct Progress {
-    sender: mpsc::Sender<Update>,
-    total: usize,
-}
+/// Sends a search's stages and progress to the tool.
+struct Sent<'a>(&'a mpsc::Sender<Update>);
 
-impl Observer for Progress {
-    fn phase(&mut self, _: &str) {}
-
-    fn begin_layers(&mut self, total: usize) {
-        self.total = total;
+impl Report for Sent<'_> {
+    fn stage(&mut self, stage: Stage) {
+        let _ = self.0.send(Update::Stage(stage));
     }
 
-    fn layers(&mut self, completed: usize) {
-        #[allow(clippy::cast_precision_loss)] // Layer counts.
-        let share = completed as f32 / self.total.max(1) as f32;
-        let _ = self.sender.send(Update::Progress(share));
+    fn progress(&mut self, share: f32) {
+        let _ = self.0.send(Update::Progress(share));
     }
 }
 
@@ -365,255 +146,9 @@ fn cache_folder() -> Option<PathBuf> {
     Some(folder)
 }
 
-fn product(a: [[f64; 3]; 3], b: [[f64; 3]; 3]) -> [[f64; 3]; 3] {
-    std::array::from_fn(|r| std::array::from_fn(|c| (0..3).map(|k| a[r][k] * b[k][c]).sum()))
-}
-
-fn apply_rows(m: [[f64; 3]; 3], v: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|r| (0..3).map(|c| m[r][c] * v[c]).sum())
-}
-
-/// Where `point` (world mm, in the pose now) goes when the model turns by `tilt` about `anchor`
-/// and moves `dz` up.
-fn turned(tilt: &Tilt, anchor: [f64; 3], dz: f64, point: [f64; 3]) -> [f64; 3] {
-    let p = apply_rows(tilt.matrix(), std::array::from_fn(|k| point[k] - anchor[k]));
-    [p[0] + anchor[0], p[1] + anchor[1], p[2] + anchor[2] + dz]
-}
-
 /// The world map of the turn: about `anchor` by `tilt`, then `dz` up.
 fn turn_matrix(tilt: &Tilt, anchor: [f64; 3], dz: f64) -> Mat4 {
-    let m = tilt.matrix();
-    let moved = apply_rows(m, anchor);
-    Mat4(std::array::from_fn(|r| {
-        if r == 3 {
-            [0.0, 0.0, 0.0, 1.0]
-        } else {
-            let lift = if r == 2 { dz } else { 0.0 };
-            [m[r][0], m[r][1], m[r][2], anchor[r] - moved[r] + lift]
-        }
-    }))
-}
-
-/// `mesh` placed by `placement`, in world mm.
-fn placed(mesh: &TriangleMesh, placement: &ObjectTransform) -> Option<TriangleMesh> {
-    let vertices: Option<Vec<Point3>> = mesh
-        .vertices()
-        .iter()
-        .map(|&v| placement.transform_point(v).ok())
-        .collect();
-    let mut triangles = mesh.triangles().to_vec();
-    // A mirroring placement turns the winding: turn it back, so the faces stay outward.
-    let s = placement.scale();
-    if s.x * s.y * s.z < 0.0 {
-        for t in &mut triangles {
-            t.swap(1, 2);
-        }
-    }
-    TriangleMesh::try_new(vertices?, triangles).ok()
-}
-
-/// What a search's thread needs.
-struct Inputs {
-    index: usize,
-    source: Arc<TriangleMesh>,
-    placement: ObjectTransform,
-    shell: Option<Arc<Preparation>>,
-    protected: Vec<Protected>,
-    request: SliceRequest,
-    output: PathBuf,
-    values: OrientValues,
-    angle_deg: f64,
-    anchor: [f64; 3],
-    /// The model's lowest world Z now, where it rests.
-    min_z: f64,
-    rotate_deg: [f64; 3],
-    drop: bool,
-}
-
-/// The suction cups `cups` holds as the Drain holes tool shows them by default: at least
-/// [`DEFAULT_SHOW_FROM_MM2`](crate::hollowing_ui::cups::DEFAULT_SHOW_FROM_MM2) wide and
-/// [`DEFAULT_SHOW_TALLER_MM`](crate::hollowing_ui::cups::DEFAULT_SHOW_TALLER_MM) tall.
-fn shown_cups(cups: &karasu_project::pipeline::SuctionCups) -> usize {
-    let shown_from = crate::hollowing_ui::cups::DEFAULT_SHOW_FROM_MM2;
-    let taller = crate::hollowing_ui::cups::DEFAULT_SHOW_TALLER_MM;
-    cups.report
-        .cups
-        .iter()
-        .filter(|cup| {
-            let bottom = cup
-                .first_layer
-                .checked_sub(1)
-                .and_then(|l| cups.height(l))
-                .unwrap_or(0.0);
-            let top = cups.height(cup.last_layer).unwrap_or(bottom);
-            cups.largest_area_mm2(cup) >= shown_from && top - bottom >= taller
-        })
-        .count()
-}
-
-/// Check the tilt of `r` as a slice would (see the module's documentation): the model alone
-/// sliced in that pose for its islands and, `hollowed`, its suction cups; its largest layer from
-/// `mesh`'s sections.
-fn check(
-    inputs: &Inputs,
-    mesh: &TriangleMesh,
-    r: &karasu_core::analysis::orientation::Rough,
-    hollowed: bool,
-    sender: &mpsc::Sender<Update>,
-    stop: &AtomicBool,
-) -> Result<Candidate, String> {
-    let halt = |_: Checkpoint| stop.load(Ordering::Relaxed);
-    let values = inputs.values;
-    let tilt = r.tilt;
-    let up = tilt.down.map(|c| -c);
-    let anchor = inputs.anchor;
-    let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-    let dz = inputs.min_z - (r.low_mm - dot(anchor, up) + anchor[2]);
-    let rotate_deg = matrix_euler(product(tilt.matrix(), euler_matrix(inputs.rotate_deg)));
-    let mut request = inputs.request.clone();
-    request.output.clone_from(&inputs.output);
-    if let Subject::Plate(plate) = &mut request.subject {
-        if let Some(object) = plate.objects.first_mut() {
-            object.pose.rotate_deg = rotate_deg;
-            if !inputs.drop {
-                object.translate_mm[2] += dz;
-            }
-        }
-    }
-    if hollowed {
-        request.find_suction_cups = Some(crate::hollowing_ui::cups::DEFAULT_MIN_VENT_MM2);
-    }
-    let mut observer = Progress {
-        sender: sender.clone(),
-        total: 0,
-    };
-    let outcome = slice_with(&request, None, &mut observer, &halt);
-    let _ = std::fs::remove_file(&inputs.output);
-    let outcome = outcome.map_err(|e| e.to_string())?;
-    let protected: Vec<[f64; 3]> = inputs
-        .protected
-        .iter()
-        .map(|p| turned(&tilt, anchor, dz, p.point))
-        .collect();
-    let near = |p: [f64; 3]| {
-        protected.iter().any(|q| {
-            (0..3).map(|c| (p[c] - q[c]).powi(2)).sum::<f64>().sqrt() <= values.keep_away_mm
-        })
-    };
-    let (mut islands, mut protected_islands) = (0, 0);
-    if let Some(found) = &outcome.unsupported {
-        for region in found
-            .report
-            .regions
-            .iter()
-            .filter(|r| r.kind == RegionKind::Island)
-        {
-            for start in &region.starts {
-                islands += 1;
-                if near(found.start_world(start)) {
-                    protected_islands += 1;
-                }
-            }
-        }
-    }
-    let cups = outcome.suction_cups.as_deref().map(shown_cups);
-    let mut predicate = |c: Checkpoint| halt(c);
-    let largest_mm2 = largest_section_mm2(
-        mesh,
-        tilt,
-        SECTION_STEP_MM,
-        &mut Cancellation::new(&mut predicate),
-    )
-    .map_err(|_| tr!("orient-stopped"))?;
-    Ok(Candidate {
-        tilt,
-        rotate_deg,
-        dz,
-        facing_mm2: r.facing_mm2,
-        islands,
-        cups: hollowed.then_some(cups.unwrap_or(0)),
-        height_mm: r.height_mm,
-        largest_mm2,
-        protected_mm2: r.protected_mm2,
-        protected_islands,
-    })
-}
-
-/// Run a search: see the module's documentation.
-fn search(
-    inputs: &Inputs,
-    sender: &mpsc::Sender<Update>,
-    stop: &AtomicBool,
-) -> Result<Found, String> {
-    let halt = |_: Checkpoint| stop.load(Ordering::Relaxed);
-    let mut predicate = |c: Checkpoint| halt(c);
-    let mut cancel = Cancellation::new(&mut predicate);
-    let shell = inputs
-        .shell
-        .as_ref()
-        .and_then(|s| s.objects.get(inputs.index))
-        .and_then(|o| o.as_ref().ok())
-        .and_then(|o| o.hollowed());
-    let own;
-    let mesh = if let Some(model) = shell {
-        model.mesh()
-    } else {
-        own = placed(&inputs.source, &inputs.placement)
-            .ok_or_else(|| "the model cannot be placed".to_owned())?;
-        &own
-    };
-    let values = inputs.values;
-    let found = rough(
-        &RoughRequest {
-            mesh,
-            angle_deg: inputs.angle_deg,
-            axes: values.axes.core(),
-            max_tilt_deg: values.limited.then_some(values.limit_deg),
-            protected: &inputs.protected,
-            keep_away_mm: values.keep_away_mm,
-        },
-        &mut cancel,
-    )
-    .map_err(|_| tr!("orient-stopped"))?;
-    if found.is_empty() {
-        return Ok(Found {
-            candidates: Vec::new(),
-            scored: 0,
-            anchor: inputs.anchor,
-        });
-    }
-    let weights = values.weights.core();
-    let rough_measures: Vec<Measures> = found.iter().map(Measures::of).collect();
-    let tilts: Vec<Tilt> = found.iter().map(|r| r.tilt).collect();
-    let best = distinct(&tilts, &rank(&rough_measures, &weights), CHECKED, APART_DEG);
-    let hollowed = shell.is_some();
-    let mut candidates = Vec::with_capacity(best.len());
-    for (k, &i) in best.iter().enumerate() {
-        let _ = sender.send(Update::Stage(Stage::Checking(k + 1, best.len())));
-        candidates.push(check(inputs, mesh, &found[i], hollowed, sender, stop)?);
-    }
-    #[allow(clippy::cast_precision_loss)] // Counts.
-    let measures: Vec<Measures> = candidates
-        .iter()
-        .map(|c| Measures {
-            facing_mm2: c.facing_mm2,
-            islands: c.islands as f64,
-            cups: c.cups.unwrap_or(0) as f64,
-            height_mm: c.height_mm,
-            largest_mm2: c.largest_mm2,
-            protected_mm2: c.protected_mm2 + LOWEST_POINT_MM2 * c.protected_islands as f64,
-        })
-        .collect();
-    let candidates = rank(&measures, &weights)
-        .into_iter()
-        .take(SHOWN)
-        .map(|i| candidates[i])
-        .collect();
-    Ok(Found {
-        candidates,
-        scored: found.len(),
-        anchor: inputs.anchor,
-    })
+    Mat4(turn_rows(tilt, anchor, dz))
 }
 
 impl OrientUi {
@@ -860,8 +395,10 @@ impl OrientUi {
         let spawned = std::thread::Builder::new()
             .name("orientation".to_owned())
             .spawn(move || {
-                let _ = sender.send(Update::Stage(Stage::Rough));
-                let result = search(&inputs, &sender, &cancelled);
+                let result = search(&inputs, &mut Sent(&sender), &cancelled).map_err(|e| match e {
+                    SearchError::Stopped => tr!("orient-stopped"),
+                    SearchError::Failed(cause) => cause,
+                });
                 let _ = sender.send(Update::Done(Box::new(result)));
             });
         match spawned {
