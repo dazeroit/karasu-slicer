@@ -198,6 +198,7 @@ fn help_text() -> String {
          [--allow-topology-defects] \
          [--progress | --no-progress]\n         \
          [--hollow <wall mm> [--hollow-cell <mm>]] [--drain-hole <x> <y> <z> <axis> <length> <diameter>]...\n         \
+         [--hollow-blocker sphere|box|frustum <x> <y> <z> <sizes>... [--blocker-rotate <x> <y> <z>]]...\n         \
          [--surface-drain-hole <x> <y> <z> <diameter> [--hole-depth <mm>] [--hole-from outer|cavity]\n         \
          \x20 [--hole-tilt <angle> <direction>]]...\n         \
          [--verify-walls] [--unsupported [--overhang-angle <deg>]]\n         \
@@ -353,6 +354,13 @@ fn help_text() -> String {
          \x20   fill-holes for open models, which must then fill every hole); touching and\n\
          \x20   overlapping bodies are hollowed as their union. Without --drain-hole the cavity\n\
          \x20   stays enclosed.\n\
+         \x20   --hollow-blocker leaves a region solid (TD-160; repeatable, up to 1024, needs\n\
+         \x20   --hollow): sphere <x> <y> <z> <diameter>, box <x> <y> <z> <width> <depth> <height>, or\n\
+         \x20   frustum <x> <y> <z> <bottom width> <bottom depth> <top width> <top depth> <height>\n\
+         \x20   (a top of 0 is a pyramid's apex), centred on the point. Unlike the drain holes, it\n\
+         \x20   is given in the model's own frame, its file's coordinates in millimetres, and\n\
+         \x20   follows every placement option. --blocker-rotate after a box or frustum turns it\n\
+         \x20   about the model's fixed X, then Y, then Z axes, in degrees.\n\
          \x20   --drain-hole cuts a cylinder from world point x y z along axis +x -x +y -y +z -z\n\
          \x20   (repeatable, up to 1024, with or without --hollow). Its path is never refused, and\n\
          \x20   holes may overlap: the summary says whether each opens to the outside, reaches a\n\

@@ -2659,6 +2659,103 @@ fn hollowing_requests_are_validated() {
 }
 
 #[test]
+fn hollow_blockers_leave_their_regions_solid() {
+    // TD-160: blockers in the model's own frame, whatever the placement.
+    let setup = Setup::new();
+    // 20 mm cube from X 10, Y 20, Z 0 in its file: a 2 mm wall leaves a cavity from Z 2 to 18.
+    let model = setup.temp.write(
+        "cube.stl",
+        box_stl([10.0, 20.0, 0.0], [30.0, 40.0, 20.0], false),
+    );
+    let cavity = |report: &str| -> f64 { field(report, "Cavity volume (mm^3)").parse().unwrap() };
+    let plain = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("plain.goo"),
+        &["--hollow", "2"],
+    ));
+    assert!(!plain.contains("Hollow blockers"), "{plain}");
+    // A 16 x 16 x 4 mm box from Z 2 to 6 keeps the cavity's lowest 4 mm solid (the cavity, eroded
+    // by the hollow offset, is 15.9 mm wide from Z 2.05). Placed elsewhere, it follows the model.
+    let based = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("based.goo"),
+        &[
+            "--hollow",
+            "2",
+            "--center",
+            "--hollow-blocker",
+            "box",
+            "20",
+            "30",
+            "4",
+            "16",
+            "16",
+            "4",
+        ],
+    ));
+    assert_eq!(field(&based, "Hollow blockers"), "1");
+    let kept = cavity(&plain) - cavity(&based);
+    assert!(
+        (kept - 15.9 * 15.9 * 3.95).abs() < 20.0,
+        "{kept}: {plain}\n{based}"
+    );
+    // Turned, a smaller part of it reaches into the cavity; two blockers are counted.
+    let turned = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("turned.goo"),
+        &[
+            "--hollow",
+            "2",
+            "--hollow-blocker",
+            "box",
+            "20",
+            "30",
+            "4",
+            "16",
+            "16",
+            "4",
+            "--blocker-rotate",
+            "0",
+            "0",
+            "45",
+            "--hollow-blocker",
+            "sphere",
+            "20",
+            "30",
+            "12",
+            "4",
+        ],
+    ));
+    assert_eq!(field(&turned, "Hollow blockers"), "2");
+    assert!(cavity(&turned) < cavity(&plain) && cavity(&turned) > cavity(&based));
+    // A blocker over the whole cavity leaves nothing to hollow.
+    let output = setup.temp.path("solid.goo");
+    let error = failure(
+        &setup.slice(
+            &model,
+            "goo-v3",
+            &output,
+            &[
+                "--hollow",
+                "2",
+                "--hollow-blocker",
+                "sphere",
+                "20",
+                "30",
+                "10",
+                "40",
+            ],
+        ),
+        1,
+    );
+    assert!(error.contains("nothing to hollow"), "{error}");
+    assert!(!output.exists());
+}
+
+#[test]
 fn drain_holes_open_the_cavity_and_report_every_region() {
     let setup = Setup::new();
     let model = setup.temp.write(

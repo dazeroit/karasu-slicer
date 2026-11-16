@@ -777,6 +777,9 @@ impl SliceRequest {
         if self.hollow_simplify.is_some() && self.hollow_mm.is_none() {
             return Err("--hollow-simplify requires --hollow <wall thickness>".to_owned());
         }
+        if !self.hollow_blockers.is_empty() && self.hollow_mm.is_none() {
+            return Err("--hollow-blocker requires --hollow <wall thickness>".to_owned());
+        }
         // TD-089: holes are independent of hollowing, but a surface hole without a depth
         // reaches the cavity, and one from the cavity starts on it: only hollowing makes it.
         let automatic =

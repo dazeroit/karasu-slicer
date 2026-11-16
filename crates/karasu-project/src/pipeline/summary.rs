@@ -130,7 +130,12 @@ pub(super) fn write(
             writeln!(out, "{line}")?;
         }
     }
-    write_preparation(out, &object.prepared, object.holes.as_ref())
+    write_preparation(
+        out,
+        &object.prepared,
+        object.holes.as_ref(),
+        args.hollow_blockers.len(),
+    )
 }
 
 /// The format and output lines.
@@ -246,15 +251,20 @@ fn write_hollow_wall(
     Ok(())
 }
 
-/// The hollowing certificate and drainage lines.
+/// The hollowing certificate and drainage lines; `blockers` is how many regions the hollowing
+/// left solid (TD-115), reported when there are any (TD-160).
 pub(super) fn write_preparation(
     out: &mut impl Write,
     prepared: &Prepared,
     holes: Option<&PreparedHoles>,
+    blockers: usize,
 ) -> fmt::Result {
     if let Some(model) = prepared.hollow() {
         let c = model.certificate();
         write_hollow_wall(out, &c)?;
+        if blockers > 0 {
+            writeln!(out, "Hollow blockers: {blockers}")?;
+        }
         writeln!(out, "Cavity volume (mm^3): {}", c.cavity_volume_mm3)?;
         if let Some(s) = c.simplification {
             let [before, after] = s.triangles;
