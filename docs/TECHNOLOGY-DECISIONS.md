@@ -6036,6 +6036,23 @@ state, its threads and its workspace.
    held`, `Automatic supports kept`, `Automatic supports left unsupported` and up to 20 `Left
    unsupported` places with why (the application's words), or `Automatic braces`; before the
    job's own summary, in its `Key: value` style, and in the log.
+6. **Platforms (validated 2026-11-16, open).** The parity holds on each platform. On a
+   500,000-triangle miniature turned 80 degrees about X (Photon P1, 436 supports, trunks merged),
+   the headless run gave the document the application had saved, to the last bit, on native
+   Windows, where the application planned it; a fresh `slice --auto-supports` and `slice
+   --project` of that project wrote identical print files there; on Linux the tool's Generate
+   and Apply and the headless run gave the same document, and the same two commands, the project
+   holding that document, identical print files. It does not hold across platforms: the
+   planners call the platform's math library (`f64::hypot`, `sin_cos`, `cos`, `tan`, `acos`),
+   whose last bit differs between Linux and Windows. On that model the placement, the surface,
+   the regions and the islands were identical on both; 5 tilted tips' axes (the tilt rings'
+   `sin_cos`) differed in the last bit, and 8 merged trunks joined their main trunk a 0.25 mm
+   step apart (the merge's `hypot`: a junction's first height is a tie that rounding decides),
+   so the print files differed in 380 of 1,612 layers. A given document slices identically on
+   both (only PP1's `os` provenance differs). Fixed IEEE operations in those two places (TD-061's
+   degree sine and cosine, the square root of the sum of squares) made both platforms plan the
+   same document on that model, but changed about 70 of its 436 supports against either
+   platform's plan today: for the owner to decide.
 
 **Alternatives:** writing the model-frame document, which `--supports` would read as world
 coordinates, or a frame field in the document, a change to the format (TD-062, TD-108) for one
@@ -6051,10 +6068,12 @@ values, a stopped run leaving no slice behind, braces between given supports, th
 taken to the model frame and back, and the value set read from both documents. The
 application: the tool's Generate and Apply and the headless run give the same document for one
 model, beside a support placed by hand, then again over the automatic ones with a higher lift,
-branches off and braces on. The command line: a lifted model sliced and reported, the values
-said, the written document slicing to identical bytes (and generating over it too), an
-application `settings.json` and an own document read, braces joining given supports, and every
-misuse refused.
+branches off and braces on; and for a slab turned 80 degrees about X whose supports branch and
+whose trunks merge, the same document to the last bit and the same print file (the plate as
+Slice slices it, and the command line's job), which a placement one bit off fails. The command
+line: a lifted model sliced and reported, the values said, the written document slicing to
+identical bytes (and generating over it too), an application `settings.json` and an own document
+read, braces joining given supports, and every misuse refused.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 

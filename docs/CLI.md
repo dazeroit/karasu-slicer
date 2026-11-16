@@ -311,7 +311,9 @@ model import → optional topology gate → explicit placement → uniform layer
       its `tools` object (`auto_supports`, `support_presets`, `auto_preset`,
       `auto_cavity_preset`, the `brace_*` values and `overhang_angle_deg`), read as the
       application reads them when it starts, its schema's migrations included and a value it
-      would refuse replaced by its built-in one, so the same file plans the same supports;
+      would refuse replaced by its built-in one, so the same file plans the same supports on
+      the same platform (the planners use the platform's math library, so Linux and Windows can
+      plan a few supports slightly differently: open, TD-157);
     - or an object of the command line's own: the `auto_supports` fields at the top level
       (`cover`, `place`, `lift_mm`, `weight`, `spacing_mm`, `density_pct`, `minis`,
       `branches`, `braces`, `passes`, …), with optionally `support_presets`, `auto_preset`,

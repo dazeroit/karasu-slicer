@@ -344,6 +344,98 @@ fn the_command_line_plans_what_generate_and_apply_make() {
     let _ = std::fs::remove_dir_all(directory);
 }
 
+/// `request` sliced into `output`, as Slice slices it: the print file's bytes.
+fn print_file(
+    workspace: &Workspace,
+    request: &karasu_project::request::SliceRequest,
+    output: std::path::PathBuf,
+) -> Vec<u8> {
+    let request = karasu_project::request::SliceRequest {
+        output: output.clone(),
+        ..request.clone()
+    };
+    karasu_project::pipeline::slice_with(
+        &request,
+        Some(&workspace.pipeline_cache()),
+        &mut karasu_project::pipeline::Silent,
+        &|_| false,
+    )
+    .unwrap();
+    std::fs::read(output).unwrap()
+}
+
+#[test]
+fn a_turned_model_s_trees_plan_and_print_alike_through_the_tool_and_the_command_line() {
+    // TD-157: a model turned 80 degrees about X, its supports branching and their trunks
+    // merging, gets the same support document, to the last bit, through the tool's Generate
+    // and Apply and through the command line's headless run, and both slice to the same print
+    // file. A slab 16 x 2 x 12 mm turned so lies on its -Y face, 16 x 12 mm, 10 degrees from
+    // the plate: an overhang wide enough for trees, lifted 15 mm for their trunks to merge.
+    let folder = std::env::temp_dir().join(format!("karasu-auto-turned-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let model = folder.join("slab.stl");
+    std::fs::write(
+        &model,
+        crate::workspace::tests::box_stl([0.0; 3], [16.0, 2.0, 12.0]),
+    )
+    .unwrap();
+    let (mut workspace, mut preparation) =
+        crate::hollowing_ui::tests::placed(model, None, Duration::from_secs(60));
+    let mut supports = SupportsUi::new();
+    supports.automatic.lift_mm = 15.0;
+    workspace.edit(|plate| {
+        let pose = &mut plate.objects[0].pose;
+        pose.rotate_deg = [80.0, 0.0, 0.0];
+        pose.center = true;
+        pose.drop = true;
+        pose.lift_mm = Some(15.0);
+    });
+    crate::hollowing_ui::tests::prepared_within(
+        &workspace,
+        &mut preparation,
+        Duration::from_secs(60),
+    );
+    let mut ui = AutoUi::new();
+    generated(&mut ui, &mut supports, &workspace, &preparation);
+    let command_line = headless(&workspace, &ui, &supports, &folder);
+    assert!(ui.apply(&mut workspace, 0) > 0);
+    let applied = workspace.supports(0).expect("supports");
+    assert_eq!(command_line.model_document.as_ref(), Some(applied));
+    // Every value to the last bit, the signs of zeros too.
+    let document = command_line.model_document.as_ref().expect("a document");
+    assert!(
+        document.to_json() == applied.to_json(),
+        "the documents differ"
+    );
+    // Trees: branches on their trunks, straight, and trunks merged into others, turned at a
+    // bend; a main trunk carrying more than a full tree's tips widened at its foot.
+    let on_supports = |bent: bool| {
+        applied
+            .supports
+            .iter()
+            .filter(|s| matches!(s.base, BaseSpec::Support { .. }) && s.bends.is_empty() != bent)
+            .count()
+    };
+    assert!(on_supports(false) > 0 && on_supports(true) > 0);
+    assert!(applied
+        .supports
+        .iter()
+        .any(|s| s.parameters.shaft_bottom_diameter_mm.is_some()));
+    // The plate as Slice slices it, and the command line's job.
+    let format = crate::slicing_ui::plate_format(&workspace).expect("a format");
+    let extension = crate::slicing_ui::extension(&format).expect("a print file");
+    let (tool, _) = workspace.request(folder.join("unused")).unwrap();
+    let tool = karasu_project::request::SliceRequest { format, ..tool };
+    let tool = print_file(&workspace, &tool, folder.join(format!("tool.{extension}")));
+    let command_line = print_file(
+        &workspace,
+        &command_line.request,
+        folder.join(format!("command-line.{extension}")),
+    );
+    assert!(tool == command_line, "the print files differ");
+    let _ = std::fs::remove_dir_all(folder);
+}
+
 #[test]
 #[ignore = "plans every support of a local large model; see the documentation"]
 fn a_local_model_s_supports_are_planned() {
