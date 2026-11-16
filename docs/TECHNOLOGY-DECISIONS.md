@@ -5954,6 +5954,108 @@ to a model's frame, three of the trees, the islands' grouping, the Automatic too
 those that need the application's workspace stay in the application. The workspace runs the same
 tests as before.
 
+## TD-157 — Automatic supports on the command line
+
+**Status:** Implemented on 2026-11-16 at the owner's request: the second of the two steps towards
+automatic supports on the command line (TD-156 the first), the next item of the owner's
+comparison of the command line with the application (2026-11-15).
+
+**Problem:** `slice` sliced only supports already placed (`--supports`), so a model that needed
+supports needed the application first; the application's Automatic tool plans them from its
+state, its threads and its workspace.
+
+**Decision:**
+1. **One implementation.** What the Automatic tool's Generate and Apply need beyond the planners
+   moved from the application into `karasu-project`, unchanged, and the application calls it:
+   - `support_plan::found`: a slice's unsupported regions told as islands, and the islands where
+     each piece starts (`found_of`, `islands_of`, `in_cavity`);
+   - `support_plan::route::RouteSurface::build`: the model's surface for routes, gridded (the
+     hollowed shell, or the model as imported, placed);
+   - `support_plan::auto::input_for`, `replaced` and `without`: the plan's input, and the
+     automatic supports a plan replaces; `support_plan::branches::with_branches` and `without`;
+   - `support_plan::generate::alone`: the request of the model sliced alone, without its
+     supports, finding its unsupported regions; `generate::LIFT_TOLERANCE_MM`;
+   - `support_plan::braces`: the Braces tool's values (`NewBraces`, `Pattern`, their ranges and
+     defaults); their names in the interface's words stay in the application;
+   - `support_plan::settings`: the critical angle's default and range, and the migrations of the
+     tool's kept values (schemas 2 and 4), which the application's settings call;
+   - `placement::affine` and `placement::plate_point`, `request::Pose::rest_at` (the lift
+     Generate sets) and `request::format_extension`.
+   No algorithm, constant, default or order changed; the application's tests pass unchanged.
+2. **`support_plan::generate::generate`** runs Generate and Apply for the one model of a slicing
+   request, as the tool does: the model lifted to the plan's lift (unless it stands within
+   `LIFT_TOLERANCE_MM` of it), prepared as a preview prepares it, its surface gridded; sliced
+   alone in the job's format into a file of a scratch folder, removed whatever happens; its
+   regions and islands told; planned with `auto::plan`; and Apply's document made with
+   `auto::with_planned`. The planners place the model imported for display (without the job's
+   repairs) by the request's pose, as the application places its models. It reports its stages
+   and the slice's layers to the caller's observer and stops at the caller's flag.
+   `generate::given` gives a request's supports as its job builds them, with the Braces tool's
+   automatic braces planned between them when asked (`pipeline::plan_world_braces`).
+   `pipeline::ObjectPreparation` now gives the placement slicing uses and the support document
+   it builds (a binding checked and its motion applied).
+3. **Frames.** The application keeps a model's supports in its model frame (TD-108); `--supports`
+   reads world coordinates at the job's placement. Generate takes a given world document to the
+   model frame for the plan (a foot on the plate through `plate_point`, which refuses a placement
+   standing the frame's plane on edge, as the application's handles do) and gives Apply's
+   document twice: in the model frame, as the application stores it, and in world coordinates
+   placed as the job places the model, with the given supports exactly as the job would build
+   them. The job slices the world document.
+4. **Options of `slice`**, for one model only (refused with `--plate`, `--project`, `--copies`,
+   `--arrange` and `--fill strict`, exit status 2):
+   - `--auto-supports` plans with the Automatic tool's defaults (`DEFAULT_AUTO_SUPPORTS`:
+     medium, islands and overhangs, everywhere, mini supports and branches on, no braces, lifted
+     5 mm) at the overhangs' default critical angle, 45 degrees, which the tool starts from. It
+     needs `--drop`, as `--lift` does; the model rests at the plan's lift unless `--lift` gives
+     another, which wins.
+   - Values, each only with `--auto-supports`: `--support-weight light|medium|heavy` (a user's
+     preset named by the settings is then not taken), `--auto-density <pct>` (`DENSITY_PCT`,
+     50 to 200), `--auto-cover all|islands`, `--auto-place everywhere|outside|cavity` (a model
+     that is not hollowed is planned everywhere, as the tool forces) and `--auto-minis on|off`;
+     `--overhang-angle` is the critical angle, as for `--unsupported`.
+   - `--auto-settings <file.json>` (with `--auto-supports` or `--auto-braces`) reads the whole
+     value set: the application's `settings.json` (its `schema_version`, then the `tools`
+     object's `auto_supports`, `support_presets`, `auto_preset`, `auto_cavity_preset`, `brace_*`
+     and `overhang_angle_deg`), read as the application reads them when it starts, migrations,
+     invalid presets left out and values it would refuse replaced by its built-in ones, so the
+     same file plans the same supports; or an object of the command line's own (the
+     `auto_supports` fields at its top level with the same other keys), checked strictly: an
+     unknown key, a value out of its range, an invalid preset or a preset name that names none
+     is refused. Options given beside it win. Unlike the application, which starts on its
+     defaults from a settings file it cannot read, a file whose `tools` cannot be read is
+     refused.
+   - Supports given with `--supports` are kept exactly as given, and the automatic ones among
+     them replaced, as Generate keeps and replaces them.
+   - `--auto-braces` adds the Braces tool's automatic braces: to the automatic supports (the
+     tool's Braces switch), or to the supports given with `--supports` alone.
+   - `--write-supports <file.json>` writes the job's support document (`karasu-supports`, world
+     coordinates at the job's placement), with `--auto-supports` or `--supports`: after the
+     print file, staged and linked into place, never over an existing file (checked before any
+     work). Read back with `--supports` at the same placement, it slices to identical bytes.
+5. **Summary and log:** `Automatic supports`, `Automatic supports values`, `Automatic supports
+   held`, `Automatic supports kept`, `Automatic supports left unsupported` and up to 20 `Left
+   unsupported` places with why (the application's words), or `Automatic braces`; before the
+   job's own summary, in its `Key: value` style, and in the log.
+
+**Alternatives:** writing the model-frame document, which `--supports` would read as world
+coordinates, or a frame field in the document, a change to the format (TD-062, TD-108) for one
+option; planning in world coordinates with an identity placement, which needs no frame
+conversion but rounds otherwise than the application, so the same values would not give the
+same document; a subcommand of its own, while the application plans supports as part of
+preparing a print.
+
+**Tests:** `karasu-project`: the run on a model with an overhang and two islands (planned, held,
+sliced, both frames agreeing, the scratch folder left empty), its determinism, the given supports
+kept as given and the automatic ones replaced, the cover, minis, branches, place and density
+values, a stopped run leaving no slice behind, braces between given supports, the world document
+taken to the model frame and back, and the value set read from both documents. The
+application: the tool's Generate and Apply and the headless run give the same document for one
+model, beside a support placed by hand, then again over the automatic ones with a higher lift,
+branches off and braces on. The command line: a lifted model sliced and reported, the values
+said, the written document slicing to identical bytes (and generating over it too), an
+application `settings.json` and an own document read, braces joining given supports, and every
+misuse refused.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

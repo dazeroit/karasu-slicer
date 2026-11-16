@@ -12,6 +12,7 @@ mod models;
 mod progress;
 mod project;
 mod slice;
+mod supports;
 
 use karasu_core::{
     APPLICATION_DESCRIPTION, APPLICATION_NAME, COPYRIGHT, LICENCE, LICENCE_URL, SOURCE_URL,
@@ -188,6 +189,9 @@ fn help_text() -> String {
          [--repair none|off|auto|exact|standard|aggressive|rebuild|<list>] [--antialias 1|2|4|8|16 [--min-gray <0-255>] [--antialias-supports]]\n         \
          [--xy-compensation <px>] [--bottom-xy-compensation <px>]\n         \
          [--supports <file.json> [--accept-support-collisions]] [--drop --lift <mm>]\n         \
+         [--auto-supports [--support-weight light|medium|heavy] [--auto-density <pct>]\n         \
+         \x20 [--auto-cover all|islands] [--auto-place everywhere|outside|cavity] [--auto-minis on|off]]\n         \
+         [--auto-settings <file.json>] [--auto-braces] [--write-supports <file.json>]\n         \
          [--layer-plan <file.json>] [--copies <n>] [--arrange] [--spacing <mm>]\n         \
          [--allow-topology-defects] \
          [--progress | --no-progress]\n         \
@@ -302,6 +306,22 @@ fn help_text() -> String {
          \x20   (outer or cavity), feet on the plate, the model or another support, braces, raft.\n\
          \x20   Clearance is proven; collisions, piercing and drain-hole crossings fail unless\n\
          \x20   collisions are accepted. --lift raises a dropped model for its supports.\n\
+         \x20   --auto-supports plans the model's supports as the application's Automatic tool\n\
+         \x20   plans them with Generate (TD-157), with its defaults: medium, islands and overhangs,\n\
+         \x20   everywhere, mini supports and branches on, no braces, the model lifted 5 mm (--drop\n\
+         \x20   is needed; --lift sets another height). --support-weight, --auto-density (50 to\n\
+         \x20   200 percent of the spacing's tips), --auto-cover, --auto-place (a model that is not\n\
+         \x20   hollowed is planned everywhere), --auto-minis and --overhang-angle (45 degrees by\n\
+         \x20   default) change them. --auto-settings reads the whole set from a JSON file: the\n\
+         \x20   application's settings.json, read as the application reads it, or an object of the\n\
+         \x20   Automatic tool's values (unknown keys and values out of range refused); options\n\
+         \x20   given beside it win. Supports given with --supports are kept and automatic ones\n\
+         \x20   among them replaced. --auto-braces adds the Braces tool's automatic braces, to the\n\
+         \x20   automatic supports or to the given ones. --write-supports writes the job's support\n\
+         \x20   document (karasu-supports, world coordinates at the job's placement), which\n\
+         \x20   --supports reads back to the same print; never over an existing file. The summary\n\
+         \x20   says what was planned, held and left unsupported. One model only: not with --plate,\n\
+         \x20   --project, --copies or --arrange; the Grid mode stays in the application.\n\
          \x20   --layer-plan reads Z ranges (karasu-layers JSON) with fixed or adaptive layer\n\
          \x20   heights; layers that differ from the calibration take their range's exposure or\n\
          \x20   the document's height-to-exposure table, never a guess. Bottom and transition\n\
@@ -341,8 +361,9 @@ fn help_text() -> String {
          \x20   --unsupported finds the print's unsupported regions on the sliced layers (TD-107):\n\
          \x20   islands, which start in mid-air, and overhangs, which hang out from material that\n\
          \x20   holds them, beyond the self-supporting distance of the layer height over the\n\
-         \x20   tangent of --overhang-angle (degrees from the plate, 45 by default). Supports in the\n\
-         \x20   job count as material. It reports and never fails the job.\n\
+         \x20   tangent of --overhang-angle (degrees from the plate, 45 by default; it is the\n\
+         \x20   automatic supports' critical angle too). Supports in the job count as material. It\n\
+         \x20   reports and never fails the job.\n\
          \x20   --suction-cups finds the print's suction cups on the sliced layers (TD-114): resin a\n\
          \x20   layer encloses while it is peeled from the film, capped towards the plate (by the\n\
          \x20   print, its raft or the plate) and not vented. An opening vents only where a circle\n\

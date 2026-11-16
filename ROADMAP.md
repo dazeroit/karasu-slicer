@@ -1412,6 +1412,13 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        Automatic tool, Support the islands and the Grid mode moved, unchanged, from the
        application to `karasu_project::support_plan`, the first step towards automatic supports
        on the command line.
+     - **Automatic supports on the command line (owner, 2026-11-16, TD-157):** `slice
+       --auto-supports` plans the model's supports as the Automatic tool's Generate and Apply do,
+       with its values, those given beside it, or the application's `settings.json`
+       (`--auto-settings`); `--auto-braces` adds the Braces tool's braces and `--write-supports`
+       writes the job's support document, which slices back to the same bytes. The same model,
+       placement and values give the application's document. The Grid mode and plates stay in
+       the application.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

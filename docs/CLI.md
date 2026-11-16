@@ -289,6 +289,60 @@ model import → optional topology gate → explicit placement → uniform layer
   {"format": "karasu-supports", "version": 1, "preset": "medium",
    "supports": [{"id": 1, "tip": {"point": [15, 25, 5]}, "base": {"vertical": true}}]}
   ```
+- **Automatic supports (TD-157):**
+  - `--auto-supports` plans the model's supports as the application's Automatic tool plans them
+    with Generate, and the job slices them: the model lifted, sliced alone to find its islands
+    and overhangs (in the job's format, into a temporary file that is removed), then every
+    support planned, routed clear of the model, grown into trees and checked as a slice builds
+    it. Places it cannot hold are listed, never hidden.
+  - **Defaults:** the Automatic tool's (`DEFAULT_AUTO_SUPPORTS`): medium, islands and overhangs,
+    everywhere, mini supports and branches on, no braces, the model's lowest point lifted 5 mm,
+    the critical angle 45 degrees (the application's overhang angle, which its tool starts from).
+  - **Placement:** `--drop` is required, as for `--lift`; the model rests at the plan's lift
+    unless `--lift <mm>` gives another, which wins.
+  - **Values**, each only with `--auto-supports`: `--support-weight light|medium|heavy`,
+    `--auto-density <pct>` (50 to 200: tips per area against the spacing's), `--auto-cover
+    all|islands`, `--auto-place everywhere|outside|cavity` (a model that is not hollowed has no
+    cavity and is planned everywhere) and `--auto-minis on|off`. `--overhang-angle <deg>` is the
+    critical angle, as for `--unsupported`.
+  - `--auto-settings <file.json>` reads the whole value set, with `--auto-supports` or
+    `--auto-braces`:
+    - the application's own `settings.json`, recognised by its `schema_version`: the values of
+      its `tools` object (`auto_supports`, `support_presets`, `auto_preset`,
+      `auto_cavity_preset`, the `brace_*` values and `overhang_angle_deg`), read as the
+      application reads them when it starts, its schema's migrations included and a value it
+      would refuse replaced by its built-in one, so the same file plans the same supports;
+    - or an object of the command line's own: the `auto_supports` fields at the top level
+      (`cover`, `place`, `lift_mm`, `weight`, `spacing_mm`, `density_pct`, `minis`,
+      `branches`, `braces`, `passes`, …), with optionally `support_presets`, `auto_preset`,
+      `auto_cavity_preset`, the `brace_*` values and `overhang_angle_deg`. An unknown key, a
+      value out of its range or a preset name that names none is refused.
+    The value options given beside it win over it.
+  - **Given supports:** supports given with `--supports` (world coordinates at the job's
+    placement, which `--auto-supports` lifts) are kept exactly as given, and the plan holds what
+    they leave; automatic supports among them (written by an earlier run) are replaced, as
+    Generate replaces them.
+  - `--auto-braces` adds the Braces tool's automatic braces (its values: from `--auto-settings`,
+    otherwise its defaults): to the automatic supports, or with `--supports` alone to the given
+    ones.
+  - `--write-supports <file.json>` writes the job's support document as `karasu-supports` JSON,
+    in world coordinates at the job's placement: what `--supports` reads, so slicing it with the
+    same options and `--lift` gives identical bytes. With `--supports` alone it is the document
+    read, as the job builds it. It is written after the print file, whole or not at all, and
+    never over an existing file (refused before any work).
+  - **Summary:** `Automatic supports` (planned, mini, branches, braces), `Automatic supports
+    values`, `Automatic supports held` (islands, overhang points covered, the closing check),
+    `Automatic supports kept` (with `--supports`), `Automatic supports left unsupported` and up
+    to 20 `Left unsupported` places with why; `Automatic braces` with `--supports` alone. The
+    log records them.
+  - **One model only:** refused with `--plate`, `--project`, `--copies` and `--arrange`, and
+    with `--fill strict`. Ctrl-C cancels the planning too.
+
+  ```console
+  karasu-cli slice --assume-mm model.stl --printer elegoo-mars-5 \
+    --resin elegoo-standard-resin --format goo-v3 --output model.goo --center --drop \
+    --auto-supports --write-supports model-supports.json
+  ```
 - **Variable and adaptive layer heights (TD-064, [specification](LAYER-PLAN-SPEC.md)):**
   - `--layer-plan <file.json>` reads a `karasu-layers` document of Z ranges from the plate up.
   - Each range has a fixed `height_mm`, optionally with its own `exposure_s`, or an `adaptive`
@@ -573,6 +627,7 @@ itself, not as an interruption. Machine files are published atomically by hard l
 without hard links (FAT32/exFAT USB sticks and SD cards) they are copied into an exclusively created
 destination, which never replaces an existing file but is not atomic.
 
-Automatic supports, islands' supports and automatic braces are not exposed through the CLI:
-`--supports` reads supports already placed.
+The Automatic tool's supports and braces are planned from the command line with
+`--auto-supports` and `--auto-braces` (TD-157), for one model; Support the islands and the Grid
+mode stay in the application, as does planning the supports of a plate or a project.
 Exported files are format-reader validated, not certified on physical printers.

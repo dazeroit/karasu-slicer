@@ -6,6 +6,7 @@
 //! export staging data is removed and nothing is published. A second Ctrl-C exits immediately.
 use super::catalog::{self, Kind, Source};
 use super::progress::{Progress, ProgressMode};
+use super::supports::{self, SupportJob, SupportOptions};
 use karasu_core::{
     cancellation::Checkpoint,
     mesh::formats::LengthUnit,
@@ -36,9 +37,11 @@ use std::{
 
 pub(super) use karasu_project::request::format_ids;
 
-/// The critical angle `--unsupported` uses without `--overhang-angle`, in degrees from the plate's
-/// plane (TD-107).
-const DEFAULT_OVERHANG_ANGLE_DEG: f64 = 45.0;
+/// The critical angle `--unsupported` and `--auto-supports` use without `--overhang-angle`, in
+/// degrees from the plate's plane (TD-107): the application's default, which its Automatic tool
+/// starts from (TD-157).
+const DEFAULT_OVERHANG_ANGLE_DEG: f64 =
+    karasu_project::support_plan::settings::DEFAULT_OVERHANG_ANGLE_DEG;
 
 /// The smallest vent `--suction-cups` credits without `--min-vent`, in mm² (TD-114): a circle
 /// about 1.1 mm across.
@@ -92,6 +95,8 @@ pub(super) struct SliceArgs {
     /// Whether `--antialias`, `--min-gray` or an XY compensation was given, which a print
     /// setting holds: refused beside one, the catalog's chosen one included (TD-155).
     pub(super) image_options: bool,
+    /// Automatic supports and braces, and the support document to write (TD-157).
+    pub(super) supports: SupportJob,
 }
 
 /// Default gap between arranged footprints (TD-065 owner decision).
@@ -228,6 +233,7 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
     let mut hollowing = Hollowing::default();
     let mut placement = PlacementOptions::default();
     let mut plate = PlateOptions::default();
+    let mut support_options = SupportOptions::default();
     while let Some(option) = arguments.next() {
         let name = option
             .to_str()
@@ -255,6 +261,7 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
             _ if plate.apply(&name, &mut arguments)? => {}
             _ if placement.apply(&name, &mut arguments)? => {}
             _ if model.apply(&name, &mut arguments)? => {}
+            _ if support_options.apply(&name, &mut arguments)? => {}
             _ => return Err(format!("unknown slice option: {name}")),
         }
     }
@@ -265,7 +272,15 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         || processing.supports.is_some()
         || processing.accept_support_collisions.is_some();
     let arranged = plate.check(per_object, placement.pose.center)?;
-    let (translate_mm, pose) = placement.finish()?;
+    let automatic = support_options.automatic();
+    let mut support_job = support_options.check(&supports::Context {
+        plate: plate.plate.is_some(),
+        copies: plate.copies.is_some() || plate.arrange,
+        supports: processing.supports.is_some(),
+        drop: placement.pose.drop,
+        strict: processing.fill == Some(Fill::Strict),
+    })?;
+    let (translate_mm, mut pose) = placement.finish()?;
     let Processing {
         fill,
         antialias,
@@ -287,8 +302,20 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         min_vent,
         log,
     } = processing;
-    if overhang_angle.is_some() && unsupported.is_none() {
-        return Err("--overhang-angle is used only with --unsupported".to_owned());
+    if overhang_angle.is_some() && unsupported.is_none() && !automatic {
+        return Err(
+            "--overhang-angle is used only with --unsupported or --auto-supports".to_owned(),
+        );
+    }
+    let mut accept_support_collisions = accept_support_collisions.unwrap_or(false);
+    // The automatic supports lift the model and hold it: their height and the collisions
+    // accepted are theirs until they are planned (TD-157).
+    if let Some(auto) = support_job.automatic.as_mut() {
+        auto.lift_mm = pose.lift_mm.take();
+        auto.angle_deg = overhang_angle;
+        if supports.is_none() {
+            auto.accept_collisions = std::mem::take(&mut accept_support_collisions);
+        }
     }
     if min_vent.is_some() && suction_cups.is_none() {
         return Err("--min-vent is used only with --suction-cups".to_owned());
@@ -339,7 +366,7 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         hollow_simplify: hollowing.simplify,
         hollow_blockers: Vec::new(),
         supports: supports.map(Input::File),
-        accept_support_collisions: accept_support_collisions.unwrap_or(false),
+        accept_support_collisions,
         layer_plan: layer_plan.map(Input::File),
         copies: plate.copies.unwrap_or(1),
         arrange: arranged,
@@ -358,6 +385,7 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         log,
         print_setting,
         image_options,
+        supports: support_job,
     })
 }
 
@@ -1417,11 +1445,45 @@ fn slice_logged(
             "warning: Ctrl-C cancellation is unavailable ({e}); interrupting may leave a staging file"
         ));
     }
-    let result = pipeline::slice(&args.request, &mut progress, &interrupted);
+    // Automatic supports and braces are planned first, sharing the job's cache (TD-157).
+    let cache = pipeline::PipelineCache::default();
+    let (request, lines, document) = if args.supports.any() {
+        let (request, lines, document) =
+            supports::prepare(&args.request, &args.supports, &cache, &mut progress)?;
+        for line in lines.lines() {
+            log::info!(target: "supports", "{line}");
+        }
+        (std::borrow::Cow::Owned(request), lines, document)
+    } else {
+        (
+            std::borrow::Cow::Borrowed(&args.request),
+            String::new(),
+            None,
+        )
+    };
+    let result = if args.supports.any() {
+        pipeline::slice_with(&request, Some(&cache), &mut progress, &interrupted)
+    } else {
+        pipeline::slice(&request, &mut progress, &interrupted)
+    };
     progress.finish();
     match result {
         Ok(outcome) => {
+            if let Some(path) = &args.supports.write {
+                let empty = karasu_core::supports::SupportDocument::new(
+                    karasu_core::supports::Preset::Medium,
+                );
+                supports::write_document(path, document.as_ref().unwrap_or(&empty)).map_err(
+                    |e| {
+                        SliceFailure::Error(format!(
+                            "{e}; the print file {} was written",
+                            request.output.display()
+                        ))
+                    },
+                )?;
+            }
             out.write_all(note.unwrap_or_default().as_bytes())
+                .and_then(|()| out.write_all(lines.as_bytes()))
                 .and_then(|()| out.write_all(outcome.summary.as_bytes()))
                 .and_then(|()| out.flush())
                 .map_err(|e| SliceFailure::from(format!("cannot write slice summary: {e}")))?;
@@ -1528,6 +1590,7 @@ mod tests {
                 log: None,
                 print_setting: None,
                 image_options: false,
+                supports: super::SupportJob::default(),
             }
         );
     }

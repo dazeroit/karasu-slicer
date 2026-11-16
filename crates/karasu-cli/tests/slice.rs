@@ -2085,7 +2085,16 @@ fn help_documents_slice_and_every_format() {
     assert!(help.contains(
         "karasu-cli slice (--assume-mm <model> | --model <model> [--units <unit>] | --plate <plate.json>)"
     ));
-    for option in ["--layer-plan", "--copies", "--arrange", "--spacing"] {
+    for option in [
+        "--layer-plan",
+        "--copies",
+        "--arrange",
+        "--spacing",
+        "--auto-supports",
+        "--auto-settings",
+        "--auto-braces",
+        "--write-supports",
+    ] {
         assert!(help.contains(option), "{option}");
     }
     assert!(help.contains("STL, OBJ or 3MF"));
@@ -3380,4 +3389,343 @@ fn suction_cups_report_the_resin_a_ring_on_the_plate_encloses() {
         &["--suction-cups", "--min-vent", "-1"],
     );
     assert!(failure(&negative, 2).contains("zero or more"));
+}
+
+/// A box 10 × 10 × 4 mm and, apart from it, a box floating 2 mm above its bottom: two islands
+/// once the model is lifted.
+fn two_islands(setup: &Setup) -> PathBuf {
+    setup.temp.write(
+        "islands.stl",
+        boxes_stl(&[
+            ([10.0, 10.0, 0.0], [20.0, 20.0, 4.0]),
+            ([26.0, 10.0, 2.0], [32.0, 16.0, 4.0]),
+        ]),
+    )
+}
+
+#[test]
+fn automatic_supports_hold_a_lifted_model_and_are_reported() {
+    // TD-157: planned as the application's Automatic tool plans them, with its defaults.
+    let setup = Setup::new();
+    let model = two_islands(&setup);
+    let output = setup.temp.path("auto.goo");
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &output,
+        &["--center", "--drop", "--auto-supports"],
+    ));
+    let planned: usize = field(&report, "Automatic supports")
+        .split(' ')
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(planned >= 4, "{report}");
+    assert_eq!(
+        field(&report, "Automatic supports values"),
+        "medium, density 100%, islands and overhangs, everywhere, minis on, branches on, lift 5 \
+         mm, critical angle 45 degrees"
+    );
+    assert!(
+        field(&report, "Automatic supports held").starts_with("islands 2 of 2"),
+        "{report}"
+    );
+    assert_eq!(field(&report, "Automatic supports left unsupported"), "0");
+    // The model rests at the plan's lift on what was planned, and the job builds every one.
+    assert!(
+        field(&report, "Translation (mm)").ends_with(" 5"),
+        "{report}"
+    );
+    assert!(
+        field(&report, "Supports").starts_with(&format!("{planned} (plate")),
+        "{report}"
+    );
+    assert!(output.is_file());
+    // --lift wins over the plan's lift; the values given beside it are said.
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("valued.goo"),
+        &[
+            "--center",
+            "--drop",
+            "--lift",
+            "7",
+            "--auto-supports",
+            "--support-weight",
+            "heavy",
+            "--auto-density",
+            "150",
+            "--auto-cover",
+            "islands",
+            "--auto-minis",
+            "off",
+            "--overhang-angle",
+            "40",
+        ],
+    ));
+    assert_eq!(
+        field(&report, "Automatic supports values"),
+        "heavy, density 150%, islands only, everywhere, minis off, branches on, lift 7 mm, \
+         critical angle 40 degrees"
+    );
+    assert!(
+        field(&report, "Translation (mm)").ends_with(" 7"),
+        "{report}"
+    );
+    assert!(
+        field(&report, "Automatic supports held").contains("overhangs not covered"),
+        "{report}"
+    );
+}
+
+#[test]
+fn written_supports_slice_to_the_same_bytes() {
+    let setup = Setup::new();
+    let model = two_islands(&setup);
+    let (output, written) = (
+        setup.temp.path("auto.goo"),
+        setup.temp.path("supports.json"),
+    );
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &output,
+        &[
+            "--center",
+            "--drop",
+            "--auto-supports",
+            "--write-supports",
+            written.to_str().unwrap(),
+        ],
+    ));
+    let planned = field(&report, "Supports").to_owned();
+    // The document is the job's, in world coordinates at its placement: read back with
+    // --supports at that placement, it slices to the same bytes.
+    let again = setup.temp.path("again.goo");
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &again,
+        &[
+            "--center",
+            "--drop",
+            "--lift",
+            "5",
+            "--supports",
+            written.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(field(&report, "Supports"), planned);
+    assert_eq!(fs::read(&again).unwrap(), fs::read(&output).unwrap());
+    // Generated again over it, the automatic supports are replaced, not added to.
+    let replaced = setup.temp.path("replaced.goo");
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &replaced,
+        &[
+            "--center",
+            "--drop",
+            "--supports",
+            written.to_str().unwrap(),
+            "--auto-supports",
+        ],
+    ));
+    assert!(
+        field(&report, "Automatic supports kept").starts_with("0 given, "),
+        "{report}"
+    );
+    assert_eq!(fs::read(&replaced).unwrap(), fs::read(&output).unwrap());
+    // --supports alone writes the document read, which reads back equal.
+    let copy = setup.temp.path("copy.json");
+    success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("copy.goo"),
+        &[
+            "--center",
+            "--drop",
+            "--lift",
+            "5",
+            "--supports",
+            written.to_str().unwrap(),
+            "--write-supports",
+            copy.to_str().unwrap(),
+        ],
+    ));
+    assert_eq!(fs::read(&copy).unwrap(), fs::read(&written).unwrap());
+    // An existing file is never written over, and the job publishes nothing.
+    let refused = setup.temp.path("refused.goo");
+    let error = failure(
+        &setup.slice(
+            &model,
+            "goo-v3",
+            &refused,
+            &[
+                "--center",
+                "--drop",
+                "--auto-supports",
+                "--write-supports",
+                written.to_str().unwrap(),
+            ],
+        ),
+        1,
+    );
+    assert!(error.contains("the file exists"), "{error}");
+    assert!(!refused.exists());
+}
+
+#[test]
+fn auto_settings_take_the_application_s_settings_file() {
+    let setup = Setup::new();
+    let model = two_islands(&setup);
+    // As the application keeps them: schema 4, the tools' values among the rest.
+    let settings = setup.temp.write(
+        "settings.json",
+        r#"{"schema_version": 4, "appearance": {}, "layout": {"sidebar_open": false},
+            "tools": {"overhang_angle_deg": 35, "auto_preset": "Fine", "support_presets": [],
+                      "auto_supports": {"weight": "light", "density_pct": 80, "lift_mm": 6,
+                                        "branches": false}}}"#,
+    );
+    let with = |extra: &[&str], name: &str| {
+        let mut options = vec![
+            "--center",
+            "--drop",
+            "--auto-supports",
+            "--auto-settings",
+            settings.to_str().unwrap(),
+        ];
+        options.extend_from_slice(extra);
+        setup.slice(&model, "goo-v3", &setup.temp.path(name), &options)
+    };
+    let report = success(&with(&[], "settings.goo"));
+    // The preset named is not among the presets: the weight is taken, as the application does.
+    assert_eq!(
+        field(&report, "Automatic supports values"),
+        "light, density 80%, islands and overhangs, everywhere, minis on, branches off, lift 6 \
+         mm, critical angle 35 degrees"
+    );
+    // Options given beside it override it.
+    let report = success(&with(&["--support-weight", "medium"], "medium.goo"));
+    assert!(
+        field(&report, "Automatic supports values").starts_with("medium, density 80%"),
+        "{report}"
+    );
+    // A document of the command line's own is checked strictly.
+    let own = setup.temp.write("own.json", r#"{"densty_pct": 120}"#);
+    let error = failure(
+        &setup.slice(
+            &model,
+            "goo-v3",
+            &setup.temp.path("own.goo"),
+            &[
+                "--center",
+                "--drop",
+                "--auto-supports",
+                "--auto-settings",
+                own.to_str().unwrap(),
+            ],
+        ),
+        1,
+    );
+    assert!(error.contains("unknown key \"densty_pct\""), "{error}");
+}
+
+#[test]
+fn automatic_braces_join_the_given_supports() {
+    let setup = Setup::new();
+    let slab = setup
+        .temp
+        .write("slab.stl", box_stl([10., 20., 19.], [30., 30., 21.], false));
+    let supports = setup.temp.write(
+        "supports.json",
+        support_document(
+            r#""supports":[{"id":1,"tip":{"point":[15,25,19]},"base":{"vertical":true}},
+                {"id":2,"tip":{"point":[25,25,19]},"base":{"vertical":true}}]"#,
+        ),
+    );
+    let low = setup
+        .temp
+        .write("low.json", r#"{"brace_lowest_mm": 2, "brace_step_mm": 2}"#);
+    let report = success(&setup.slice(
+        &slab,
+        "goo-v3",
+        &setup.temp.path("braced.goo"),
+        &[
+            "--supports",
+            supports.to_str().unwrap(),
+            "--auto-braces",
+            "--auto-settings",
+            low.to_str().unwrap(),
+        ],
+    ));
+    let added: usize = field(&report, "Automatic braces")
+        .split(' ')
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(added > 0, "{report}");
+    assert!(
+        field(&report, "Supports").contains(&format!("braces {added},")),
+        "{report}"
+    );
+}
+
+#[test]
+fn automatic_support_options_are_refused_when_misused() {
+    let setup = Setup::new();
+    let model = two_islands(&setup);
+    let output = setup.temp.path("refused.goo");
+    let refused = |extra: &[&str], says: &str| {
+        let error = failure(&setup.slice(&model, "goo-v3", &output, extra), 2);
+        assert!(error.contains(says), "{error}");
+    };
+    refused(&["--auto-density", "120"], "only with --auto-supports");
+    refused(
+        &["--drop", "--auto-cover", "islands"],
+        "only with --auto-supports",
+    );
+    refused(&["--auto-supports"], "add --drop");
+    refused(
+        &["--drop", "--auto-supports", "--copies", "2"],
+        "--copies or --arrange",
+    );
+    refused(
+        &["--drop", "--auto-supports", "--auto-density", "300"],
+        "from 50 to 200",
+    );
+    refused(&["--auto-braces"], "give --auto-supports or --supports");
+    refused(
+        &["--drop", "--auto-supports", "--fill", "strict"],
+        "--fill union",
+    );
+    // A plate and a project hold their objects' supports.
+    let plate = run([
+        "slice",
+        "--plate",
+        "plate.json",
+        "--printer",
+        "p.json",
+        "--resin",
+        "r.json",
+        "--format",
+        "goo-v3",
+        "--output",
+        "o.goo",
+        "--auto-supports",
+    ]);
+    assert!(failure(&plate, 2).contains("one model"));
+    let project = run([
+        "slice",
+        "--project",
+        "p.karasu",
+        "--output",
+        "o.goo",
+        "--auto-supports",
+    ]);
+    assert!(failure(&project, 2).contains("one model"));
+    assert!(!output.exists());
 }

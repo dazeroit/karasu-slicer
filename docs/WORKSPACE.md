@@ -58,7 +58,8 @@ See [ROADMAP.md](../ROADMAP.md), TD-020 and PREP-001–009 for requirements, sta
   their own printer, resin and settings, revisions) and background jobs (TD-071); and the
   planners of the automatic supports (TD-156).
 - `karasu-cli` is the headless command-line adapter (`inspect` and `slice`); `slice` parses its
-  options into a `karasu-project` request and runs the shared pipeline.
+  options into a `karasu-project` request and runs the shared pipeline, after planning automatic
+  supports with `karasu-project`'s `support_plan::generate` when asked (TD-157).
 - `karasu-app` is the desktop application (M6, egui, eframe and wgpu), its executable `karasu`:
   `cargo run --release -p karasu-app -- [FILE...]`.
   - **Viewport (M6.2, TD-073):**
