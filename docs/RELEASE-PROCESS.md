@@ -182,3 +182,7 @@ Rulesets enforce the above; the owner can bypass them.
   branch.
 - Tags `v*`: created only by the owner, never updated or deleted.
 - Merged topic branches are deleted automatically.
+- Actions event policy `cla_pull_request_target_event` (TD-161): the **CLA** workflow
+  (`.github/workflows/cla.yml`) alone may run on `pull_request_target` and `issue_comment`, which
+  GitHub blocks by default in public repositories from 2026-12-02. No other workflow uses
+  `pull_request_target`.
