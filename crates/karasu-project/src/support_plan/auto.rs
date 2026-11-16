@@ -1078,6 +1078,100 @@ fn plan_braces(
     })
 }
 
+/// What a plan of one model is made from, as Generate makes it: [`Input`] without its regions
+/// and islands, which the slice of the model alone finds, and the automatic supports of the
+/// model's `document` (model frame) that the plan replaces. The model's surface for routes is
+/// `surface`, `to_world` maps its model frame to the world, and `hollowed` tells whether it is
+/// hollowed: a model that is not has no cavity to choose, so it is planned everywhere. The plan
+/// keeps the supports placed by hand or by the Islands tool and the automatic ones of the place
+/// it leaves as it is. `None` for a placement without an inverse.
+#[allow(clippy::too_many_arguments)] // The plan's whole context.
+#[must_use]
+pub fn input_for(
+    surface: Arc<RouteSurface>,
+    document: Option<&SupportDocument>,
+    to_world: &Affine,
+    hollowed: bool,
+    (values, presets): (AutoSupports, &[SupportPreset]),
+    angle_deg: f64,
+    volume: BuildVolume,
+    model: Option<check::ModelInput>,
+) -> Option<(Input, Vec<u64>)> {
+    let to_model = to_world.inverse()?;
+    let mut values = values;
+    // A model that is not hollowed has no cavity to choose.
+    if !hollowed {
+        values.place = Place::Everywhere;
+    }
+    // The supports kept: placed by hand or by the Islands tool, and the automatic ones of the
+    // place the plan leaves as it is.
+    let replaced = document.map_or_default(|d| replaced(d, &surface, to_world, values.place));
+    let document = document.map(|d| without(d, &replaced));
+    let kept_tips = document.as_ref().map_or_default(|d| {
+        d.supports
+            .iter()
+            .map(|s| to_world.point(s.tip_mm))
+            .collect()
+    });
+    let input = Input {
+        regions: Vec::new(),
+        islands: Vec::new(),
+        document,
+        kept_tips,
+        surface,
+        next: values.next(presets),
+        cavity_next: values
+            .cavity()
+            .filter(|_| hollowed)
+            .map(|cavity| cavity.next(presets)),
+        values,
+        angle_deg,
+        volume,
+        to_model,
+        model,
+    };
+    Some((input, replaced))
+}
+
+/// The automatic supports of `document` that a plan covering `place` replaces: every one, or
+/// those whose tip (`to_world` from the model frame) touches the cavity's surface, or the
+/// outside's. A tip over no surface within [`PROBE_MM`] counts as outside.
+#[must_use]
+pub fn replaced(
+    document: &SupportDocument,
+    surface: &RouteSurface,
+    to_world: &Affine,
+    place: Place,
+) -> Vec<u64> {
+    let probe = PROBE_MM;
+    let in_cavity = |tip: [f64; 3]| {
+        let [x, y, z] = to_world.point(tip);
+        surface.mesh().is_some_and(|mesh| {
+            surface
+                .grid()
+                .first_above(mesh, [x, y, z - probe], z + probe)
+                .is_some_and(|(_, _, t)| surface.is_cavity(t))
+        })
+    };
+    document
+        .supports
+        .iter()
+        .filter(|s| {
+            s.origin == SupportOrigin::Automatic
+                && (place == Place::Everywhere || place.holds(in_cavity(s.tip_mm)))
+        })
+        .map(|s| s.id)
+        .collect()
+}
+
+/// `document` without the supports `ids`, the branches and braces on them too.
+#[must_use]
+pub fn without(document: &SupportDocument, ids: &[u64]) -> SupportDocument {
+    let mut kept = document.clone();
+    super::branches::without(&mut kept, ids);
+    kept
+}
+
 /// The document `document` (the kept supports) with `outcome`'s supports and braces added, as
 /// Apply adds them.
 #[must_use]

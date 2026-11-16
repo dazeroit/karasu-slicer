@@ -1,7 +1,11 @@
 use super::*;
 use crate::supports_ui::tests::lifted_cube;
 use crate::supports_ui::{NextSupport, Weight};
-use karasu_core::supports::{BaseSpec, SupportOrigin};
+use karasu_core::{
+    cancellation::Cancellation,
+    supports::{BaseSpec, SupportOrigin, SurfaceGrid},
+};
+use karasu_project::support_plan::found::in_cavity;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 

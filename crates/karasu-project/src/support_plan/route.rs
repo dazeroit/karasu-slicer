@@ -7,8 +7,10 @@
 //! The route is found against a model's surface (its hollowed shell, or the placed model) and a
 //! grid of its triangles, [`RouteSurface`]: built once per preparation and placement, then
 //! routes are found at once.
-use crate::pipeline::Preparation;
+use crate::pipeline::{placed_mesh, Preparation};
 use karasu_core::{
+    cancellation::Cancellation,
+    geometry::ObjectTransform,
     mesh::TriangleMesh,
     supports::{
         find_mini_foot, find_route, AxisSpec, BaseSpec, ManualSupport, MiniQuery, Route,
@@ -71,6 +73,34 @@ impl RouteSurface {
     #[must_use]
     pub fn new(mesh: SurfaceMesh, grid: SurfaceGrid) -> Self {
         Self { mesh, grid }
+    }
+
+    /// Object `index`'s surface for routes, gridded: the hollowed shell `preparation` holds for
+    /// it, or else `source` (the model as imported) placed by `placement`. The Supports tool
+    /// grids the selected model so, and the command line's automatic supports (TD-157) too.
+    /// `Ok(None)` when the grid is not built: cancelled, or a surface it refuses.
+    ///
+    /// # Errors
+    /// A placement that cannot carry the source's vertices (see [`placed_mesh`]).
+    pub fn build(
+        source: &TriangleMesh,
+        placement: &ObjectTransform,
+        preparation: Arc<Preparation>,
+        index: usize,
+        cancel: &mut Cancellation<'_>,
+    ) -> Result<Option<Self>, String> {
+        let hollow = preparation
+            .objects
+            .get(index)
+            .and_then(|o| o.as_ref().ok())
+            .is_some_and(|o| o.hollowed().is_some());
+        let mesh = if hollow {
+            SurfaceMesh::Hollow(preparation, index)
+        } else {
+            SurfaceMesh::Placed(placed_mesh(source, placement)?)
+        };
+        let grid = mesh.mesh().and_then(|m| SurfaceGrid::build(m, cancel).ok());
+        Ok(grid.map(|grid| Self::new(mesh, grid)))
     }
 
     /// The surface: the hollowed shell, or the placed model, in world millimetres.

@@ -5,18 +5,25 @@
 //! and trunks merging into trees ([`trees`]).
 //!
 //! The desktop application plans with them on threads of its own and shows the result before it
-//! is applied; the command line is to plan with them too (TD-156). Everything here works in
-//! world millimetres on a model's surface for routes ([`route::RouteSurface`]) and is
-//! deterministic for equal inputs; the plans take the caller's cancellation flag. The decisions
-//! are TD-112 (the Automatic tool and the final check), TD-127 (density and wide undersides),
-//! TD-136 (edges, corners and leading edges), TD-137 (the cavity's own preset and density) and
-//! TD-138 (the Grid mode's supports, grown by [`auto::plan_tips`]).
+//! is applied (TD-156); the command line plans with them through [`generate`], the Automatic
+//! tool's Generate and Apply for one model of a slicing request (TD-157), which reads what a
+//! slice finds through [`found`], the tool's value set through [`settings`] and the Braces
+//! tool's values through [`braces`]. Everything here works in world millimetres on a model's
+//! surface for routes ([`route::RouteSurface`]) and is deterministic for equal inputs; the plans
+//! take the caller's cancellation flag. The decisions are TD-112 (the Automatic tool and the
+//! final check), TD-127 (density and wide undersides), TD-136 (edges, corners and leading
+//! edges), TD-137 (the cavity's own preset and density) and TD-138 (the Grid mode's supports,
+//! grown by [`auto::plan_tips`]).
 use karasu_core::{geometry::Point3, mesh::TriangleMesh};
 
 pub mod auto;
+pub mod braces;
 pub mod branches;
+pub mod found;
+pub mod generate;
 pub mod islands;
 pub mod route;
+pub mod settings;
 pub mod trees;
 pub mod values;
 

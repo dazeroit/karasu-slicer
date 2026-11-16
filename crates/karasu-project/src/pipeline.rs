@@ -362,10 +362,12 @@ pub fn slice_with(
 #[derive(Debug)]
 pub struct ObjectPreparation {
     prepared: Prepared,
+    placement: ObjectTransform,
     holes: Option<PreparedHoles>,
     holes_error: Option<PipelineError>,
     drainage_unavailable: Option<PipelineError>,
     supports: Option<SupportScene>,
+    support_document: Option<SupportDocument>,
     probe: Option<Arc<HoleProbe>>,
     repair: Option<RepairOutcome>,
 }
@@ -402,6 +404,22 @@ impl ObjectPreparation {
     #[must_use]
     pub fn supports(&self) -> Option<&SupportScene> {
         self.supports.as_ref()
+    }
+
+    /// The object's placement as slicing places it: source to world, from the imported (and
+    /// repaired) model.
+    #[must_use]
+    pub fn placement(&self) -> &ObjectTransform {
+        &self.placement
+    }
+
+    /// The support document the supports were built from, when the object has supports: in
+    /// world coordinates at [`Self::placement`], a binding checked and the motion it allows
+    /// applied (TD-072), a document in the model's frame placed (TD-108). Slicing builds the
+    /// same document; the command line's automatic supports keep it (TD-157).
+    #[must_use]
+    pub fn support_document(&self) -> Option<&SupportDocument> {
+        self.support_document.as_ref()
     }
 
     /// Why the object's drain holes could not be cut, when they could not (a hole too narrow
@@ -586,14 +604,21 @@ fn prepare_all(
                     ctx,
                 )
             })
-            .map(|object| ObjectPreparation {
-                prepared: object.prepared,
-                holes: object.holes,
-                holes_error: object.holes_error,
-                drainage_unavailable: object.drainage_unavailable,
-                repair: object.diagnosis.outcome.clone(),
-                supports: object.supported.and_then(|s| s.scene),
-                probe: object.probe,
+            .map(|object| {
+                let (supports, support_document) = object
+                    .supported
+                    .map_or((None, None), |s| (s.scene, s.document));
+                ObjectPreparation {
+                    prepared: object.prepared,
+                    placement: object.placement,
+                    holes: object.holes,
+                    holes_error: object.holes_error,
+                    drainage_unavailable: object.drainage_unavailable,
+                    repair: object.diagnosis.outcome.clone(),
+                    supports,
+                    support_document,
+                    probe: object.probe,
+                }
             })
             .map_err(PipelineError::from);
         prepared.push(result);
@@ -659,6 +684,26 @@ pub fn import_mesh(
         Err(failure) if failure.remedies == [Remedy::GiveUnits] => Err(ImportError::UnitsRequired),
         Err(failure) => Err(failed(failure)),
     }
+}
+
+/// The model of a single-model request as [`import_mesh`] imports it for display, without the
+/// repairs a job applies, read as STL for an unknown extension with the legacy `--assume-mm`
+/// (`legacy_stl`): the mesh the support planners place, as the desktop application places
+/// its models (TD-157).
+///
+/// # Errors
+/// A request without one model, and the failures of [`import_mesh`].
+pub(crate) fn import_request_mesh(
+    request: &SliceRequest,
+    stop: &(dyn Fn(Checkpoint) -> bool + Sync),
+) -> Result<TriangleMesh, String> {
+    let model = request
+        .model()
+        .ok_or("the request has no single model to import")?;
+    let bytes = read_model(model)?;
+    import_model(request.units, request.legacy_stl, model, &bytes, Stop(stop))
+        .map(|imported| imported.mesh)
+        .map_err(|failure| failure.message)
 }
 
 /// The caller's cancellation predicate, shared by every stage and worker thread.
@@ -2835,6 +2880,8 @@ struct Supported {
     lines: Vec<String>,
     /// The built scene, kept only when preparing for display.
     scene: Option<SupportScene>,
+    /// The document built, in world coordinates, kept only when preparing for display.
+    document: Option<SupportDocument>,
 }
 
 /// The placed model as a world mesh. A reflecting placement reverses every face, keeping the
@@ -2871,7 +2918,7 @@ pub fn placed_mesh(
 }
 
 /// Read and validate a support document.
-fn read_supports(input: &Input<SupportDocument>) -> Result<SupportDocument, String> {
+pub(crate) fn read_supports(input: &Input<SupportDocument>) -> Result<SupportDocument, String> {
     let path = match input {
         Input::File(path) => path,
         Input::Loaded { value, .. } => return Ok(value.clone()),
@@ -3064,6 +3111,37 @@ pub fn plan_model_braces(
         .validated()
         .and_then(|d| d.placed(&affine))
         .map_err(|e| e.to_string())?;
+    plan_placed_braces(&doc, mesh, placement, preparation, plan, stop)
+}
+
+/// [`plan_model_braces`] for a document already in world coordinates at `placement`, as a
+/// support document given to a job is (the command line's automatic braces, TD-157). A
+/// binding is not checked here: the document is taken as built.
+///
+/// # Errors
+/// A document or placement that cannot be used, and cancellation.
+pub fn plan_world_braces(
+    document: &SupportDocument,
+    mesh: &TriangleMesh,
+    placement: &ObjectTransform,
+    preparation: &ObjectPreparation,
+    plan: &BracePlan,
+    stop: &(dyn Fn(Checkpoint) -> bool + Sync),
+) -> Result<Vec<PlannedBrace>, String> {
+    let doc = document.clone().validated().map_err(|e| e.to_string())?;
+    plan_placed_braces(&doc, mesh, placement, preparation, plan, stop)
+}
+
+/// Plan braces between the supports of `doc`, in world coordinates, against the prepared surface
+/// (the hollowed shell, or `mesh` carried by `placement`) and its drain holes.
+fn plan_placed_braces(
+    doc: &SupportDocument,
+    mesh: &TriangleMesh,
+    placement: &ObjectTransform,
+    preparation: &ObjectPreparation,
+    plan: &BracePlan,
+    stop: &(dyn Fn(Checkpoint) -> bool + Sync),
+) -> Result<Vec<PlannedBrace>, String> {
     let world;
     let (surface, interior_from) = if let Some(model) = preparation.prepared.hollow() {
         (model.mesh(), Some(model.exterior_faces()))
@@ -3073,7 +3151,7 @@ pub fn plan_model_braces(
     };
     let mut predicate = |checkpoint| stop(checkpoint);
     plan_braces(
-        &doc,
+        doc,
         SupportSurface {
             mesh: surface,
             interior_from,
@@ -3218,6 +3296,7 @@ fn apply_supports(
         top_z,
         lines,
         scene: ctx.preview.then_some(scene),
+        document: ctx.preview.then(|| doc.clone()),
     })
 }
 
@@ -3808,7 +3887,7 @@ fn read_profile(path: &Path, what: &str) -> Result<ProfileDocument, String> {
         .map_err(|e| format!("invalid {what} profile {}: {e}", QuotedPath(path)))
 }
 
-fn read_printer(input: &Input<PrinterProfile>) -> Result<PrinterProfile, String> {
+pub(crate) fn read_printer(input: &Input<PrinterProfile>) -> Result<PrinterProfile, String> {
     let path = match input {
         Input::File(path) => path,
         Input::Loaded { value, .. } => return Ok(value.clone()),

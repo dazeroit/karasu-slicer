@@ -1,7 +1,9 @@
 use super::*;
 use crate::islands_ui::plan::Skip;
 use crate::supports_ui::tests::{built, ray};
-use karasu_core::supports::BaseSpec;
+use karasu_core::supports::{BaseSpec, SupportOrigin};
+use karasu_project::support_plan::auto::replaced;
+use plan::Place;
 use std::time::Duration;
 
 /// An 8 mm cube lifted 6 mm above the plate on a preset printer, prepared: its bottom is one
@@ -243,6 +245,195 @@ fn a_plan_made_before_an_edit_is_out_of_date_and_cannot_be_applied() {
     assert_eq!(ui.apply(&mut workspace, 0), 0);
     assert!(workspace.supports(0).is_none());
     let _ = std::fs::remove_dir_all(directory);
+}
+
+/// The command line's Generate and Apply (TD-157) for model 0 of `workspace` with the tool's
+/// values: its request is the plate's, for that object alone, as the command line's own
+/// single-model request is.
+fn headless(
+    workspace: &Workspace,
+    ui: &AutoUi,
+    supports: &SupportsUi,
+    scratch: &std::path::Path,
+) -> karasu_project::support_plan::generate::Generated {
+    use karasu_project::support_plan::{generate, settings::AutoSettings};
+    let (request, _) = workspace.request(scratch.join("unused.goo")).unwrap();
+    let karasu_project::request::Subject::Plate(plate) = &request.subject else {
+        panic!("a plate request");
+    };
+    // The format Slice writes, as the command line's job names it.
+    let single = karasu_project::request::SliceRequest {
+        format: crate::slicing_ui::plate_format(workspace).expect("a format"),
+        ..request.for_object(&plate.objects[0])
+    };
+    let settings = AutoSettings {
+        values: supports.automatic,
+        presets: supports.presets.clone(),
+        braces: supports.bracing.new,
+        angle_deg: ui.angle_deg,
+    };
+    let stop = AtomicBool::new(false);
+    generate::generate(
+        &single,
+        &settings,
+        generate::Run {
+            cache: Some(&workspace.pipeline_cache()),
+            scratch,
+            observer: &mut karasu_project::pipeline::Silent,
+            stop: &stop,
+        },
+    )
+    .unwrap()
+}
+
+#[test]
+fn the_command_line_plans_what_generate_and_apply_make() {
+    // TD-157: the same model, placement and values give the same support document through the
+    // tool (its threads, its surface, its Apply) and through the command line's headless run:
+    // first beside a support placed by hand, then again over the automatic ones, which both
+    // replace, lifted higher by Generate, with branches off and braces on.
+    let (mut workspace, mut preparation, directory) = lifted_small_cube("parity");
+    let mut supports = SupportsUi::new();
+    let placed = workspace.placement_of(0).unwrap();
+    let [cx, cy] =
+        [0, 1].map(|k| f64::midpoint(placed.min.coordinates()[k], placed.max.coordinates()[k]));
+    supports.straight_only = true;
+    supports.toggle_placing();
+    let up = ray(cx + 2.0, cy, true);
+    let hit = workspace.hit(&up);
+    assert!(supports.click(&mut workspace, &up, hit, 0));
+    supports.toggle_placing();
+    built(&mut supports, &workspace, &preparation);
+    let mut ui = AutoUi::new();
+    for (round, lift) in [(0, 6.0), (1, 15.0)] {
+        if round == 1 {
+            supports.automatic.branches = false;
+            supports.automatic.braces = true;
+            // Close enough for the short shafts to take some.
+            supports.bracing.new.step_mm = 2.0;
+        }
+        // Generate lifts the model to the tool's lift first (as `generate_lifted` does), and
+        // the plan waits for it to be prepared there. The headless run finds it there.
+        supports.automatic.lift_mm = lift;
+        if (lift_of(&workspace, 0) - lift).abs() > LIFT_TOLERANCE_MM {
+            set_lift(&mut workspace, 0, lift);
+        }
+        crate::hollowing_ui::tests::prepared_within(
+            &workspace,
+            &mut preparation,
+            Duration::from_secs(60),
+        );
+        generated(&mut ui, &mut supports, &workspace, &preparation);
+        let command_line = headless(&workspace, &ui, &supports, &directory);
+        assert!((command_line.lift_mm - lift).abs() < 1e-12);
+        let count = ui.apply(&mut workspace, 0);
+        assert!(count > 0);
+        assert_eq!(command_line.outcome.plan.supports.len(), count);
+        let applied = workspace.supports(0).expect("supports");
+        assert_eq!(
+            command_line.model_document.as_ref(),
+            Some(applied),
+            "round {round}"
+        );
+        assert_eq!(command_line.kept, by_origin(&workspace).1.len());
+        if round == 1 {
+            assert!(command_line.replaced > 0);
+            assert!(!applied.braces.is_empty(), "{:?}", applied.supports.len());
+        }
+    }
+    let _ = std::fs::remove_dir_all(directory);
+}
+
+/// `request` sliced into `output`, as Slice slices it: the print file's bytes.
+fn print_file(
+    workspace: &Workspace,
+    request: &karasu_project::request::SliceRequest,
+    output: std::path::PathBuf,
+) -> Vec<u8> {
+    let request = karasu_project::request::SliceRequest {
+        output: output.clone(),
+        ..request.clone()
+    };
+    karasu_project::pipeline::slice_with(
+        &request,
+        Some(&workspace.pipeline_cache()),
+        &mut karasu_project::pipeline::Silent,
+        &|_| false,
+    )
+    .unwrap();
+    std::fs::read(output).unwrap()
+}
+
+#[test]
+fn a_turned_model_s_trees_plan_and_print_alike_through_the_tool_and_the_command_line() {
+    // TD-157: a model turned 80 degrees about X, its supports branching and their trunks
+    // merging, gets the same support document, to the last bit, through the tool's Generate
+    // and Apply and through the command line's headless run, and both slice to the same print
+    // file. A slab 16 x 2 x 12 mm turned so lies on its -Y face, 16 x 12 mm, 10 degrees from
+    // the plate: an overhang wide enough for trees, lifted 15 mm for their trunks to merge.
+    let folder = std::env::temp_dir().join(format!("karasu-auto-turned-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let model = folder.join("slab.stl");
+    std::fs::write(
+        &model,
+        crate::workspace::tests::box_stl([0.0; 3], [16.0, 2.0, 12.0]),
+    )
+    .unwrap();
+    let (mut workspace, mut preparation) =
+        crate::hollowing_ui::tests::placed(model, None, Duration::from_secs(60));
+    let mut supports = SupportsUi::new();
+    supports.automatic.lift_mm = 15.0;
+    workspace.edit(|plate| {
+        let pose = &mut plate.objects[0].pose;
+        pose.rotate_deg = [80.0, 0.0, 0.0];
+        pose.center = true;
+        pose.drop = true;
+        pose.lift_mm = Some(15.0);
+    });
+    crate::hollowing_ui::tests::prepared_within(
+        &workspace,
+        &mut preparation,
+        Duration::from_secs(60),
+    );
+    let mut ui = AutoUi::new();
+    generated(&mut ui, &mut supports, &workspace, &preparation);
+    let command_line = headless(&workspace, &ui, &supports, &folder);
+    assert!(ui.apply(&mut workspace, 0) > 0);
+    let applied = workspace.supports(0).expect("supports");
+    assert_eq!(command_line.model_document.as_ref(), Some(applied));
+    // Every value to the last bit, the signs of zeros too.
+    let document = command_line.model_document.as_ref().expect("a document");
+    assert!(
+        document.to_json() == applied.to_json(),
+        "the documents differ"
+    );
+    // Trees: branches on their trunks, straight, and trunks merged into others, turned at a
+    // bend; a main trunk carrying more than a full tree's tips widened at its foot.
+    let on_supports = |bent: bool| {
+        applied
+            .supports
+            .iter()
+            .filter(|s| matches!(s.base, BaseSpec::Support { .. }) && s.bends.is_empty() != bent)
+            .count()
+    };
+    assert!(on_supports(false) > 0 && on_supports(true) > 0);
+    assert!(applied
+        .supports
+        .iter()
+        .any(|s| s.parameters.shaft_bottom_diameter_mm.is_some()));
+    // The plate as Slice slices it, and the command line's job.
+    let format = crate::slicing_ui::plate_format(&workspace).expect("a format");
+    let extension = crate::slicing_ui::extension(&format).expect("a print file");
+    let (tool, _) = workspace.request(folder.join("unused")).unwrap();
+    let tool = karasu_project::request::SliceRequest { format, ..tool };
+    let tool = print_file(&workspace, &tool, folder.join(format!("tool.{extension}")));
+    let command_line = print_file(
+        &workspace,
+        &command_line.request,
+        folder.join(format!("command-line.{extension}")),
+    );
+    assert!(tool == command_line, "the print files differ");
+    let _ = std::fs::remove_dir_all(folder);
 }
 
 #[test]

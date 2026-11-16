@@ -118,7 +118,15 @@ The headless orchestration shared by `karasu-cli` and `karasu-app`. It depends o
   of the model on a `RouteSurface`), `branches`, `trees` and `values` (weights, the user's
   presets, the next support's values). They work in world millimetres, take the caller's
   cancellation flag and are deterministic; the application runs them on threads of its own and
-  keeps the previews, Apply and the weights' names.
+  keeps the previews, Apply and the weights' names. TD-157 adds what the command line needs to
+  plan as the Automatic tool's Generate and Apply do, which the application now calls too:
+  `found` (a slice's unsupported regions as islands), `settings` (the tool's value set, from
+  the application's `settings.json` or an object of the command line's own, and the settings'
+  migrations), `braces` (the Braces tool's values), `auto::input_for` (the plan's input),
+  `RouteSurface::build` (the gridded surface) and `generate` (the whole run for the one model of
+  a request: lift, analysis slice, plan, Apply's document in the model frame and in world
+  coordinates). `ObjectPreparation` gives the placement slicing uses and the support document it
+  builds.
 - **Still to come:** the project file (M6.6).
 
 ### `karasu-app` (M6.0, TD-068)

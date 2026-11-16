@@ -681,6 +681,14 @@ impl Pose {
     pub fn is_rigid_identity(&self) -> bool {
         self.rotate_deg == [0.; 3] && self.scale == [1.; 3] && self.mirror == [false; 3]
     }
+
+    /// Rest the model with its lowest point `lift_mm` above the plate, as the Automatic tool's
+    /// Generate lifts it (TD-128): dropped, and on the plate itself for a lift under a
+    /// nanometre.
+    pub fn rest_at(&mut self, lift_mm: f64) {
+        self.drop = true;
+        self.lift_mm = (lift_mm > 1e-9).then_some(lift_mm);
+    }
 }
 
 impl SliceRequest {
@@ -825,6 +833,16 @@ impl SliceRequest {
 /// A message listing the supported identifiers when `format` is unknown.
 pub fn machine_exporter(format: &str) -> Result<Option<BuiltinExporter>, String> {
     machine_exporter_with(format, 1)
+}
+
+/// The file extension of `format`'s machine files, without the dot; `None` for the reference
+/// format, which writes a directory, and for an unknown format.
+#[must_use]
+pub fn format_extension(format: &str) -> Option<String> {
+    machine_exporter(format)
+        .ok()
+        .flatten()
+        .map(|exporter| MachineExporter::extension(&exporter).to_owned())
 }
 
 /// The exporter for `format` with masks supersampled `antialias` times per axis.

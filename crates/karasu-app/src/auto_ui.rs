@@ -22,23 +22,20 @@ pub mod plan;
 use crate::{
     appearance::Appearance,
     camera::Mat4,
-    gizmo::Affine,
     i18n::tr,
     islands_ui::{alone_request, found_of, plan::Preview},
     messages::{Level, Message},
     preparation_ui::PreparationUi,
     repair_panel::{marker, MARKER_SIZE},
-    supports_ui::{branches, route::RouteSurface, SupportsUi},
+    supports_ui::SupportsUi,
     viewport::{Draw, Viewport},
     workspace::Workspace,
 };
 use eframe::egui_wgpu;
-use karasu_core::{
-    cancellation::Checkpoint,
-    supports::{BuildVolume, SupportDocument, SupportOrigin},
-};
+use karasu_core::{cancellation::Checkpoint, supports::BuildVolume};
 use karasu_project::pipeline::{slice_with, Observer};
-use plan::{AutoOutcome, AutoSupports, Input, Left, Place};
+use karasu_project::support_plan::auto::{input_for, without};
+use plan::{AutoOutcome, AutoSupports, Input, Left};
 use std::{
     path::PathBuf,
     sync::{
@@ -64,8 +61,8 @@ struct Key {
     angle_deg: f64,
 }
 
-/// How far a model's lift may differ from the tool's before Generate lifts it, in mm.
-const LIFT_TOLERANCE_MM: f64 = 1e-6;
+// How far a model's lift may differ from the tool's before Generate lifts it, in mm.
+use karasu_project::support_plan::generate::LIFT_TOLERANCE_MM;
 /// Merge key of a lift Generate makes, with the model's index.
 const LIFT_KEY: u64 = 0x4C49_4654_0000_0000; // "LIFT"
 
@@ -74,8 +71,7 @@ const LIFT_KEY: u64 = 0x4C49_4654_0000_0000; // "LIFT"
 pub(crate) fn set_lift(workspace: &mut Workspace, index: usize, lift: f64) {
     workspace.edit_merging(LIFT_KEY | index as u64, |plate| {
         if let Some(object) = plate.objects.get_mut(index) {
-            object.pose.drop = true;
-            object.pose.lift_mm = (lift > 1e-9).then_some(lift);
+            object.pose.rest_at(lift);
         }
     });
 }
@@ -226,7 +222,7 @@ fn cache_folder() -> Option<PathBuf> {
 
 /// What model `index`'s plan is made from, its regions still to find, its hollowed shell's
 /// preparation to tell the cavity's regions, and the automatic supports it replaces: see
-/// [`plan`]. `None` without the surface for routes, a printer or a placement.
+/// [`plan`] and [`input_for`]. `None` without the surface for routes, a printer or a placement.
 fn plan_input(
     workspace: &Workspace,
     preparation: &PreparationUi,
@@ -242,88 +238,27 @@ fn plan_input(
     let object = workspace.plate().objects.get(index)?;
     let printer = workspace.printer()?;
     let to_world = workspace.model_to_world(index)?;
-    let to_model = to_world.inverse()?;
-    let mut values = supports.automatic;
-    // A model that is not hollowed has no cavity to choose.
-    if object.hollowing().is_none() {
-        values.place = Place::Everywhere;
-    }
-    // The supports kept: placed by hand or by the Islands tool, and the automatic ones of the
-    // place the plan leaves as it is.
-    let replaced = workspace
-        .supports(index)
-        .map_or_default(|d| replaced(d, &surface, &to_world, values.place));
-    let document = workspace.supports(index).map(|d| without(d, &replaced));
-    let kept_tips = document.as_ref().map_or_default(|d| {
-        d.supports
-            .iter()
-            .map(|s| to_world.point(s.tip_mm))
-            .collect()
-    });
-    let shared = preparation
+    let hollowed = object.hollowing().is_some();
+    let shell = preparation
         .shared(workspace, index)
-        .map(|(shared, _)| shared);
-    let shell = shared.clone().filter(|_| object.hollowing().is_some());
+        .map(|(shared, _)| shared)
+        .filter(|_| hollowed);
     let model =
         crate::islands_ui::plan::check::model_input(workspace, preparation, supports, index);
-    let input = Input {
-        regions: Vec::new(),
-        islands: Vec::new(),
-        document,
-        kept_tips,
+    let (input, replaced) = input_for(
         surface,
-        next: values.next(&supports.presets),
-        cavity_next: values
-            .cavity()
-            .filter(|_| object.hollowing().is_some())
-            .map(|cavity| cavity.next(&supports.presets)),
-        values,
+        workspace.supports(index),
+        &to_world,
+        hollowed,
+        (supports.automatic, &supports.presets),
         angle_deg,
-        volume: BuildVolume {
+        BuildVolume {
             origin_xy_mm: printer.origin_xy_mm,
             size_mm: printer.build_size_mm,
         },
-        to_model,
         model,
-    };
+    )?;
     Some((input, shell, replaced))
-}
-
-/// The automatic supports of `document` that a plan covering `place` replaces: every one, or
-/// those whose tip (`to_world` from the model frame) touches the cavity's surface, or the
-/// outside's. A tip over no surface within [`crate::islands_ui::PROBE_MM`] counts as outside.
-pub(crate) fn replaced(
-    document: &SupportDocument,
-    surface: &RouteSurface,
-    to_world: &Affine,
-    place: Place,
-) -> Vec<u64> {
-    let probe = crate::islands_ui::PROBE_MM;
-    let in_cavity = |tip: [f64; 3]| {
-        let [x, y, z] = to_world.point(tip);
-        surface.mesh().is_some_and(|mesh| {
-            surface
-                .grid()
-                .first_above(mesh, [x, y, z - probe], z + probe)
-                .is_some_and(|(_, _, t)| surface.is_cavity(t))
-        })
-    };
-    document
-        .supports
-        .iter()
-        .filter(|s| {
-            s.origin == SupportOrigin::Automatic
-                && (place == Place::Everywhere || place.holds(in_cavity(s.tip_mm)))
-        })
-        .map(|s| s.id)
-        .collect()
-}
-
-/// `document` without the supports `ids`, the branches and braces on them too.
-pub(crate) fn without(document: &SupportDocument, ids: &[u64]) -> SupportDocument {
-    let mut kept = document.clone();
-    branches::without(&mut kept, ids);
-    kept
 }
 
 impl AutoUi {

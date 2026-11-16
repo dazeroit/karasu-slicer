@@ -9,9 +9,41 @@
 //! the support's widest radius and the clearance.
 use super::route::{widest, RouteSurface};
 use karasu_core::supports::{
-    SupportDocument, SupportKind, SupportParameters, SupportScene, TipCone,
+    BaseSpec, SupportDocument, SupportKind, SupportParameters, SupportScene, TipCone,
     DEFAULT_ANCHOR_TOLERANCE_MM,
 };
+
+/// The supports of `document` that `ids` are, and every support standing on any of them,
+/// directly or through others: what deleting them deletes (owner: deleting a support deletes
+/// the branches on it, and theirs).
+#[must_use]
+pub fn with_branches(document: &SupportDocument, ids: &[u64]) -> Vec<u64> {
+    let mut gone: Vec<u64> = ids.to_vec();
+    loop {
+        let more: Vec<u64> = document
+            .supports
+            .iter()
+            .filter(|s| !gone.contains(&s.id))
+            .filter(
+                |s| matches!(s.base, BaseSpec::Support { parent, .. } if gone.contains(&parent)),
+            )
+            .map(|s| s.id)
+            .collect();
+        if more.is_empty() {
+            return gone;
+        }
+        gone.extend(more);
+    }
+}
+
+/// `document` without the supports `ids`, the branches on them, and the braces on any of them.
+pub fn without(document: &mut SupportDocument, ids: &[u64]) {
+    let gone = with_branches(document, ids);
+    document.supports.retain(|s| !gone.contains(&s.id));
+    document
+        .braces
+        .retain(|b| !gone.contains(&b.from.0) && !gone.contains(&b.to.0));
+}
 
 /// The steepest a branch's slanted part goes, as the tangent of its angle from vertical: 45°,
 /// the steepest shaft the build accepts without a warning, less a margin for rounding.

@@ -47,6 +47,14 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Pro
                 )?;
             }
             "--log" => set(&mut log, &name, path_value(&name, arguments.next())?)?,
+            "--auto-supports" | "--auto-braces" | "--write-supports" | "--auto-settings"
+            | "--support-weight" | "--auto-density" | "--auto-cover" | "--auto-place"
+            | "--auto-minis" => {
+                return Err(format!(
+                    "{name} works on one model (--model): a project's plate holds its objects' \
+                     supports, which the application plans"
+                ))
+            }
             _ => {
                 return Err(format!(
                     "{name} cannot be given with --project: the project holds the printer, \
@@ -132,6 +140,7 @@ pub(super) fn slice(args: &ProjectArgs, out: &mut impl Write) -> Result<(), Slic
             log: args.log.clone(),
             print_setting: None,
             image_options: false,
+            supports: super::supports::SupportJob::default(),
         },
         out,
     )
