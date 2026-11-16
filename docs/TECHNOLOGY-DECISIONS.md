@@ -6130,6 +6130,61 @@ candidates are deterministic on each platform; the search uses the platform's ma
 support planners (TD-157 item 6). Automatic orientation on the command line would now need only
 its options, the input built from a request, and a parity check against the application.
 
+## TD-159 — Every plate of a project from the command line
+
+**Status:** Implemented on 2026-11-16 at the owner's request ("procedi con 4a come proposto"):
+the first part of the fourth item of the comparison of the command line with the application
+(2026-11-15).
+
+**Problem:** the application slices every plate of a project and exports them into a folder
+(Export every plate, TD-135 phase 4); `slice --project` sliced one plate. The application also
+slices a plate in a format its printer writes: a plate whose printer changed may still hold the
+format of the one before, which `slice --project` took as it was.
+
+**Decision:**
+1. **Shared with the application** (`karasu_project::project::batch`, moved unchanged from it):
+   `printer_formats` (the formats a printer lists that the build writes), `plate_format` (the
+   plate's own when its printer writes it, else the first), `slice_format` (the reference format
+   when chosen, else `plate_format`, else the plate's own), `plate_file_name` (the pattern filled,
+   made a name every file system takes) and `plate_files` (every plate's file, with the format's
+   extension, the same name never twice whatever the case, a later plate's with ` (2)`, ` (3)`...).
+   `DEFAULT_PLATE_FILES` is the pattern `{project} {number} {plate}`; the application's
+   Export every plate and Slice panel call these.
+2. **`slice --project`** slices a plate in `slice_format`'s format, as the application does: a
+   plate whose printer does not write its format is sliced in the printer's first instead of
+   failing or writing a format that printer cannot read.
+3. **`slice --project --every-plate --folder <folder> [--names <pattern>] [--replace]`**, as Export
+   every plate:
+   - the plates with a model, in project order; those without one are listed as left out, as the
+     application leaves them unchecked;
+   - the project's name in the pattern is the project file's (the application's too), else the
+     project's own;
+   - files that exist already are refused before any plate is sliced, naming them, unless
+     `--replace`; replacing, each plate is sliced into a sibling (its name with
+     `.karasu-partial-<process>` before the extension, which the exporter checks) and renamed into
+     place once whole, so a failure leaves the old file;
+   - a plate that fails is reported and the next sliced; the run then exits 1, naming each plate
+     and why (the application's batch goes on likewise);
+   - each plate's summary opens with `Plate number: <n>`; the run ends with `Plates sliced: <k> of
+     <m>` and, if any, `Plates without a model`;
+   - Ctrl-C stops the plate being sliced; the plates already sliced stay, their summaries
+     printed, and the error says how many were published (exit status 130).
+   `--project-plate`, `--output` and `--every-plate`'s options exclude one another as the help
+   says; every other option stays refused beside `--project`.
+
+**Alternatives rejected:**
+- **Removing the old file before slicing a plate:** a failed slice would lose it.
+- **Stopping at the first plate that fails:** the application goes on, and the other files are
+  independent.
+
+**Tests:** the shared helpers in `karasu-project` (the format a changed printer gives, the
+reference format, names repeated in another case, the characters replaced); the options; and
+the command run on a project of five plates (one with copies, one empty, one whose printer does
+not write its format, one outside the plate): the three files named as the application names
+them and identical to `--project-plate`'s, the empty plate left out, the failing one reported
+with exit status 1, existing files refused, then replaced with the summaries naming the final
+paths.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

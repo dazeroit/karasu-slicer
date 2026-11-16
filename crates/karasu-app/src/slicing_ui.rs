@@ -53,7 +53,7 @@ mod panel;
 
 pub(crate) use panel::{format_label, switch_row};
 
-pub(crate) use panel::{format_of, plate_format};
+pub(crate) use panel::plate_format;
 
 /// How long the toast of a finished slice or export shows: its facts or path take a moment to
 /// read.
@@ -363,11 +363,7 @@ impl SlicingUi {
         // The format the Slice panel would settle on: a plate not shown may still hold one its
         // printer does not write (TD-135, phase 4). The reference format, chosen in the
         // Advanced options, stays.
-        let format = if plate.settings.format == REFERENCE_FORMAT {
-            plate.settings.format.clone()
-        } else {
-            format_of(plate).unwrap_or_else(|| plate.settings.format.clone())
-        };
+        let format = karasu_project::project::batch::slice_format(plate);
         // Unique across every plate's slicing (TD-135): they share the session's folder, and
         // a slice removes its previous file when the next ends.
         let number = NEXT_SLICE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

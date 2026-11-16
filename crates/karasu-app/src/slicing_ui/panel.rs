@@ -18,8 +18,11 @@ use crate::{
 };
 use eframe::egui;
 use karasu_project::{
-    project::Freshness,
-    request::{format_ids, format_name, REFERENCE_FORMAT},
+    project::{
+        batch::{plate_format as format_of, printer_formats},
+        Freshness,
+    },
+    request::{format_name, REFERENCE_FORMAT},
 };
 
 /// The formats the plate's printer lists that this build can write, in the printer's order;
@@ -29,44 +32,10 @@ fn formats(workspace: &Workspace, reference: bool) -> Vec<String> {
     printer_formats(workspace.printer(), reference)
 }
 
-/// The formats `printer` lists that this build can write, in its order; with `reference`, then
-/// the reference format.
-fn printer_formats(
-    printer: Option<&karasu_core::profiles::PrinterProfile>,
-    reference: bool,
-) -> Vec<String> {
-    let supported: Vec<String> = format_ids().split(", ").map(str::to_owned).collect();
-    let mut formats: Vec<String> = printer.map_or_default(|printer| {
-        printer
-            .format_ids
-            .iter()
-            .filter(|f| supported.contains(f) && f.as_str() != REFERENCE_FORMAT)
-            .cloned()
-            .collect()
-    });
-    if reference && printer.is_some() {
-        formats.push(REFERENCE_FORMAT.to_owned());
-    }
-    formats
-}
-
 /// The format a slice of the plate is written in: the plate's own when its printer writes it,
 /// else the first its printer writes, as the Slice panel chooses it; `None` without one.
 pub(crate) fn plate_format(workspace: &Workspace) -> Option<String> {
     format_of(workspace.plate())
-}
-
-/// [`plate_format`] for `plate`, shown or not (TD-135, phase 4: a plate not shown has not had
-/// its format settled by the Slice panel): its own when its printer writes it, else the first
-/// its printer writes; `None` without one.
-pub(crate) fn format_of(plate: &karasu_project::project::PlateContent) -> Option<String> {
-    let formats = printer_formats(plate.printer.as_ref(), false);
-    let current = &plate.settings.format;
-    if formats.contains(current) {
-        Some(current.clone())
-    } else {
-        formats.into_iter().next()
-    }
 }
 
 /// A format as the panel names it: its readable name and extension, or the reference format's

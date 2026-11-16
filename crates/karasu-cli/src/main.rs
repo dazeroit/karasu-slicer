@@ -176,6 +176,8 @@ fn help_text() -> String {
          Usage: karasu-cli [OPTIONS]\n       karasu-cli catalog [--printer <id> | --resins]\n       karasu-cli inspect (--assume-mm <path> | --model <path> [--units <unit>]) [--diagnosis | --minima [--rotate <x> <y> <z>]]\n       \
          karasu-cli slice --project <project.karasu> [--project-plate <number or name>] --output <path>\n         \
          \x20 [--progress | --no-progress] [--log <file>]\n       \
+         karasu-cli slice --project <project.karasu> --every-plate --folder <folder> [--names <pattern>] [--replace]\n         \
+         \x20 [--progress | --no-progress] [--log <file>]\n       \
          karasu-cli export-models --project <project.karasu> [--project-plate <number or name> | --every-plate]\n         \
          \x20 [--model <n>] --format stl|3mf|obj [--per-model] [--no-supports] [--no-raft] [--separate-objects] [--replace]\n         \
          \x20 (--output <file> | --folder <folder> [--names <pattern>]) [--progress | --no-progress] [--log <file>]\n       \
@@ -217,9 +219,17 @@ fn help_text() -> String {
          \n  slice --project <project.karasu> --output <path>\n\
          \x20   Slice one plate of a karasu-slicer project (TD-130) with its own printer, resin,\n\
          \x20   print setting, settings and objects: placement, repair, hollowing, drain holes,\n\
-         \x20   blockers and supports, as the application slices it. --project-plate chooses the\n\
-         \x20   plate by its number (from 1) or its name; a project of one plate needs none. Every\n\
-         \x20   other option belongs in the project and is refused beside it.\n\
+         \x20   blockers and supports, as the application slices it, in the format it slices it in\n\
+         \x20   (the plate's own when its printer writes it, else the printer's first).\n\
+         \x20   --project-plate chooses the plate by its number (from 1) or its name; a project of\n\
+         \x20   one plate needs none. With --every-plate (TD-159), every plate with a model is\n\
+         \x20   sliced, one after another, into its own file of --folder, named as the\n\
+         \x20   application's Export every plate names it: --names with {{project}} (the project\n\
+         \x20   file's name), {{number}} and {{plate}}, \"{{project}} {{number}} {{plate}}\" by default,\n\
+         \x20   and the format's extension. Files that exist already are refused before any plate\n\
+         \x20   is sliced, unless --replace; a plate that fails is reported and the others are\n\
+         \x20   still sliced, with exit status 1. Every other option belongs in the project and is\n\
+         \x20   refused beside it.\n\
          \n  export-models --project <project.karasu> --format stl|3mf|obj (--output <file> | --folder <folder>)\n\
          \x20   Write the models of a project's plate (TD-139) as they stand on it, in millimetres:\n\
          \x20   turned, scaled, hollowed, their drain holes cut into the mesh (TD-140), with their\n\
@@ -421,6 +431,13 @@ fn sliced(result: Result<(), slice::SliceFailure>) -> Result<Result<(), String>,
             let _ = writeln!(
                 io::stderr().lock(),
                 "error: interrupted by Ctrl-C; no output was published"
+            );
+            Err(ExitCode::from(slice::INTERRUPTED_EXIT_STATUS))
+        }
+        Err(slice::SliceFailure::InterruptedAfter(published)) => {
+            let _ = writeln!(
+                io::stderr().lock(),
+                "error: interrupted by Ctrl-C; {published}"
             );
             Err(ExitCode::from(slice::INTERRUPTED_EXIT_STATUS))
         }

@@ -120,8 +120,8 @@ impl Default for ModelExportSettings {
 }
 
 /// The pattern of Export every plate's file names when the user sets none: the project's name,
-/// the plate's number and its name (TD-135).
-pub const DEFAULT_EXPORT_PATTERN: &str = "{project} {number} {plate}";
+/// the plate's number and its name (TD-135), the command line's too (TD-159).
+pub const DEFAULT_EXPORT_PATTERN: &str = karasu_project::project::batch::DEFAULT_PLATE_FILES;
 
 /// Arrange's and Export every plate's choices, kept from one use to the next (TD-135). The
 /// spacing Arrange offers is the plate's own, not kept here.

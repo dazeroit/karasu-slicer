@@ -15,6 +15,9 @@
 //!
 //! **Persistence:** [`file`](mod@file) saves a project as a `.karasu` package and opens one
 //! (TD-130).
+//!
+//! **Batches:** [`batch`] gives the format each plate is sliced in and the names of the plates'
+//! print files, for slicing every plate (TD-159).
 use crate::request::{
     Blocker, Coordinates, DrainHole, Fill, Input, ModelSource, ObjectSpec, PlateSpec, Pose,
     Simplify, SliceRequest, Subject, DEFAULT_CLOSE_HOLES_MM, DEFAULT_JOB_ID, DEFAULT_REPAIR,
@@ -30,6 +33,7 @@ use karasu_core::{
 };
 use std::{fmt, path::PathBuf, sync::Arc};
 
+pub mod batch;
 pub mod file;
 
 /// A library model's identity: the SHA-256 of its file bytes.

@@ -660,15 +660,9 @@ fn a_library_resin_and_print_setting_slice_like_the_calibrated_resin() {
     assert!(failure(&alone, 1).contains("--print-setting"));
 }
 
-#[test]
-#[allow(clippy::too_many_lines)] // One scenario: the profiles, a project of two plates, refusals.
-fn a_saved_project_slices_from_the_command_line_as_the_library_slices_it() {
-    // TD-130: `slice --project` slices the plate with its own profiles and objects.
-    use karasu_project::{
-        pipeline::{slice, Silent},
-        project::{file, PlateContent, PlateObject, PlateSettings, Project},
-    };
-    let setup = Setup::new();
+/// The test printer's calibrated resin as a library material, and its print setting: what a
+/// project's plate holds.
+fn plate_profiles() -> (ResinMaterial, PrintSettingProfile) {
     let calibrated = resin(PRINTER_ID);
     let material = ResinMaterial {
         colour: None,
@@ -703,6 +697,19 @@ fn a_saved_project_slices_from_the_command_line_as_the_library_slices_it() {
             bottom_xy_compensation_px: None,
         },
     };
+    (material, setting)
+}
+
+#[test]
+#[allow(clippy::too_many_lines)] // One scenario: the profiles, a project of two plates, refusals.
+fn a_saved_project_slices_from_the_command_line_as_the_library_slices_it() {
+    // TD-130: `slice --project` slices the plate with its own profiles and objects.
+    use karasu_project::{
+        pipeline::{slice, Silent},
+        project::{file, PlateContent, PlateObject, PlateSettings, Project},
+    };
+    let setup = Setup::new();
+    let (material, setting) = plate_profiles();
     let mut project = Project::new("Command line");
     let model = project.add_model(
         "box.stl",
@@ -778,6 +785,162 @@ fn a_saved_project_slices_from_the_command_line_as_the_library_slices_it() {
         1,
     );
     assert!(message.contains("not a karasu-slicer project"), "{message}");
+}
+
+#[test]
+#[allow(clippy::too_many_lines)] // One scenario: a project of five plates sliced three times.
+fn every_plate_of_a_project_slices_into_a_folder_as_the_application_names_it() {
+    // TD-159: `slice --project --every-plate` slices the plates with a model one after another
+    // into a folder, named as the application's Export every plate names them, each in the
+    // format the application slices it in; a plate that fails leaves the others.
+    use karasu_project::project::{file, PlateContent, PlateObject, PlateSettings, Project};
+    let setup = Setup::new();
+    let (material, setting) = plate_profiles();
+    let mut project = Project::new("Command line");
+    let model = project.add_model(
+        "box.stl",
+        box_stl([10., 20., 0.], [30., 30., 2.], false).into_bytes(),
+    );
+    let content = |name: &str, objects: Vec<PlateObject>| PlateContent {
+        name: name.to_owned(),
+        printer: Some(printer()),
+        resin: Some(material.clone()),
+        print_setting: Some(setting.clone()),
+        settings: PlateSettings::new("goo-v3"),
+        objects,
+    };
+    let object = PlateObject::new("box", model);
+    project.add_plate(content("First", vec![object.clone()]));
+    let mut copies = object.clone();
+    copies.copies = 2;
+    project.add_plate(content("Second", vec![copies]));
+    project.add_plate(content("Empty", Vec::new()));
+    // A printer that writes GOO alone, the plate still holding CTB: GOO, as the application.
+    project.add_plate(PlateContent {
+        printer: Some(PrinterProfile {
+            format_ids: vec!["goo-v3".into()],
+            ..printer()
+        }),
+        settings: PlateSettings::new("ctb-v4-plain"),
+        ..content("Changed printer", vec![object.clone()])
+    });
+    // Far outside the build plate, not arranged: its slice fails.
+    let mut outside = object;
+    outside.arrange = false;
+    outside.translate_mm = [5000., 0., 0.];
+    project.add_plate(content("Outside", vec![outside]));
+    let path = setup.temp.path("job.karasu");
+    file::save(&project, &path).unwrap();
+    let folder = setup.temp.path("plates");
+    fs::create_dir(&folder).unwrap();
+    let every = |extra: &[&str]| {
+        let mut args = vec![
+            OsStr::new("slice"),
+            OsStr::new("--project"),
+            path.as_os_str(),
+            OsStr::new("--every-plate"),
+            OsStr::new("--folder"),
+            folder.as_os_str(),
+            OsStr::new("--no-progress"),
+        ];
+        args.extend(extra.iter().map(OsStr::new));
+        run(args)
+    };
+    let names = [
+        "job 1 First.goo",
+        "job 2 Second.goo",
+        "job 4 Changed printer.goo",
+    ];
+    let listed = || {
+        let mut files: Vec<String> = fs::read_dir(&folder)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        files.sort();
+        files
+    };
+    let partial = |output: &Output, expected: &str| {
+        assert_eq!(output.status.code(), Some(1));
+        let error = String::from_utf8(output.stderr.clone()).unwrap();
+        assert!(error.contains(expected), "{error}");
+        assert!(!error.contains("panicked"), "{error}");
+        String::from_utf8(output.stdout.clone()).unwrap()
+    };
+    let output = every(&[]);
+    let summary = partial(
+        &output,
+        "error: 1 of 4 plates were not sliced: plate 5 \"Outside\": ",
+    );
+    assert_eq!(listed(), names);
+    assert!(summary.contains("Plate number: 1\n"), "{summary}");
+    assert!(summary.contains("Plate number: 4\n"), "{summary}");
+    assert!(summary.contains("Plates sliced: 3 of 4\n"), "{summary}");
+    assert!(
+        summary.contains("Plates without a model: 3 \"Empty\"\n"),
+        "{summary}"
+    );
+    // Each file is the plate's own slice, as `--project-plate` gives it.
+    for (number, name) in [("1", names[0]), ("2", names[1]), ("4", names[2])] {
+        let single = setup.temp.path(&format!("single-{number}.goo"));
+        success(&run([
+            OsStr::new("slice"),
+            OsStr::new("--project"),
+            path.as_os_str(),
+            OsStr::new("--project-plate"),
+            OsStr::new(number),
+            OsStr::new("--output"),
+            single.as_os_str(),
+            OsStr::new("--no-progress"),
+        ]));
+        assert_eq!(
+            fs::read(folder.join(name)).unwrap(),
+            fs::read(&single).unwrap(),
+            "plate {number}"
+        );
+    }
+    // Files there already are refused before any plate is sliced.
+    let before = fs::read(folder.join(names[0])).unwrap();
+    fs::write(folder.join(names[1]), b"old").unwrap();
+    let refused = failure(&every(&[]), 1);
+    assert!(
+        refused.contains("3 file(s) exist already") && refused.contains("--replace"),
+        "{refused}"
+    );
+    assert_eq!(fs::read(folder.join(names[1])).unwrap(), b"old");
+    // --replace slices each beside its file and renames it into place.
+    let summary = partial(&every(&["--replace"]), "1 of 4 plates were not sliced");
+    assert_eq!(listed(), names);
+    assert_eq!(fs::read(folder.join(names[0])).unwrap(), before);
+    assert_eq!(
+        fs::read(folder.join(names[1])).unwrap(),
+        fs::read(setup.temp.path("single-2.goo")).unwrap()
+    );
+    // Each summary names the file where it now is.
+    let outputs: Vec<&str> = summary
+        .lines()
+        .filter(|l| l.starts_with("Output path: "))
+        .collect();
+    assert_eq!(outputs.len(), 3, "{summary}");
+    for (line, name) in outputs.iter().zip(names) {
+        assert!(
+            line.contains(name) && !line.contains("karasu-partial"),
+            "{line}"
+        );
+    }
+    // The folder must exist.
+    let missing = setup.temp.path("missing");
+    let refused = failure(
+        &run([
+            OsStr::new("slice"),
+            OsStr::new("--project"),
+            path.as_os_str(),
+            OsStr::new("--every-plate"),
+            OsStr::new("--folder"),
+            missing.as_os_str(),
+        ]),
+        1,
+    );
+    assert!(refused.contains("does not exist"), "{refused}");
 }
 
 /// ASCII STL of one closed shell: a 10 × 10 plate of height `p` at XY [10, 20]² carrying a
