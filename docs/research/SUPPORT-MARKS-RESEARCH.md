@@ -9,9 +9,11 @@ default.
 **Method:**
 - prints made by the owner, with the owner's photos and reports;
 - karasu-slicer's own files;
-- files that Lychee Slicer exported from a specimen made for the purpose. Only the files were
-  read, by independent scripts and by UVtools used as a program. Nothing of either application
-  was examined.
+- files that Lychee Slicer exported from a specimen made for the purpose;
+- a pre-supported model whose supports a third party prepared in Lychee Slicer (E-SUP-08).
+
+Only the files were read, by independent scripts and by UVtools used as a program. Nothing of
+either application was examined.
 
 Statements are marked **observed** (seen in a print, a photo or a file, or measured in a file),
 **inferred** (deduced from observations) or **hypothesis** (to be tested). Raw evidence (photos,
@@ -213,6 +215,113 @@ The band tips stand in two staggered rows per band, 1.8 to 5.4 mm apart along th
    those free tiles. UVtools flags Lychee's file more than karasu's. Its print will show whether
    the bands come out flat and the cylinder's lowest line whole.
 
+## A pre-supported arm prepared in Lychee (E-SUP-08, owner, 2026-11-18)
+
+**Conditions:**
+- **Files (observed):**
+  - `Arm_R_SUP.stl` (SHA-256 `27e3cf4200f14754a3b2eef0642580c40e4583861656ec667c7a986af863e905`;
+    1,559,966 triangles), the arm with its supports;
+  - `Arm_R_SUP.pp1` (SHA-256 `10982f089addd719ad4dfe76a8bb5a4264c817f641fdd48606c0363df37c050c`;
+    2,846 layers of 0.05 mm, for the Photon P1).
+  - Both are kept in `E:\3dprint\karasu_slicer_compare_test\tip_test\`.
+- **Who prepared them:** a third party placed the supports in Lychee Slicer, in a version not
+  known; the PP1 names "Lychee Slicer 8.0.0". Some supports may have been placed or edited by
+  hand, so the layout shows what can be made in Lychee, not necessarily what its automatic tool
+  makes.
+- **Model:** the same arm the owner printed with karasu (E-SUP-05), in the same orientation. The
+  arm is hollow: its cavity is a closed surface of its own, with no drain hole in the STL. Its
+  lowest point stands 7 mm above the plate.
+- **PP1 (observed):** it has the same exposures as the owner's print setting (5 bottom layers at
+  25 s, 10 transition layers, 2 s). Its sampled layers (0, 12, 300 and 600) hold no grey
+  pixel. It rasterises Y at 24.8 µm: the raft's 116.5 mm are 4,696 pixels.
+- **Owner's report:** the marks these supports leave are much less visible than karasu's on the
+  same arm (E-SUP-05).
+
+**Reading the STL (observed):**
+- **Parts:** the STL holds 5,400 separate parts: the model's surface, its cavity, and 5,398
+  support parts.
+  - The supports are prisms of a cross-shaped section: a plus sign of 12 corners, measured
+    tip to tip and by the width of its arms.
+  - Spheres join them at the bends.
+  - Separate blocks make the raft.
+- **How they were read:** each prism was measured from its two end faces. Its contact end was
+  told from its far end by the signed distance to the model.
+
+**The tips (observed):**
+
+| | 484 tips | 51 tips | karasu, E-SUP-05 (Medium) |
+| --- | --- | --- | --- |
+| Section at the contact | cross 0.37 mm tip to tip, arms 0.12 mm | cross 0.55 mm, arms 0.18 mm | circle 0.52 mm at the surface |
+| Area of the contact | 0.076 mm² | 0.168 mm² | 0.212 mm² |
+| Depth into the model | 0.03 mm | about 0.04 mm | 0.1 mm |
+| Cone | 0.37 to 1.25 mm over 3.03 mm, then a 1.25 mm joint sphere | 0.55 to 1.40 mm over 2.03 mm | 0.5 to 1.0 mm over 2.5 mm |
+| Direction | along the surface's normal (median 0.1° off) | vertical, under the lowest points | along the normal |
+
+**Totals of the contacts that hold the model from below:**
+- **Lychee:** 659 contacts covering about 178 mm²:
+  - the 537 tips of the supports from the raft, about 45 mm²;
+  - the 122 contacts of the supports standing on the model (below), about 133 mm².
+- **karasu:** 1,509 Medium contacts on the same arm, about 320 mm².
+
+**The frame (observed):**
+- **Trunks:** 189 trunks rise from the raft, with a cross 1.33 mm wide. 188 of them stand on
+  the points of one square lattice, 7.0 mm apart, turned 20.6° from the file's X axis.
+- **Branches:** they leave the trunks at exactly 45° from vertical, sections 1.30 to 1.40 mm,
+  and end at the joint spheres of the tips. Each trunk carries 1 to 13 tips, 2 in the median.
+  karasu's arm had 285 supports on the plate and no lattice.
+- **Braces:**
+  - **Shape:** 1,917 segments, with a cross 0.90 mm wide, all at 45°.
+  - **Where:** each joins two neighbouring trunks of the lattice, one step apart (7.0 mm across,
+    7.0 mm up, 9.9 mm long). They run only along the lattice's rows and columns, never across a
+    cell.
+  - **Heights:** 1,471 of them start at 1 + 7k mm, so their ends meet the trunks at common
+    heights.
+  - **Pattern:** they climb mostly as zigzags, where 1,230 end where the next one starts, with
+    228 crossings in an X.
+  - **Extent:** 297 of the 327 neighbouring pairs are braced, up to 124.5 mm.
+- **Supports standing on the model:** 68 supports stand on upward-facing surfaces of the model.
+  - Their 122 feet end in a 1.4 mm cross that touches the surface without sinking, widening to
+    a body of 1.75, 2.67 or 3.0 mm.
+  - Their 122 contacts above end in a straight 1.4 mm cross, sunk 0.03 mm: about 1.1 mm² each,
+    five times a karasu Medium contact.
+
+**The raft (observed):**
+- 0.5 mm thick: 189 pads 6.0 mm wide, one under each trunk, joined by 548 bars 1.33 mm wide,
+  as wide as the trunks.
+- The bars join the pads' centres:
+  - 327 run along the lattice's rows and columns, 7.0 mm;
+  - 173 are one diagonal per cell, 9.9 mm, either way;
+  - the rest run along the outline, up to 77 mm.
+
+  That is almost a complete triangulation of the pads: 548 bars, where a complete one has 549.
+  One 77 mm bar crosses four others.
+- Each trunk stands on a cone that narrows from 4.33 mm to the trunk's 1.33 mm, from the raft's
+  top to 2.0 mm above the plate.
+- For comparison, karasu's web raft (TD-144) also puts a disc under each foot. Its bars are
+  1.0 mm wide, the shortest that do not cross, at most 20 mm long, with 0.8 mm fillets.
+
+**Findings (inferred):**
+1. **Most of the arm is touched far less.** The tips from the raft, which hold most of the arm,
+   cover a seventh of karasu's contact area:
+   - about a third of the tips;
+   - a contact a third the area;
+   - less than a third of the depth (0.03 against 0.1 mm).
+
+   This fits the owner's report. Counting the 122 large contacts of the supports standing on the
+   model, Lychee's total is still 56 % of karasu's, concentrated in those 122 places. A thin
+   cross may also break more easily than a full circle of the same width, but nothing measured
+   here shows it.
+2. **The tips and the frame are separate.** Few thin tips hang from a stiff, regular frame:
+   - trunks on a lattice;
+   - branches at one angle;
+   - braces of one length at fixed heights.
+
+   karasu's tips stand on supports of their own, branching freely.
+3. **Lychee's raft is a triangulated web of the trunks' feet.** That is karasu's web idea, with
+   bars to every neighbour and no length limit.
+4. **The supports standing on the model are the exception.** Their 1.4 mm contacts are larger
+   than any of karasu's. Where they left marks is not reported.
+
 ## The pixel's height on the Photon P1 (observed, 2026-11-18)
 
 - **Observed:** the two PP1s rasterise the specimen's 24 mm side (along the plate's Y)
@@ -220,7 +329,8 @@ The band tips stand in two staggered rows per band, 1.8 to 5.4 mm apart along th
   - Lychee's file uses 968 pixels, that is 24.8 µm each, though its header gives the panel as
     126.48 mm, which is 24.703 µm for 5120 pixels;
   - karasu's uses 976 pixels, 24.605 µm each, from Photon Workshop's area (125.976 mm).
-  The 30 mm side (along X, 16.8 µm) is 1786 pixels in both.
+  The 30 mm side (along X, 16.8 µm) is 1786 pixels in both. The arm's PP1 of E-SUP-08 also
+  uses 24.8 µm.
 - **Inferred:** one of the two prints its Y sizes about 0.8 % off: 0.19 mm on 24 mm, 1 mm on
   126 mm.
 - **Background:** the pitch is already an open question:
@@ -237,6 +347,7 @@ The band tips stand in two staggered rows per band, 1.8 to 5.4 mm apart along th
 **Waiting for the owner:**
 - the print of Lychee's specimen, with the same photos and checks as E-SUP-06;
 - whether the corner marks of E-SUP-06 are joined to the cylinder's side (hypothesis 3);
+- where the 1.4 mm contacts of E-SUP-08's supports standing on the model left marks;
 - the calipers check of the P1's pixel height.
 
 **Candidate changes, not decided:** each needs its own design, a decision the owner approves,
@@ -245,6 +356,12 @@ and a test print.
    is missing or higher, not where it is lower (a concave corner whose wall holds the
    underside), or keep tips clear of a wall by more than the gap that cures shut.
 2. **Fewer tips on flat undersides in Medium,** if Lychee's specimen shows that far fewer hold.
+   E-SUP-08 holds the same arm with fewer than half of karasu's contacts (659 against 1,509).
 3. **Lower fillets, or none, on a raft:** the fillets bring the base from 0.5 to 1.3 mm.
 4. **A slender tip:** a narrower body under the neck, as Lychee's 0.58 mm at 1 mm below against
    karasu's 0.74 to 0.78 mm.
+5. **A smaller, shallower contact:** E-SUP-08's contacts cover a third of a karasu Medium
+   contact's area and sink 0.03 mm against 0.1 mm.
+6. **A regular frame:** trunks on a lattice, branches at one angle, and braces one lattice step
+   long at fixed heights, carrying the tips (E-SUP-08); and a raft that joins the feet to every
+   neighbour.
