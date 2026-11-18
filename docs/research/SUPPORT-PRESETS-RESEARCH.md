@@ -431,5 +431,5 @@ that. Implemented under TD-136 in `docs/TECHNOLOGY-DECISIONS.md`.
    interface.
 
 **Continued in** [SUPPORT-MARKS-RESEARCH.md](SUPPORT-MARKS-RESEARCH.md) (2026-11-18): the marks the
-supports leave, the tip test, Lychee's supports on a curved underside and a pre-supported arm
-prepared in Lychee (E-SUP-05 to E-SUP-08).
+supports leave, the tip tests, Lychee's supports on a curved underside and a pre-supported arm
+prepared in Lychee (E-SUP-05 to E-SUP-09).

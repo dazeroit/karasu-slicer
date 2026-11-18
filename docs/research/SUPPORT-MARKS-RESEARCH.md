@@ -1,4 +1,4 @@
-# Support marks: the venom arm, the tip test and Lychee's supports (research, 2026-11-18)
+# Support marks: the venom arm, the tip tests and Lychee's supports (research, 2026-11-18)
 
 **Purpose:** find what decides how many marks the supports leave on a printed part and what kind,
 after the owner's print of the venom arm (E-SUP-05). Earlier evidence, about whether supports
@@ -119,7 +119,8 @@ not leave a part unsupported.
 
 **Findings (inferred):**
 1. **Narrowing the neck from 0.52 to 0.30 mm helped only a little.** The contact's shape alone
-   is not what decides how many marks are left, or how large they are.
+   is not what decides how many marks are left, or how large they are. E-SUP-09 later found that
+   most of these tips met the bands tilted, which widens a small contact most.
 2. **The corner row comes from karasu's outline rule (TD-136).** An underside's outline counts as
    an edge where the surface beyond it stands more than 0.5 mm higher **or lower**
    (`crates/karasu-project/src/support_plan/auto/edges.rs`). At the corner, the surface beyond
@@ -322,6 +323,146 @@ The band tips stand in two staggered rows per band, 1.8 to 5.4 mm apart along th
 4. **The supports standing on the model are the exception.** Their 1.4 mm contacts are larger
    than any of karasu's. Where they left marks is not reported.
 
+## The tip test with tips along the normal (E-SUP-09, owner, printed 2026-11-18)
+
+**Why a second test:**
+- **E-SUP-06's tips were tilted (observed in `tip_test.pp1`).** Of each specimen's 120 band
+  tips, 29 follow the surface's normal. The other 91 meet the bands 20 to 42° off it, 24.5° in
+  the median, measured from how far their sections shift between layers.
+  - They are the tips of supports standing on other supports.
+  - Their axis points from the contact towards the parent's shaft, a straight axis allowed up to
+    `max_axis_deviation_deg` (60°) from the normal (`docs/SUPPORTS-SPEC.md`, section 4).
+- **A tilted tip touches the surface differently from its setting (inferred, from the tip's
+  geometry in the same section).** The contact is placed along the tip's axis, not along the
+  normal:
+  - a cone's end face comes out of the surface on one side once the tilt passes `atan(p / r)`:
+    22° for Medium's 0.5 mm cone sunk 0.1 mm, 9° for a 0.37 mm cone sunk 0.03 mm;
+  - a ball sinks deeper as it tilts, `ρ − (ρ − p) cos θ` below the surface (`ρ` the ball's
+    radius), so its neck widens;
+  - the footprint's centre moves 0.10 to 0.15 mm at 45°.
+
+| Footprint at the surface (mm²), by tilt | 0° | 15° | 25° | 35° | 45° |
+| --- | --- | --- | --- | --- | --- |
+| A: cone 0.5 mm, sunk 0.1 mm | 0.212 | 0.219 | 0.228 | 0.225 | 0.241 |
+| B: ball 0.5 mm, sunk 0.1 mm | 0.126 | 0.130 | 0.138 | 0.150 | 0.172 |
+| C: ball 0.5 mm, sunk 0.05 mm | 0.071 | 0.079 | 0.093 | 0.112 | 0.136 |
+| D: cone 0.37 mm, sunk 0.03 mm | 0.112 | 0.101 | 0.092 | 0.097 | 0.110 |
+
+**The specimens (observed):**
+- **Specimen:** E-SUP-06's specimen, with one to four bars on top instead of dots.
+- **Supports:** E-SUP-06's 161 supports, with every tip's axis set to the surface's normal.
+  - Each of the 92 supports standing on another had the height where it joins its parent
+    lowered, by a script, so that the segment from its joint to the parent leans at most 43°
+    from vertical.
+  - `karasu-cli` reported no collision and no warning.
+  - This builds by hand what tips along the normal would look like (candidate change 7). It does
+    not test how a planner would choose the junctions.
+- **Contact:** as in E-SUP-06, only the contact differs between the specimens:
+
+| Specimen | Bars | Contact | Section in the last layer below a band | Section 1 mm below | Same contact in E-SUP-06 |
+| --- | --- | --- | --- | --- | --- |
+| An | 1 | cone 0.5 mm, sunk 0.1 mm | 0.52 mm | 0.70 mm | A: 0.54 and 0.78 mm |
+| Dn | 2 | cone 0.37 mm, sunk 0.03 mm | 0.38 mm | 0.61 mm | none; E-SUP-08's tip width |
+| Bn | 3 | ball 0.5 mm, sunk 0.1 mm | 0.42 mm | 0.67 mm | B: 0.44 and 0.75 mm |
+| Cn | 4 | ball 0.5 mm, sunk 0.05 mm | 0.35 mm | 0.66 mm | C: 0.38 and 0.74 mm |
+
+The sections are measured as in E-SUP-06. Those 1 mm below are smaller than E-SUP-06's because a
+tilted tip's section is an oblique, wider cut (inferred).
+
+**Files and checks (observed):**
+- **Tilt (in the PP1):** every band tip but one stands within 0.3° of vertical, measured
+  from the shift of its section between layers 200 and 219. The exception, on the tile's end
+  edge, reads 2.3 to 4.0°.
+- **Files:** kept in `E:\3dprint\karasu_slicer_compare_test\tip_test\`; karasu-slicer 0.2.0-dev,
+  code as at 45bc195:
+  - `tip_test_2n.karasu`, SHA-256
+    `6950e957c638639242a59944e50be3a875470ff58ffe7d3b2dcfd9bcdd24efd2`;
+  - `tip_test_2n.pp1`, SHA-256
+    `7ce6c3c5df60229e2c510df78276cc07cab731c4126fb6788e1bf3c2b096e126`: the four specimens
+    side by side, each lifted 5 mm, on E-SUP-06's raft and print setting; 280 layers, 2,726 s
+    and 16.9 ml estimated;
+  - the STLs: An `d671c4b8400a0630f80e178f1f4fc0c1066e253cb7f2b52ba088d0b387514f0c`, Dn
+    `b097a6915246a43d454a27b266b91c40d312b9f4bec749fc81504a8e537c05d8`, Bn
+    `773b209ef144b8be3e56557ed3e1df0e7bef1f489a73ccd79587d13c0c59400b`, Cn
+    `3cd3b3408f5404b0f3682242bcafa8b621bbb958095e939fe89d68a77662bae8`.
+- **Read before printing (UVtools 2.2.0 issue detection):**
+  - **Islands:** at the cylinder's lowest line (layer 100), 75,000 pixels each on Dn, Bn and Cn,
+    none on An.
+  - **Overhang:** under the bands (layer 220), An 314,000 pixels, Bn 387,000, Dn 413,000, Cn
+    444,000.
+
+**Outcome (owner, 2026-11-18; four photos in
+`E:\3dprint\karasu_slicer_compare_test\tip_test\foto\tip_test_2n\`, An
+`5de8653538b58b389efbc086247b2ce511d193b3d5ceb45f78c5ea4e7c9b8f20`, Dn
+`626883e77eb7bced8de8ab9c4a9eb66497ccd65daeadd1004c6c61eacf1d3e86`, Bn
+`ddb30a07e8565368a89d2a700dc226cb9654fbc352e1f28d70f9393ff5a9a0f1`, Cn
+`78aa46ed7460f5132969c38625a408af8bb8e7adc0afcfceb7b95f1aa6afdf48`):**
+- **Print (observed):** all four printed whole, the cylinder's lowest line included.
+- **Comparison (owner, in hand):** all four leave better marks than E-SUP-06's specimens and
+  come off more easily, though the supports are many and leave little room to lever them off.
+  Dn and Cn give the best results.
+- **Corner rows (observed in the photos):** they still leave the largest marks on all four,
+  about 0.8 to 1 mm wide, as in E-SUP-06, whatever the contact.
+- **Band marks (observed in the photos):**
+  - Dn, Bn and Cn show dots about 0.25 to 0.3 mm wide.
+  - An's photo is out of focus, so its dots cannot be measured.
+  - No photo shows whether a dot stands proud or is a pit.
+  - The inner half of Dn's, Bn's and Cn's bands looks matte and rough, and the outer strip
+    smooth. The cause is not known.
+- **The corner tips' gap (observed in the PP1):** between each corner tip's section and the
+  cylinder's, in the last millimetre before the band:
+
+| Specimen | 1 mm below the band (layer 200) | 0.5 mm below (layer 210) | Last layer (219) |
+| --- | --- | --- | --- |
+| An | 0.12 mm | 0.12 mm | 0.15 mm |
+| Dn | 0.17 mm | 0.17 mm | 0.22 mm |
+| Bn | 0.15 mm | 0.15 mm | 0.20 mm |
+| Cn | 0.15 mm | 0.15 mm | 0.22 mm |
+
+The tip's axis stands 0.4 mm from the cylinder's side. The tip widens downwards while the side
+curves away under the band, so the gap stays this narrow for about 1.5 mm below the band (computed
+for An: 0.11 to 0.15 mm).
+
+**The owner's reading:**
+- A smaller contact leaves fewer marks and comes off more easily.
+- With tips along the normal, the contact is the one set; tilted tips make it larger.
+- At the corners, the resin around a tip probably cures although no pixel lights it (light
+  bleeding, or cross-curing). A safety distance between tips and the model, set by the user,
+  could prevent it.
+
+**Findings (inferred):**
+1. **The tilt mattered.** With the same contacts and the same supports, all four specimens did
+   better once the tips followed the normal. The evidence is one print of each, judged by hand,
+   and the junctions moved as well as the tips.
+2. **The section at the surface decides more than the contact's shape.** The two best, Dn and Cn,
+   have the smallest sections (0.38 and 0.35 mm), and one is a cone, the other a ball.
+3. **A cone keeps its section better than a ball.**
+   - The 0.37 mm cone's section at the surface is 0.378 mm sunk 0.03 mm and 0.395 mm sunk
+     0.1 mm.
+   - A 0.5 mm ball's neck, `2√(p(D − p))`, is 0.30 mm sunk 0.05 mm and 0.40 mm sunk 0.1 mm.
+
+   Where the real depth differs from the set one, the cone's contact stays the same and the
+   ball's changes. That happens at an anchor within its tolerance (0.05 mm) and on a curved
+   surface.
+4. **The corner rows do not depend on the tip.** Neither the tilt nor the contact changed them.
+   That leaves their placement (E-SUP-06, finding 2) and the narrow gap (hypothesis 3).
+   - **Why the rules allow such a gap:** `clearance_mm` (0.3 mm) applies to every part except a
+     support's own contact part, its model foot and mini supports. The contact part must only not
+     enter the model away from its contact (TD-124), with no clearance (`docs/SUPPORTS-SPEC.md`,
+     section 5).
+   - **Hypothesis, sideways:** the light of the lit pixels on both sides spreads into the gap.
+     The grey pixels of the anti-aliased edge add to it. The tip would be joined along its
+     height, about 1 mm.
+   - **Hypothesis, in Z:** when the band's first layer is exposed, its light cures the resin left
+     in the gap under it, beyond the layer's thickness. The tip would be joined only in its top
+     0.1 to 0.2 mm.
+
+   How far a corner mark runs down the cylinder's side from the band would tell the two apart.
+5. **Whether such small contacts hold a larger part is not known.** The specimen is small and
+   light, and the forces that pull a layer off the film grow with its area. E-SUP-08's arm is
+   held mostly by 0.37 mm crosses sunk 0.03 mm, besides 122 larger contacts, which suggests that
+   they can.
+
 ## The pixel's height on the Photon P1 (observed, 2026-11-18)
 
 - **Observed:** the two PP1s rasterise the specimen's 24 mm side (along the plate's Y)
@@ -346,22 +487,44 @@ The band tips stand in two staggered rows per band, 1.8 to 5.4 mm apart along th
 
 **Waiting for the owner:**
 - the print of Lychee's specimen, with the same photos and checks as E-SUP-06;
-- whether the corner marks of E-SUP-06 are joined to the cylinder's side (hypothesis 3);
+- whether the corner marks of E-SUP-06 and E-SUP-09 are joined to the cylinder's side, and how
+  far down it they run (hypothesis 3; E-SUP-09, finding 4);
 - where the 1.4 mm contacts of E-SUP-08's supports standing on the model left marks;
 - the calipers check of the P1's pixel height.
+
+**Proposed test, not prepared:** a gap test.
+- **Specimen:** a flat underside with a vertical wall below it.
+- **Supports:** rows of tips along the normal, whose least distance from the wall is 0.1, 0.2,
+  0.3, 0.4, 0.5 and 0.7 mm.
+- **What it would show:** the rows that end up joined to the wall give the gap that cures shut
+  with the owner's resin and exposure. They also show whether `clearance_mm`'s 0.3 mm is enough
+  for the other parts.
 
 **Candidate changes, not decided:** each needs its own design, a decision the owner approves,
 and a test print.
 1. **Outline tips only at free edges.** Give edge tips only where the surface beyond an outline
    is missing or higher, not where it is lower (a concave corner whose wall holds the
-   underside), or keep tips clear of a wall by more than the gap that cures shut.
+   underside). Change 8 would keep any tip clear of a wall.
 2. **Fewer tips on flat undersides in Medium,** if Lychee's specimen shows that far fewer hold.
    E-SUP-08 holds the same arm with fewer than half of karasu's contacts (659 against 1,509).
 3. **Lower fillets, or none, on a raft:** the fillets bring the base from 0.5 to 1.3 mm.
 4. **A slender tip:** a narrower body under the neck, as Lychee's 0.58 mm at 1 mm below against
    karasu's 0.74 to 0.78 mm.
 5. **A smaller, shallower contact:** E-SUP-08's contacts cover a third of a karasu Medium
-   contact's area and sink 0.03 mm against 0.1 mm.
+   contact's area and sink 0.03 mm against 0.1 mm. In E-SUP-09 the two smallest sections at the
+   surface, 0.35 and 0.38 mm, left the best marks. A cone's section depends less on the depth
+   than a ball's (E-SUP-09, finding 3).
 6. **A regular frame:** trunks on a lattice, branches at one angle, and braces one lattice step
    long at fixed heights, carrying the tips (E-SUP-08); and a raft that joins the feet to every
    neighbour.
+7. **Tips along the surface's normal,** with the support bending at the tip's joint, as on all
+   four specimens of E-SUP-09 and in Lychee's files (E-SUP-07, E-SUP-08). A planner must then
+   choose the junctions so that the segment from the joint stays within the shaft's angle;
+   E-SUP-09 did it by hand.
+8. **A safety distance for the contact part (owner's proposal, 2026-11-18).**
+   - **What:** keep a support's contact part a set distance from every surface other than the
+     one it touches, along its whole length.
+   - **A setting:** the gap that cures shut depends on the resin, the exposure and the
+     anti-aliasing. Its default would come from the gap test.
+   - **The design question:** telling the touched surface from a wall beside it, above all on
+     curved surfaces and at creases.
