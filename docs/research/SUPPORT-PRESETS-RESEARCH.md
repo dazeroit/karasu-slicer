@@ -429,3 +429,6 @@ that. Implemented under TD-136 in `docs/TECHNOLOGY-DECISIONS.md`.
    keeps its meaning (the cone's end inside the model) so that saved projects slice the same.
 5. **Not proposed yet:** a narrower neck that breaks off cleanly, a warm soak suggested in the
    interface.
+
+**Continued in** [SUPPORT-MARKS-RESEARCH.md](SUPPORT-MARKS-RESEARCH.md) (2026-11-18): the marks the
+supports leave, the tip test and Lychee's supports on a curved underside (E-SUP-05 to E-SUP-07).
