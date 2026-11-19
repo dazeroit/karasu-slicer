@@ -175,10 +175,6 @@ impl MainWindow {
                 .clone_object(form.index, copies, form.to, form.arranged, name)
             {
                 Ok(cloned) => cloned_message(&model, &plate, &cloned),
-                Err(Refused::NoRoom) => Message::new(
-                    Level::Warning,
-                    tr!("plates-transfer-no-room", model = &model, plate = &plate),
-                ),
                 Err(Refused::Loading) => Message::new(Level::Info, tr!("plates-transfer-loading")),
                 Err(Refused::Unknown) => return,
             };
@@ -195,6 +191,11 @@ fn cloned_message(model: &str, plate: &str, cloned: &Cloned) -> Message {
         plate = plate
     );
     let undo = tr!("clone-undo");
+    if cloned.too_large {
+        // In the middle of the plate, over each other: a warning (TD-163).
+        return Message::new(Level::Warning, text)
+            .detail(format!("{} {undo}", tr!("clone-too-large", plate = plate)));
+    }
     if cloned.moved > 0 {
         Message::new(Level::Success, text).detail(format!(
             "{} {undo}",

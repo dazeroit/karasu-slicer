@@ -1442,7 +1442,7 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        shorter), and models may turn about Z at any angle to fit (off by default). Then an
        arrangement of every plate.
      - **A model moved, copied or cloned to a plate always lands (owner, 2026-11-19, TD-163,
-       accepted, not implemented):** with no room, it goes to the middle of the plate instead of
+       implemented the same day, issue #39):** with no room, it goes to the middle of the plate instead of
        being refused, and the notification says so; the status bar warns when footprints
        overlap. The command line still refuses copies that do not fit.
      - **Support contacts along the normal, and a safety distance (owner, 2026-11-19, TD-164,

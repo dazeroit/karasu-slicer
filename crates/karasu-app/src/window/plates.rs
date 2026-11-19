@@ -406,17 +406,25 @@ impl MainWindow {
                     (false, Landing::Beside) => {
                         tr!("plates-moved-beside", model = model, plate = plate)
                     }
+                    (false, Landing::Middle) => {
+                        tr!("plates-moved-middle", model = model, plate = plate)
+                    }
                     (true, Landing::Kept) => tr!("plates-copied", model = model, plate = plate),
                     (true, Landing::Beside) => {
                         tr!("plates-copied-beside", model = model, plate = plate)
                     }
+                    (true, Landing::Middle) => {
+                        tr!("plates-copied-middle", model = model, plate = plate)
+                    }
                 };
-                Message::new(Level::Success, text)
+                // In the middle with no room, it may overlap: a warning, not a refusal (TD-163).
+                let level = if landing == Landing::Middle {
+                    Level::Warning
+                } else {
+                    Level::Success
+                };
+                Message::new(level, text)
             }
-            Err(Refused::NoRoom) => Message::new(
-                Level::Warning,
-                tr!("plates-transfer-no-room", model = &model, plate = &plate),
-            ),
             Err(Refused::Loading) => Message::new(Level::Info, tr!("plates-transfer-loading")),
             Err(Refused::Unknown) => return,
         };

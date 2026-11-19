@@ -95,13 +95,15 @@ clone-done = { $count ->
        *[other] { $count } copies of { $model } added to { $plate }
     }
 clone-undo = Ctrl+Z removes every copy at once.
+clone-too-large = The model is larger than an empty plate, so its copies are in the middle of { $plate }, over each other.
 sidebar-copy-to-plate = Copy to plate
 sidebar-export-model = Export model
 plates-moved = { $model } moved to { $plate }
 plates-moved-beside = { $model } moved to { $plate }, beside the models there
 plates-copied = { $model } copied to { $plate }
 plates-copied-beside = { $model } copied to { $plate }, beside the models there
-plates-transfer-no-room = No room for { $model } on { $plate }, clear of the models there: it stays where it is
+plates-moved-middle = { $model } moved to { $plate }, in the middle of the plate: there was no room beside the models there, so it may overlap them
+plates-copied-middle = { $model } copied to { $plate }, in the middle of the plate: there was no room beside the models there, so it may overlap them
 plates-transfer-loading = A model is still loading: try again once it has opened
 arrange-title = Arrange models · { $plate }
 arrange-spacing = Spacing between models
@@ -377,6 +379,10 @@ status-floating = { $count ->
 status-outside = { $count ->
     [one] { $count } model outside the build volume
    *[other] { $count } models outside the build volume
+}
+status-overlapping = { $count ->
+    [one] { $count } model overlaps another
+   *[other] { $count } models overlap
 }
 status-importing = Importing { $names }
 status-saving = Saving { $name }

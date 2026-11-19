@@ -2263,6 +2263,18 @@ impl MainWindow {
             let text = tr!("status-outside", count = outside);
             statuses.push(Status::new(text, theme::WARNING.color()));
         }
+        // Models whose footprints overlap print joined, or not at all with drain holes: a model
+        // moved where there was no room lands over others (TD-163).
+        let overlapping: std::collections::BTreeSet<usize> = self
+            .workspace
+            .overlapping()
+            .into_iter()
+            .flat_map(|(a, b)| [a, b])
+            .collect();
+        if !overlapping.is_empty() {
+            let text = tr!("status-overlapping", count = overlapping.len());
+            statuses.push(Status::new(text, theme::WARNING.color()));
+        }
         let floating = self.workspace.floating().len();
         if floating > 0 {
             let text = tr!("status-floating", count = floating);
@@ -4594,6 +4606,35 @@ mod tests {
                 model = &model,
                 plate = &third.content().name
             )
+        );
+        // With no room on the target, it lands in its middle all the same, with a warning, and
+        // the status bar counts the models overlapping there (TD-163).
+        let third = third.id();
+        window.workspace.show_plate(third);
+        window.follow_plate(&ctx);
+        window.workspace.edit(|plate| {
+            let width = plate.printer.as_ref().unwrap().build_size_mm[0];
+            plate.objects[0].pose.scale = [width / 4.0; 3];
+        });
+        window.transfer_object(0, Some(second), true);
+        let latest = window.messages.latest().unwrap();
+        assert_eq!(
+            latest.text,
+            tr!("plates-copied-middle", model = &model, plate = &second_name)
+        );
+        assert_eq!(latest.colour, theme::WARNING.color());
+        window.workspace.show_plate(second);
+        window.follow_plate(&ctx);
+        assert_eq!(window.workspace.plate().objects.len(), 2);
+        let overlapping = tr!("status-overlapping", count = 2_usize);
+        assert!(
+            window.statuses().iter().any(|s| s.text == overlapping),
+            "{:?}",
+            window
+                .statuses()
+                .iter()
+                .map(|s| s.text.clone())
+                .collect::<Vec<_>>()
         );
         let _ = std::fs::remove_dir_all(&folder);
     }
