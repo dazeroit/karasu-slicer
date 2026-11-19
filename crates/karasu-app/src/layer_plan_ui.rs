@@ -614,6 +614,15 @@ impl RangeWindow {
             |ui, part| match part {
                 crate::dialog::Part::Body => {
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                    // Whether the printer applies a range's heights and exposures is up to its
+                    // firmware: the Photon P1 does not (owner, 2026-11-18; issue #35, TD-064).
+                    crate::widgets::state_line(
+                        ui,
+                        crate::icons::Icons::shared(ui.ctx()).as_deref(),
+                        Some(crate::icons::Icon::Warning),
+                        &tr!("layers-firmware-note"),
+                        theme::WARNING.color(),
+                    );
                     self.fields(ui, boundaries, &others);
                     let Some(check) = &check else {
                         return;
@@ -1057,6 +1066,27 @@ mod tests {
         set(&mut workspace, &[], &[]);
         assert_eq!(workspace.plate().settings.layer_plan, None);
         let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn the_range_window_says_that_the_firmware_decides() {
+        // Issue #35: whether a printer applies a range's heights and exposures is up to its
+        // firmware; said for adaptive and fixed ranges alike.
+        let mut workspace = Workspace::new();
+        let boundaries = vec![0.0, 0.05, 0.1, 1.0, 2.0];
+        let note = tr!("layers-firmware-note");
+        for adaptive in [true, false] {
+            let mut window = RangeWindow::add(&workspace, 1.0, adaptive);
+            let ctx = egui::Context::default();
+            let (nodes, _) = crate::accessibility_check::settled(&ctx, |ui| {
+                window.show(ui.ctx(), &mut workspace, &boundaries);
+            });
+            let said = nodes
+                .iter()
+                .filter(|(_, n)| n.value() == Some(note.as_str()))
+                .count();
+            assert_eq!(said, 1, "adaptive {adaptive}");
+        }
     }
 
     #[test]
