@@ -144,8 +144,10 @@ Native dialogs: open, and export.
 | Escape | Stop placing or dragging holes, release the selected hole, or else clear the selection |
 | Shift, while turning | Snap the turn to 15° (a drag modifier, not an action) |
 
-Shortcuts work while no widget holds the keyboard focus. Not bound: open, save, fit, home,
-slice, export.
+Shortcuts wait while a text or value field is typed in, except Save and Save as, which enter
+the typed value first; beside any other control with the keyboard focus they work, except on
+the keys that control uses itself (arrows, Page Up and Page Down, Home, End, Space, Enter, Tab;
+issue #32). Not bound: open, save, fit, home, slice, export.
 
 ## 10. Mouse in the viewport
 

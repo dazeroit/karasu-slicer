@@ -28,7 +28,7 @@ mod settings_dialog;
 mod tool_values;
 
 use crate::{
-    actions::{Action, Keymap},
+    actions::{self, Action, Keymap},
     appearance::Appearance,
     camera::{Camera, Mat4, Ray},
     gpu,
@@ -103,6 +103,10 @@ pub struct MainWindow {
     lines_look: Option<(Appearance, String)>,
     /// Fit the view once the next imports have arrived.
     fit_pending: bool,
+    /// A shortcut pressed while a value was typed (Save or Save as), and the frame it was
+    /// pressed on: it runs at the end of a later frame, once the field has entered the value
+    /// (issue #32).
+    after_typing: Option<(Action, u64)>,
     /// Viewport size in points, for fitting.
     aspect: f64,
     /// The selected object.
@@ -438,6 +442,7 @@ impl MainWindow {
             lines_printer: None,
             lines_look: None,
             fit_pending,
+            after_typing: None,
             aspect: 1.6,
             selected: None,
             deleting: None,
@@ -2234,6 +2239,10 @@ impl MainWindow {
             busy: true,
             ..Status::new(text, theme::TEXT_PRIMARY.color())
         };
+        // First, so a long line never cuts it: the user is waiting on it.
+        if let Some(file) = self.project_file.status() {
+            statuses.push(busy(file));
+        }
         let importing: Vec<&str> = self.workspace.importing().collect();
         if !importing.is_empty() {
             statuses.push(busy(tr!("status-importing", names = importing.join(", "))));
@@ -3038,23 +3047,65 @@ impl MainWindow {
     /// The actions whose shortcuts were pressed, while no widget holds the keyboard focus (a
     /// text field or a value being typed).
     fn keys(&mut self, ui: &egui::Ui) {
-        // Nor while a dialog is open: its keys are its own (Escape, Enter).
-        if ui.ctx().egui_wants_keyboard_input()
-            || ui.ctx().memory(|m| m.top_modal_layer().is_some())
-        {
+        let ctx = ui.ctx();
+        // A dialog's keys are its own (Escape, Enter).
+        if ctx.memory(|m| m.top_modal_layer().is_some()) {
             return;
         }
-        // The section's keys wait while another control holds the keyboard: one reached with
-        // Tab, or the layer image, which takes the same keys (owner R10, 2026-11-10).
-        let focused = ui.ctx().memory(egui::Memory::focused);
+        // A text or value field being typed in keeps the keys, Ctrl+Z included, except Save
+        // and Save as: the field enters the typed value first, then they run (owner,
+        // 2026-11-19; issue #32).
+        if widgets::typing(ctx) {
+            let pressed = ui.input_mut(|i| {
+                self.keymap.pressed_where(i, |_, action| {
+                    matches!(action, Action::Save | Action::SaveAs)
+                })
+            });
+            if let Some(&action) = pressed.first() {
+                if self.enabled(action) && self.after_typing.is_none() {
+                    widgets::enter_typed(ctx);
+                    self.after_typing = Some((action, ctx.cumulative_pass_nr()));
+                    ctx.request_repaint();
+                }
+            }
+            return;
+        }
+        // Another control with the keyboard (a slider, a control reached with Tab, the first
+        // of a window just opened, the layer image) keeps only the keys it uses itself. The
+        // section's keys wait while it holds them, unless it is the section's slider (owner
+        // R10, 2026-11-10).
+        let focused = ctx.memory(egui::Memory::focused);
         let free = focused.is_none() || focused == self.section.slider_id();
         let pressed = ui.input_mut(|i| {
-            self.keymap
-                .pressed_where(i, |action| free || !matches!(action, Action::Section(_)))
+            self.keymap.pressed_where(i, |shortcut, action| {
+                free || !(matches!(action, Action::Section(_)) || actions::control_key(shortcut))
+            })
         });
         for action in pressed {
             self.perform(action);
         }
+    }
+
+    /// The shortcut pressed while a value was typed, at the end of a frame after the one it
+    /// was pressed on (from the project file's frame): every field drawn since has entered its
+    /// typed value. A text field that
+    /// is no value field (a search, a name being typed) did not take the request; it gives the
+    /// keyboard back, its text kept as it is, and the action runs all the same.
+    fn run_after_typing(&mut self, ctx: &egui::Context) {
+        let Some((action, pressed)) = self.after_typing else {
+            return;
+        };
+        if ctx.cumulative_pass_nr() <= pressed {
+            ctx.request_repaint();
+            return;
+        }
+        self.after_typing = None;
+        if widgets::take_enter_typed(ctx) {
+            if let Some(id) = ctx.memory(egui::Memory::focused) {
+                ctx.memory_mut(|m| m.surrender_focus(id));
+            }
+        }
+        self.perform(action);
     }
 
     /// Whether the tool in use has a list window (owner, 2026-10-29).
@@ -4744,6 +4795,168 @@ mod tests {
         frame(&mut window, Vec::new());
         assert_eq!(window.clearing, None);
         assert_eq!(window.deletable(Tool::Raft, Some(0)), None);
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    /// A window with an 8 mm cube, in `folder`.
+    fn window_with_cube(folder: &std::path::Path) -> MainWindow {
+        std::fs::create_dir_all(folder).unwrap();
+        let model = folder.join("cube.stl");
+        std::fs::write(&model, crate::workspace::tests::box_stl([0.0; 3], [8.0; 3])).unwrap();
+        let mut window = MainWindow::new(Vec::new());
+        window.workspace.open(model);
+        crate::workspace::tests::wait(&mut window.workspace);
+        window
+    }
+
+    /// `key` pressed with Ctrl (Command on a Mac).
+    fn command(key: egui::Key) -> egui::Event {
+        egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::COMMAND,
+        }
+    }
+
+    #[test]
+    fn shortcuts_work_while_a_control_holds_the_keyboard_and_wait_while_a_field_is_typed_in() {
+        // Issue #32: every shortcut stopped while any control held the keyboard.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-window-focus-{}", std::process::id()));
+        let mut window = window_with_cube(&folder);
+        let ctx = egui::Context::default();
+        let field = egui::Id::new("a text field");
+        // Each frame draws a text field, gives the keyboard to `focus`, then reads the keys.
+        let frame = |window: &mut MainWindow, events: Vec<egui::Event>, focus: egui::Id| {
+            let input = egui::RawInput {
+                events,
+                ..egui::RawInput::default()
+            };
+            let mut output = ctx.run_ui(input, |ui| {
+                let mut text = String::new();
+                ui.add(egui::TextEdit::singleline(&mut text).id(field));
+                ui.memory_mut(|m| m.request_focus(focus));
+                window.keys(ui);
+            });
+            output.textures_delta.clear();
+        };
+        #[allow(clippy::float_cmp)] // The exact values set below.
+        let moved = |w: &MainWindow| w.workspace.plate().objects[0].translate_mm == [5.0, 0.0, 0.0];
+        // A control that is no text field holds the keyboard (a slider, a button reached with
+        // Tab, the first control of a window just opened): Ctrl+Z undoes.
+        window
+            .workspace
+            .edit(|p| p.objects[0].translate_mm = [5.0, 0.0, 0.0]);
+        assert!(moved(&window));
+        let control = egui::Id::new("another control");
+        frame(&mut window, Vec::new(), control);
+        frame(&mut window, vec![command(egui::Key::Z)], control);
+        assert!(!moved(&window));
+        // A text field holds it: Ctrl+Z is the field's, the plate stays as it is.
+        window
+            .workspace
+            .edit(|p| p.objects[0].translate_mm = [5.0, 0.0, 0.0]);
+        frame(&mut window, Vec::new(), field);
+        frame(&mut window, vec![command(egui::Key::Z)], field);
+        assert!(moved(&window));
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn ctrl_s_while_a_value_is_typed_enters_it_then_saves() {
+        // Issue #32, owner 2026-11-19: Save and Save as work while a value is typed, the value
+        // entered first.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-window-typed-{}", std::process::id()));
+        let mut window = window_with_cube(&folder);
+        let path = folder.join("cube.karasu");
+        window.project_file.path = Some(path.clone());
+        let ctx = egui::Context::default();
+        let mut mm = 1.0;
+        // Each frame draws a value field, reads the keys and ends as the window's frame does.
+        let frame = |window: &mut MainWindow, mm: &mut f64, events: Vec<egui::Event>| {
+            let input = egui::RawInput {
+                events,
+                ..egui::RawInput::default()
+            };
+            let mut id = egui::Id::NULL;
+            let mut output = ctx.run_ui(input, |ui| {
+                id = ui
+                    .add(widgets::UnitField::new(mm, widgets::Unit::Millimetre))
+                    .id;
+                window.keys(ui);
+                window.run_after_typing(ui.ctx());
+            });
+            output.textures_delta.clear();
+            id
+        };
+        let id = frame(&mut window, &mut mm, Vec::new());
+        ctx.memory_mut(|m| m.request_focus(id));
+        frame(&mut window, &mut mm, Vec::new());
+        ctx.data_mut(|d| d.insert_temp(id, "25".to_owned()));
+        // Ctrl+S: the field enters 25 on the next frame, and only then does the save start.
+        frame(&mut window, &mut mm, vec![command(egui::Key::S)]);
+        assert!(
+            (mm - 1.0).abs() < 1e-12 && !window.project_file.busy(),
+            "{mm}"
+        );
+        frame(&mut window, &mut mm, Vec::new());
+        assert!((mm - 25.0).abs() < 1e-12, "{mm}");
+        assert!(window.project_file.busy(), "saving");
+        assert!(
+            !ctx.memory(|m| m.has_focus(id)),
+            "the field gave the keyboard back"
+        );
+        for _ in 0..2000 {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                window.project_frame(ui.ctx());
+            });
+            output.textures_delta.clear();
+            if !window.project_file.busy() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(path.exists() && !window.unsaved());
+        // In a text field that is no value field (a search), Ctrl+S saves too: the field gives
+        // the keyboard back with its text as it is.
+        window
+            .workspace
+            .edit(|p| p.objects[0].translate_mm = [3.0, 0.0, 0.0]);
+        let search = egui::Id::new("a search");
+        let typed = |window: &mut MainWindow, events: Vec<egui::Event>| {
+            let input = egui::RawInput {
+                events,
+                ..egui::RawInput::default()
+            };
+            let mut output = ctx.run_ui(input, |ui| {
+                let mut text = "abc".to_owned();
+                ui.add(egui::TextEdit::singleline(&mut text).id(search));
+                window.keys(ui);
+                window.run_after_typing(ui.ctx());
+            });
+            output.textures_delta.clear();
+        };
+        ctx.memory_mut(|m| m.request_focus(search));
+        typed(&mut window, Vec::new());
+        typed(&mut window, vec![command(egui::Key::S)]);
+        assert!(!window.project_file.busy());
+        typed(&mut window, Vec::new());
+        assert!(window.project_file.busy(), "saving");
+        assert!(!ctx.memory(|m| m.has_focus(search)));
+        for _ in 0..2000 {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                window.project_frame(ui.ctx());
+            });
+            output.textures_delta.clear();
+            if !window.project_file.busy() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(!window.unsaved());
         let _ = std::fs::remove_dir_all(&folder);
     }
 

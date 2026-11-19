@@ -5,11 +5,16 @@
 //! their labels and hints, and maps keys to them.
 //!
 //! **Shortcuts** are data, a [`Keymap`], so the settings panel can let the user change them and
-//! keep them across restarts. The defaults are the shortcuts the window has always had. A
-//! shortcut fires only while no widget holds the keyboard focus (a text field or a value being
-//! typed), and the more specific of two
-//! shortcuts on one key wins (Ctrl+Shift+Z before Ctrl+Z), because egui's matching ignores
-//! extra Shift and Alt.
+//! keep them across restarts. The defaults are the shortcuts the window has always had. The
+//! more specific of two shortcuts on one key wins (Ctrl+Shift+Z before Ctrl+Z), because egui's
+//! matching ignores extra Shift and Alt.
+//!
+//! **While a control holds the keyboard** (issue #32; owner, 2026-11-19):
+//! - a text or value field being typed in keeps every key, except Save and Save as, which enter
+//!   the typed value first and then run;
+//! - any other control (a slider, a button reached with Tab, the first control of a window just
+//!   opened) keeps only the keys it uses itself ([`control_key`]): the other shortcuts work;
+//! - a modal dialog keeps every key.
 //!
 //! The plate's undo history stays snapshot-based ([`karasu_project::project`]): actions are not
 //! commands that undo themselves.
@@ -507,6 +512,30 @@ impl Action {
     }
 }
 
+/// Whether `shortcut` is on a key that a focused control (a slider, a button, a list, the
+/// layer image) uses itself: the arrows, Page Up and Page Down, Home, End, Space, Enter and Tab,
+/// without Ctrl, Alt or Command. While such a control holds the keyboard these shortcuts wait
+/// (issue #32).
+#[must_use]
+pub fn control_key(shortcut: KeyboardShortcut) -> bool {
+    let held = shortcut.modifiers;
+    !(held.ctrl || held.alt || held.command || held.mac_cmd)
+        && matches!(
+            shortcut.logical_key,
+            Key::ArrowUp
+                | Key::ArrowDown
+                | Key::ArrowLeft
+                | Key::ArrowRight
+                | Key::PageUp
+                | Key::PageDown
+                | Key::Home
+                | Key::End
+                | Key::Space
+                | Key::Enter
+                | Key::Tab
+        )
+}
+
 /// The keyboard shortcuts of the actions. An action may have several, or none.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Keymap {
@@ -637,16 +666,18 @@ impl Keymap {
             .map(|(shortcut, _)| *shortcut)
     }
 
-    /// The actions `keep` accepts whose shortcuts were pressed, their keys consumed; the other
-    /// actions' keys are left for the widgets.
+    /// The actions whose shortcuts were pressed and that `keep` accepts with their shortcut,
+    /// their keys consumed; the other shortcuts' keys are left for the widgets.
     pub fn pressed_where(
         &self,
         input: &mut egui::InputState,
-        keep: impl Fn(Action) -> bool,
+        keep: impl Fn(KeyboardShortcut, Action) -> bool,
     ) -> Vec<Action> {
         self.bindings
             .iter()
-            .filter(|(shortcut, action)| keep(*action) && input.consume_shortcut(shortcut))
+            .filter(|(shortcut, action)| {
+                keep(*shortcut, *action) && input.consume_shortcut(shortcut)
+            })
             .map(|(_, action)| *action)
             .collect()
     }
@@ -766,10 +797,40 @@ mod tests {
         };
         let mut actions = Vec::new();
         let mut output = ctx.run_ui(input, |ui| {
-            actions = ui.input_mut(|i| keymap.pressed_where(i, |_| true));
+            actions = ui.input_mut(|i| keymap.pressed_where(i, |_, _| true));
         });
         output.textures_delta.clear();
         actions
+    }
+
+    #[test]
+    fn a_focused_control_keeps_only_the_keys_it_uses() {
+        // Issue #32.
+        let plain = |key| KeyboardShortcut::new(Modifiers::NONE, key);
+        for key in [
+            Key::ArrowUp,
+            Key::PageDown,
+            Key::Home,
+            Key::Space,
+            Key::Enter,
+            Key::Tab,
+        ] {
+            assert!(control_key(plain(key)), "{key:?}");
+        }
+        assert!(control_key(KeyboardShortcut::new(
+            Modifiers::SHIFT,
+            Key::ArrowLeft
+        )));
+        assert!(!control_key(KeyboardShortcut::new(
+            Modifiers::COMMAND,
+            Key::PageUp
+        )));
+        assert!(!control_key(KeyboardShortcut::new(
+            Modifiers::COMMAND,
+            Key::S
+        )));
+        assert!(!control_key(plain(Key::T)));
+        assert!(!control_key(plain(Key::Delete)));
     }
 
     #[test]

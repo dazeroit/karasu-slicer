@@ -1602,7 +1602,8 @@ keys).
    one, outlined; with the bar focused, Up and Down move it a layer, Page Up and Page Down ten,
    Home and End to the plate and the top. Since R10 (owner, 2026-11-10) these are shortcuts,
    `Action::Section`, configurable, which work without the bar focused while no other control
-   holds the keyboard.
+   holds the keyboard (since issue #32, 2026-11-19, they wait only for such a control, and the
+   other shortcuts work beside it; TD-097).
 2. **Planned layers.** The handles snap to the plate's planned layers, numbered from the plate.
    The core's planner computes them, as slicing does. They are exact for the calibrated height
    and for fixed ranges: a test slices the plate and finds the planned count. Adaptive ranges
@@ -3612,7 +3613,10 @@ later, as its own step (owner, 2026-11-04).
    plates' revisions recorded), written to a temporary file beside the target and renamed over
    it, so a failed or interrupted save leaves the previous file whole; the failure is reported
    with its cause. The project is unmodified while every plate keeps the revision it was saved
-   at and no plate was added or removed.
+   at and no plate was added or removed. While it runs, the status bar's line starts with
+   "Saving cube.karasu" and its spinner, once it takes 150 ms as a slice's does, until the
+   notification says it was saved (owner, 2026-11-19). A file being read says "Opening
+   cube.karasu" there too, while its dialog is closed ("Show now").
 6. **The application:** File › New project, Open, Open recent (the last ten, kept in the
    settings; one no longer found is removed with a notification), Save and Save as, as actions
    with configurable shortcuts (TD-097). A `.karasu` file dropped on the window or given on the
@@ -6587,7 +6591,15 @@ settled step by step as the interface moves into the layout.
 3. **Shortcuts are data.** A `Keymap` binds shortcuts to actions, more specific shortcuts first,
    so Ctrl+Shift+Z is never taken by Ctrl+Z. The defaults are the window's shortcuts so far. A
    bare key no longer fires with Ctrl held. Shortcuts fire only while no widget holds the
-   keyboard focus (a text field or a value being typed).
+   keyboard focus (a text field or a value being typed). Changed on 2026-11-19 (issue #32,
+   owner): egui counts any control with the focus, which stopped every shortcut after a click
+   on the section slider or when a tool window opened. Now:
+   - a text or value field being typed in keeps every key, except Save and Save as, which make
+     the field enter the typed value and then run;
+   - any other control with the focus keeps only the keys it uses itself (arrows, Page Up and
+     Page Down, Home, End, Space, Enter and Tab without Ctrl or Alt), and the other shortcuts
+     work;
+   - a modal dialog keeps every key.
 4. **Configurable shortcuts.** The settings panel will let the user change the keymap.
 5. **Every user setting persists.** Whatever the user sets (shortcuts, colours and their
    switches, auto-repair on import, units, panel and layout states, and later settings) is
