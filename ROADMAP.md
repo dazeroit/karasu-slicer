@@ -1445,6 +1445,11 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        accepted, not implemented):** with no room, it goes to the middle of the plate instead of
        being refused, and the notification says so; the status bar warns when footprints
        overlap. The command line still refuses copies that do not fit.
+     - **Support contacts along the normal, and a safety distance (owner, 2026-11-19, TD-164,
+       proposed):** from the support marks research (E-SUP-06 to E-SUP-09). Automatic tips
+       follow the surface's normal and bend at their joint; a setting keeps the contact part
+       a safety distance from other model surfaces; concave corners take no edge tips. It waits
+       for the owner's approval, the gap test and a test print.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

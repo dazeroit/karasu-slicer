@@ -6506,6 +6506,116 @@ when it fitted nowhere on the target.
 - **The overlap warning:** shown for overlapping footprints, and gone when they are moved apart.
 - **Undo:** each of these operations is undone in one step.
 
+## TD-164 — Support contacts along the normal, and a safety distance from other surfaces
+
+**Status:** Proposed on 2026-11-19 at the owner's request. It comes from the support marks
+research ([SUPPORT-MARKS-RESEARCH.md](research/SUPPORT-MARKS-RESEARCH.md), E-SUP-06 to E-SUP-09),
+candidate changes 1, 7 and 8. It still needs:
+- the owner's approval of the design;
+- the gap test that sets the default;
+- a test print.
+
+Not implemented.
+
+**Context (from the research):**
+- **Tilted tips (E-SUP-06, E-SUP-09; observed in the PP1, then inferred):**
+  - A support standing on another has a straight axis, from its contact towards the parent's
+    shaft, up to `max_axis_deviation_deg` (60°) off the normal. Its contact is placed along that
+    axis (`docs/SUPPORTS-SPEC.md`, section 4).
+  - On the tip test's specimen, 91 of 120 band tips met the bands 20 to 42° off the normal,
+    24.5° in the median.
+  - A tilted contact touches more than it is set to, off its centre. At 24.5°, the 0.5 mm ball
+    sunk 0.05 mm covers 31 % more; at 45°, 92 % more, and its centre moves 0.10 to 0.15 mm.
+  - With every tip along the normal (E-SUP-09), all four specimens left better marks and came
+    off more easily (owner): the contact was the one set.
+- **The corner rows (E-SUP-06, E-SUP-09):**
+  - **The cause:** TD-136 counts an underside's outline as an edge where the surface beyond is
+    lower, too (`karasu-project/src/support_plan/auto/edges.rs`). So a concave corner takes edge
+    tips 0.4 mm from the wall that meets the underside.
+  - **The gap (observed in the PP1):** in the last millimetre under the band, those tips stand
+    0.12 to 0.22 mm from the wall's section.
+  - **The marks (observed):** they leave the largest marks, about 1 mm wide, whatever the tip.
+  - **Hypothesis:** the gap cures shut (light bleeding or cross-curing, owner), joining the tip
+    to the wall.
+- **Why the rules allow such a gap:**
+  - `clearance_mm` (0.3 mm) leaves out a support's contact part.
+  - The contact part must only not enter the model away from its contact (TD-124), with no
+    margin (`docs/SUPPORTS-SPEC.md`, section 5).
+- **Another slicer's output (E-SUP-07, E-SUP-08; observed in files exported for the purpose):**
+  Lychee's tips follow the normal, and it places none near the concave corners.
+
+**Proposal:**
+1. **Tips along the normal (candidate 7).**
+   - Every automatic support's tip, from its contact to its joint `J`, follows the surface's
+     normal at the contact (`axis: normal`, already in the document format), and the support
+     bends at `J`.
+   - **A support standing on another:** the planner chooses the junction on the parent so that
+     the segment from `J` leans no more than the shafts' limit (45°). It lowers the junction, as
+     E-SUP-09 did by hand, or else takes another parent or the plate.
+   - **It never tilts the tip instead.** A contact with no such route is left out and reported,
+     as one with no route is today.
+   - **Unchanged:** the straight axis stays in the format, for supports placed by hand and for
+     documents saved before; mini supports are unchanged.
+2. **A safety distance for the contact part (owner's proposal, candidate 8).**
+   - **The setting:** a document setting, `contact_clearance_mm` (proposed name). It is the least
+     distance between a support's contact part and every model surface other than the one the
+     contact holds, along the part's whole length. It is proven as the clearance is (separating
+     axes, conservative).
+   - **The surface the contact holds:** proposed as the connected patch around the contact whose
+     normals stay within the planner's overhang angle of the contact's normal. Every other
+     triangle is tested: in a concave corner, the wall beside the underside. The rule needs
+     checking on curved surfaces and at creases before it is adopted.
+   - **The default:** set from the gap test (tips 0.1 to 0.7 mm from a wall, proposed in the
+     research). The provisional proposal is 0.3 mm, the clearance's.
+   - **In the interface:** shown and set in the Supports panel beside Clearance, and kept with the
+     document.
+   - **Documents saved before:** a document without the setting keeps today's rule, the contact
+     part left out, so existing projects plan and slice as before.
+   - **Automatic planning:** a candidate tip that breaks it moves away from the wall along the
+     surface, within the grid's step, or is dropped.
+   - **Placed by hand:** a support that breaks it is a collision, accepted only through
+     `accept_collision`, as other collisions are.
+3. **Edge tips only at free edges (candidate 1).**
+   - An outline counts as an edge where the surface beyond it is missing or higher, no longer
+     where it is lower.
+   - **Why:** a concave corner's wall prints before the underside and holds it there, so it takes
+     no edge row. The safety distance would move or drop those tips anyway; this rule says why
+     they are not needed.
+
+**Not in this proposal:** the other candidate changes, each still waiting for its own evidence:
+- a smaller, shallower Medium contact (5), which needs a hold test on a larger part;
+- fewer tips on flat undersides (2);
+- lower fillets on a raft (3);
+- a slender tip (4);
+- a regular frame (6).
+
+**Alternatives considered:**
+- **A short neck along the normal, the rest of the tip tilted:** the tilted body still stands
+  over the surface, beside the contact.
+- **The depth measured along the normal:** it sets the depth, but the footprint stays oblique.
+- **A lower tilt limit:** fewer tips tilted, but tilted all the same.
+- **Edge tips farther from a corner (0.8 mm), the exemption kept:** it solves the corner, not the
+  other walls (grooves, ribs, the edges of holes).
+
+**Validation (planned):**
+1. **The gap test print,** for the safety distance's default.
+2. **A third tip test:** the specimen planned automatically under these rules.
+   - Measured in the PP1: band tips within 1° of the normal, none within the safety distance
+     of the cylinder, and no corner row.
+   - Compared in hand with E-SUP-09.
+3. **The venom arm:** the number of contacts, their area and their marks, against E-SUP-05.
+4. **Automated tests:**
+   - tips along the normal, and junctions within the shafts' limit;
+   - the safety distance's proof, the concave corner included;
+   - documents without the setting slicing byte-identical to before;
+   - the command line's automatic supports planning the same.
+
+**Open for the owner:**
+- the provisional default before the gap test;
+- the rule that tells the surface held from a wall beside it;
+- whether shafts and braces need more than `clearance_mm`, should the gap test show that 0.3 mm
+  cures shut too.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are
