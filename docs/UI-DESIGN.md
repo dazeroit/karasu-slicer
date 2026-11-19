@@ -242,8 +242,9 @@ section. The **Cavity markers** switch, with its legend, ends the section.
     widest layer) and **and taller than** (mm), 1 mm² and 0.5 mm by default.
 - **Facts**, once searched: how many were found (out of date once the plate changes), how many
   are shown with the smaller ones hidden, and how many close over their resin.
-- **Navigator**, "Suction cup n of m", through the shown ones, widest first. The previous and
-  next buttons frame the cup and cut the section at the top of the layer where its vent goes (that layer shows; owner, 2026-11-04), with Back to
+- **Navigator**, "Suction cup n of m", through the shown ones, widest first. One row, as the
+  Islands tool's: the previous button, the title in bold cut to the room left (the whole text
+  under the pointer), the next button (issue #30). The previous and next buttons frame the cup and cut the section at the top of the layer where its vent goes (that layer shows; owner, 2026-11-04), with Back to
   the whole model as for a cavity region. The chosen cup's facts follow:
   - its layers;
   - its height, from its cap to its last layer's top;

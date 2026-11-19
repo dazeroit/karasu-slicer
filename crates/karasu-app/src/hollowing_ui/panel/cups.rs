@@ -139,7 +139,7 @@ impl HollowingUi {
 
     /// The chosen cup of model `index`: steps through the cups shown, its facts and Add a vent
     /// here.
-    fn cups_navigator(
+    pub(in crate::hollowing_ui) fn cups_navigator(
         &mut self,
         ui: &mut egui::Ui,
         workspace: &mut Workspace,
@@ -165,21 +165,20 @@ impl HollowingUi {
                     });
                 }
             });
+            // The title between the two buttons, cut to the room left with the whole text under
+            // the pointer (TD-142), as the Islands tool's navigator (issue #30).
             let title = match place {
                 Some(p) => tr!("cups-of", number = p + 1, count = count),
                 None => tr!("cups-cup"),
             };
-            crate::widgets::group(ui, title, |ui| {
-                ui.add_enabled_ui(count > 1, |ui| {
-                    if icon_button(ui, icons, Icon::ChevronRight, false, &tr!("cups-next"))
-                        .clicked()
-                    {
-                        go = Some(match place {
-                            Some(p) => shown[(p + 1) % count],
-                            None => shown[0],
-                        });
-                    }
-                });
+            ui.add(egui::Label::new(egui::RichText::new(title).strong()).truncate());
+            ui.add_enabled_ui(count > 1, |ui| {
+                if icon_button(ui, icons, Icon::ChevronRight, false, &tr!("cups-next")).clicked() {
+                    go = Some(match place {
+                        Some(p) => shown[(p + 1) % count],
+                        None => shown[0],
+                    });
+                }
             });
         });
         if let Some(k) = go {
