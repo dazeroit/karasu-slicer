@@ -730,6 +730,7 @@ layers-height = Layer height
 layers-height-hint = Every layer of the range has this height
 layers-own-exposure = Own exposure (else from the table below)
 layers-exposures = Exposures
+layers-firmware-note = Variable layer heights and a range's own exposure depend on the printer's firmware, and may not work on the printer in use
 layers-exposures-note = Provisional: kept with the plate until the resin profiles hold them. A height between two rows takes an exposure in between; outside the table it has none, and the range cannot be applied
 layers-add-row = Add a row
 layers-remove-row = Remove this row

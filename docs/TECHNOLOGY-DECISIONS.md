@@ -1623,7 +1623,11 @@ keys).
    - a table that is not increasing or exceeds the printer's exposure;
    - a table that does not cover the range's heights (it is never extrapolated).
 
-   It warns of a format that stores one height (SL1) and of a range above the models.
+   It warns of a format that stores one height (SL1) and of a range above the models. Above
+   its fields, for adaptive and fixed ranges alike, a line with the warning icon says that
+   variable layer heights and a range's own exposure depend on the printer's firmware, and may
+   not work on the printer in use (owner, 2026-11-18, issue #35: the Photon P1 ignores them,
+   TD-064).
 5. **The plan is the plate's** `karasu-layers` document: the first range from the plate with
    the calibrated height, then the user's ranges. Each change is one undoable plate edit, and a
    slice made before it is out of date; without ranges the plate has no plan. The exposure table
@@ -9085,7 +9089,15 @@ points.
 - **Regression:** the 16 cross-platform cases are byte-identical to the previous build.
 
 **Open:**
-- printer acceptance of variable layers (physical campaign);
+- printer acceptance of variable layers (physical campaign). The owner's first test answers it
+  for the Anycubic Photon P1, on 2026-11-18, with 0.2.0-beta.2:
+  - **the print:** a 20 mm sphere whose cap was planned as 32 layers of 0.03 mm at 1.2 s;
+  - **the file:** the PP1 held each layer's thickness and exposure, with
+    `use_indivi_layerpara` set to 1;
+  - **the result:** the printer kept one layer height and one exposure throughout.
+
+  Nothing is blocked and no printer profile changes (owner, issue #35). The range window says
+  that these settings depend on the printer's firmware (TD-102, point 4);
 - per-range motion, waits and PWM;
 - boundary snapping;
 - an opt-in exposure model from resin constants;

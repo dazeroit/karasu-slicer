@@ -293,8 +293,10 @@ the layer clicked: "Add adaptive layers from here", "Add fixed layers from here"
 "Edit" and "Remove", and "Show everything". The range's window has the start (layer or height,
 filled from the click), where it ends, the adaptive rule or the fixed height and its own
 exposure, and the exposure table (provisional, kept with the plate until the resin profiles hold
-it). What forbids applying is said in red, what deserves a warning in orange; Apply and Cancel
-end the window. Applying and removing come as toasts; both are undoable plate edits.
+it). Above its fields, with the warning icon: variable layer heights and a range's own exposure
+depend on the printer's firmware, and may not work on the printer in use (issue #35). What
+forbids applying is said in red, what deserves a warning in orange; Apply and Cancel end the
+window. Applying and removing come as toasts; both are undoable plate edits.
 
 ## Slice and export panel (M6.5)
 

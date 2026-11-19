@@ -118,6 +118,11 @@ variable layers. Their header layer height stays the calibration's.
 | Anycubic Photon Workshop | LAYERDEF thickness |
 | Reference | Position and thickness |
 
+A format that stores per-layer values does not mean the printer applies them: that is up to its
+firmware. The Anycubic Photon P1 keeps one layer height and one exposure through a PP1 that holds
+variable ones (owner's test, 2026-11-18, TD-064). Nothing is refused for it; the interface's range
+window says so (issue #35).
+
 **SL1/SL1S:**
 - `config.ini` has one `layerHeight`, so a non-uniform job is refused:
   - by the CLI before rasterizing (any explicit layer settings);

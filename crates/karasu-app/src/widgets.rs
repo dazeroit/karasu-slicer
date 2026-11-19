@@ -227,6 +227,9 @@ impl egui::Widget for UnitField<'_> {
             egui::pos2(value_rect.right() - FIELD_INSET / 2.0, value_rect.bottom()),
         );
         let typed = ui.put(text_rect, edit);
+        // Putting the text moves the layout's cursor to its end: back past the whole field, so
+        // a control after it in a row does not cover its unit (issue #35's screen).
+        ui.advance_cursor_after_rect(rect);
         let entering = typed.has_focus() && take_enter_typed(ui.ctx());
         if entering {
             // A shortcut acts on what was typed: enter it, and give the keyboard back.
@@ -1366,6 +1369,31 @@ mod tests {
         assert_eq!(parse("1e-3"), Some(0.001));
         assert_eq!(parse("abc"), None);
         assert_eq!(parse("inf"), None);
+    }
+
+    #[test]
+    fn controls_after_a_value_field_in_a_row_leave_its_unit_clear() {
+        // The exposure table's rows (issue #35's screen): the next field and the remove button
+        // were drawn over the previous field's unit.
+        let ctx = egui::Context::default();
+        let (mut mm, mut s) = (0.05, 2.0);
+        let mut rects = Vec::new();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            ui.horizontal(|ui| {
+                rects.push(ui.add(UnitField::new(&mut mm, Unit::Millimetre)).rect);
+                rects.push(ui.add(UnitField::new(&mut s, Unit::Second)).rect);
+                rects.push(ui.button("x").rect);
+            });
+        });
+        output.textures_delta.clear();
+        for pair in rects.windows(2) {
+            assert!(pair[1].left() >= pair[0].right(), "{pair:?}");
+        }
+        assert!(
+            (rects[0].width() - FIELD_WIDTH).abs() < 0.5,
+            "{:?}",
+            rects[0]
+        );
     }
 
     #[test]
