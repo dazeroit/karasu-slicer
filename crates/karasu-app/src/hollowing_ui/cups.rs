@@ -1006,6 +1006,61 @@ mod tests {
         let _ = std::fs::remove_dir_all(folder);
     }
 
+    #[test]
+    fn the_navigator_is_one_row_of_previous_title_and_next() {
+        // Issue #30: the title was a framed group holding only the Next button.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-app-cups-row-{}", std::process::id()));
+        let mut workspace = crate::slicing_ui::tests::hollowed_cube(&folder);
+        let preparation = PreparationUi::default();
+        let mut ui = HollowingUi::default();
+        ui.cups.cache = Some(folder.clone());
+        ui.cups.find(&workspace, 0);
+        let started = Instant::now();
+        while ui.cups.searching() {
+            ui.cups.poll();
+            assert!(started.elapsed() < Duration::from_secs(300), "no cups");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let (cups, current) = ui.cups.found(&workspace, Some(0)).map_or_else(
+            || panic!("no cups: {:?}", ui.cups.outbox),
+            |(cups, current)| (cups.to_vec(), current),
+        );
+        let ctx = egui::Context::default();
+        let (nodes, _) = crate::accessibility_check::settled(&ctx, |panel| {
+            ui.cups_navigator(
+                panel,
+                &mut workspace,
+                &preparation,
+                0,
+                (&cups, current),
+                None,
+            );
+        });
+        let _ = std::fs::remove_dir_all(&folder);
+        let bounds = |found: &dyn Fn(&egui::accesskit::Node) -> bool, what: &str| {
+            nodes
+                .iter()
+                .find(|(_, node)| found(node))
+                .and_then(|(_, node)| node.bounds())
+                .unwrap_or_else(|| panic!("no {what} among {} nodes", nodes.len()))
+        };
+        let named = |name: String| move |node: &egui::accesskit::Node| node.label() == Some(&name);
+        let previous = bounds(&named(tr!("cups-previous")), "Previous");
+        let next = bounds(&named(tr!("cups-next")), "Next");
+        let text = tr!("cups-of", number = 1_usize, count = 1_usize);
+        let title = bounds(&|node| node.value() == Some(&text), "title");
+        // Left to right on one row: each centre lies within the others' heights.
+        assert!(
+            previous.x1 <= title.x0 && title.x1 <= next.x0,
+            "{previous:?} {title:?} {next:?}"
+        );
+        for (a, b) in [(previous, title), (title, next), (previous, next)] {
+            let centre = f64::midpoint(a.y0, a.y1);
+            assert!(b.y0 <= centre && centre <= b.y1, "{a:?} {b:?}");
+        }
+    }
+
     /// Search `ui`'s cups on model 0 and print them, the shown ones in full.
     fn report(ui: &mut HollowingUi, workspace: &Workspace, title: &str) {
         ui.cups.find(workspace, 0);
