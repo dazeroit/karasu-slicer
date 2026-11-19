@@ -501,7 +501,7 @@ for An: 0.11 to 0.15 mm).
   for the other parts.
 
 **Candidate changes, not decided:** each needs its own design, a decision the owner approves,
-and a test print.
+and a test print. Candidates 1, 7 and 8 are proposed together in TD-164 (2026-11-19).
 1. **Outline tips only at free edges.** Give edge tips only where the surface beyond an outline
    is missing or higher, not where it is lower (a concave corner whose wall holds the
    underside). Change 8 would keep any tip clear of a wall.
