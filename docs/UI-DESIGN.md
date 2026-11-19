@@ -144,8 +144,10 @@ a lock on each (open, or closed and lit; it stops the section's handles, values 
 which fade), Reset on Rotate and Scale, and Uniform on Scale (a typed percentage scales the
 three axes alike; the handles have their own uniform handle). Below each header, X, Y and Z in
 value fields that follow the handles: the centre's X and Y and the lowest point's height on the
-plate in millimetres, the angles about the plate's axes in degrees, the scale along the model's
-axes in percent. Move has **Drop to plate** and **Center**; Scale has **Fit to plate** (the
+plate in millimetres, the angles about the plate's axes in degrees, and the model's size along
+each of its own axes in millimetres followed by its scale along it in percent (issue #40; the
+size first, owner 2026-11-19): a size typed scales the model to it, as its percentage would,
+Uniform included; a model flat along an axis has no size to type there. Move has **Drop to plate** and **Center**; Scale has **Fit to plate** (the
 largest uniform scale that fits the build volume, then centred and rested). Locks and Uniform are
 settings of the tool, applying to any model selected.
 

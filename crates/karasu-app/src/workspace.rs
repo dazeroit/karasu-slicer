@@ -92,6 +92,9 @@ pub struct LoadedMesh {
     pub mesh: Arc<TriangleMesh>,
     /// The origin its GPU vertices are relative to: the source bounding-box centre.
     pub origin: [f64; 3],
+    /// The source bounding box's size along the model's own axes, in mm: measured once, so the
+    /// Transform tool's sizes never scan the mesh (issue #40).
+    pub size_mm: [f64; 3],
     /// The viewport's key for it.
     pub key: u64,
     /// Its surface area, in mm², which predicts its cavity (TD-094).
@@ -1274,7 +1277,17 @@ impl Workspace {
         // The objects of this model could not be placed without its mesh: placed again now,
         // though the plate's revision stays (a project opened, TD-130).
         self.placements.0 = 0;
-        let origin = placement::centre(&imported.mesh).map_or([0.0; 3], |c| [c.x, c.y, c.z]);
+        let (origin, size_mm) =
+            placement::source_bounds(&imported.mesh).map_or(([0.0; 3], [0.0; 3]), |(min, max)| {
+                (
+                    [
+                        f64::midpoint(min.x, max.x),
+                        f64::midpoint(min.y, max.y),
+                        f64::midpoint(min.z, max.z),
+                    ],
+                    [max.x - min.x, max.y - min.y, max.z - min.z],
+                )
+            });
         let mesh = Arc::clone(
             &self
                 .meshes
@@ -1283,6 +1296,7 @@ impl Workspace {
                     area_mm2: imported.area_mm2,
                     mesh: Arc::new(imported.mesh),
                     origin,
+                    size_mm,
                     key: mesh_key(id),
                 })
                 .mesh,
@@ -1332,6 +1346,16 @@ impl Workspace {
             result,
         });
         id
+    }
+
+    /// The size of object `index`'s model along its own axes, scale applied, in mm (mirroring
+    /// keeps it): what the Transform tool shows beside the scale (issue #40). `None` for no
+    /// such object or a model still loading.
+    #[must_use]
+    pub fn own_size(&self, index: usize) -> Option<[f64; 3]> {
+        let object = self.plate().objects.get(index)?;
+        let size = self.meshes.get(&object.model)?.size_mm;
+        Some(std::array::from_fn(|k| size[k] * object.pose.scale[k]))
     }
 
     /// The loaded meshes, by library model.
