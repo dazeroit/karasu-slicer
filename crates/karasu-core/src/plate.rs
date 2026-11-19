@@ -6,7 +6,9 @@
 //! - a number of copies.
 //!
 //! [`arrange`] packs footprints deterministically, and [`overlapping_pairs`] reports footprints
-//! that overlap.
+//! that overlap. [`arrange_turning`] may also turn footprints a quarter turn, and
+//! [`footprint_turn`] chooses the turn about Z that makes a convex footprint take the least
+//! room (TD-162).
 //!
 //! The document only describes the plate. Reading models, preparing them and uniting them into
 //! one sliced body belong to the caller (the CLI), which reuses the single-model pipeline per
@@ -15,7 +17,8 @@
 //! **Footprints:**
 //! - They are axis-aligned XY rectangles in world millimetres.
 //! - They include everything an object prints: supports, raft and drain-hole cutters.
-//! - Packing never rotates objects.
+//! - [`arrange`] never rotates objects; a caller that turns them (the application's Arrange,
+//!   TD-162) gives [`arrange_turning`] the footprints it may turn.
 use crate::{
     mesh::formats::LengthUnit,
     preparation::{HoleTilt, MAX_HOLE_TILT_DEG},
@@ -673,6 +676,51 @@ pub fn arrange(
     obstacles: &[Rect],
     spacing_mm: f64,
 ) -> Result<Vec<[f64; 2]>, Unplaced> {
+    let placed = arrange_with(
+        sizes,
+        &vec![false; sizes.len()],
+        area,
+        obstacles,
+        spacing_mm,
+    )?;
+    Ok(placed.into_iter().map(|p| p.corner).collect())
+}
+
+/// Where [`arrange_turning`] put a footprint: its lowest corner, and whether it lies turned a
+/// quarter turn, its width and depth swapped.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Placed {
+    /// The footprint's lowest corner, in mm.
+    pub corner: [f64; 2],
+    /// Whether it lies a quarter turn round: its width along Y, its depth along X.
+    pub turned: bool,
+}
+
+/// [`arrange`], where each footprint whose `turnable` entry is true may also lie a quarter turn
+/// round, its width and depth swapped (TD-162): at each footprint the turned candidates are
+/// tried beside the others, and the nearest the plate's middle is taken, the footprint as it
+/// was on a tie. The fallback shelves keep the footprints as they are.
+///
+/// # Errors
+/// [`Unplaced`] lists every footprint that does not fit either way.
+pub fn arrange_turning(
+    sizes: &[[f64; 2]],
+    turnable: &[bool],
+    area: Rect,
+    obstacles: &[Rect],
+    spacing_mm: f64,
+) -> Result<Vec<Placed>, Unplaced> {
+    arrange_with(sizes, turnable, area, obstacles, spacing_mm)
+}
+
+/// [`arrange_turning`]'s work, which [`arrange`] does with nothing turnable.
+fn arrange_with(
+    sizes: &[[f64; 2]],
+    turnable: &[bool],
+    area: Rect,
+    obstacles: &[Rect],
+    spacing_mm: f64,
+) -> Result<Vec<Placed>, Unplaced> {
     let mut order: Vec<usize> = (0..sizes.len()).collect();
     order.sort_by(|&a, &b| {
         let area_of = |k: usize| sizes[k][0] * sizes[k][1];
@@ -683,7 +731,11 @@ pub fn arrange(
             .then(a.cmp(&b))
     });
     let middle: [f64; 2] = std::array::from_fn(|k| f64::midpoint(area.min[k], area.max[k]));
-    let mut corners = vec![[0.; 2]; sizes.len()];
+    let unturned = Placed {
+        corner: [0.; 2],
+        turned: false,
+    };
+    let mut placed = vec![unturned; sizes.len()];
     let mut unplaced = Vec::new();
     // Cells as large as the largest footprint and its spacing: a candidate meets only what lies
     // in the few cells it covers.
@@ -692,13 +744,37 @@ pub fn arrange(
     for obstacle in obstacles {
         taken.add(*obstacle);
     }
+    // How far a footprint of `size` at `corner` lies from the plate's middle.
+    let distance = |corner: [f64; 2], size: [f64; 2]| {
+        let [dx, dy] = [
+            corner[0] + size[0] / 2.0 - middle[0],
+            corner[1] + size[1] / 2.0 - middle[1],
+        ];
+        dx * dx + dy * dy
+    };
     for &i in &order {
-        match nearest_free(sizes[i], area, &taken, middle) {
-            Some(corner) => {
-                corners[i] = corner;
+        let size = sizes[i];
+        let swapped = [size[1], size[0]];
+        let as_is = nearest_free(size, area, &taken, middle);
+        let turned = turnable
+            .get(i)
+            .copied()
+            .unwrap_or(false)
+            .then(|| nearest_free(swapped, area, &taken, middle))
+            .flatten();
+        let chosen = match (as_is, turned) {
+            (Some(a), Some(t)) if distance(t, swapped) < distance(a, size) => Some((t, true)),
+            (Some(a), _) => Some((a, false)),
+            (None, Some(t)) => Some((t, true)),
+            (None, None) => None,
+        };
+        match chosen {
+            Some((corner, turned)) => {
+                placed[i] = Placed { corner, turned };
+                let [w, d] = if turned { swapped } else { size };
                 taken.add(Rect {
                     min: corner,
-                    max: [corner[0] + sizes[i][0], corner[1] + sizes[i][1]],
+                    max: [corner[0] + w, corner[1] + d],
                 });
             }
             None => unplaced.push(i),
@@ -709,14 +785,186 @@ pub fn arrange(
         // Close packing fits more on a tight plate: taken when it leaves fewer out.
         let (packed, left) = shelves(sizes, area, obstacles, spacing_mm);
         if left.len() < unplaced.len() {
-            (corners, unplaced) = (packed, left);
+            placed = packed
+                .into_iter()
+                .map(|corner| Placed {
+                    corner,
+                    turned: false,
+                })
+                .collect();
+            unplaced = left;
         }
     }
     if unplaced.is_empty() {
-        Ok(corners)
+        Ok(placed)
     } else {
         Err(Unplaced { items: unplaced })
     }
+}
+
+/// The convex hull of `points`, counter-clockwise from the lowest X (then Y), its collinear
+/// points left out (Andrew's monotone chain). Fewer than three distinct points come back
+/// distinct, in that order.
+///
+/// The points strictly inside the polygon of the extreme points along X, Y and both diagonals
+/// are left out first, as none of them is on the hull (Akl and Toussaint, 1978): a model's
+/// millions of vertices leave few to sort.
+#[must_use]
+pub fn convex_hull(points: &[[f64; 2]]) -> Vec<[f64; 2]> {
+    let mut sorted: Vec<[f64; 2]> = without_inner(points);
+    sorted.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+    sorted.dedup();
+    if sorted.len() < 3 {
+        return sorted;
+    }
+    let cross = |o: [f64; 2], a: [f64; 2], b: [f64; 2]| {
+        (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    };
+    let mut hull: Vec<[f64; 2]> = Vec::with_capacity(sorted.len() + 1);
+    for pass in 0..2 {
+        let start = hull.len();
+        let points: Box<dyn Iterator<Item = &[f64; 2]>> = if pass == 0 {
+            Box::new(sorted.iter())
+        } else {
+            Box::new(sorted.iter().rev())
+        };
+        for &p in points {
+            while hull.len() >= start + 2
+                && cross(hull[hull.len() - 2], hull[hull.len() - 1], p) <= 0.
+            {
+                hull.pop();
+            }
+            hull.push(p);
+        }
+        // Each chain's last point starts the other.
+        hull.pop();
+    }
+    hull
+}
+
+/// `points` less those strictly inside the convex polygon of their extreme points in eight
+/// directions (along X, Y and the diagonals, both ways), which cannot be on their hull.
+fn without_inner(points: &[[f64; 2]]) -> Vec<[f64; 2]> {
+    let Some(&first) = points.first() else {
+        return Vec::new();
+    };
+    // The extreme point along each direction, counter-clockwise from +X.
+    let directions = [
+        [1., 0.],
+        [1., 1.],
+        [0., 1.],
+        [-1., 1.],
+        [-1., 0.],
+        [-1., -1.],
+        [0., -1.],
+        [1., -1.],
+    ];
+    let mut extremes = [first; 8];
+    for &p in points {
+        for (k, d) in directions.iter().enumerate() {
+            let e = extremes[k];
+            if p[0] * d[0] + p[1] * d[1] > e[0] * d[0] + e[1] * d[1] {
+                extremes[k] = p;
+            }
+        }
+    }
+    let mut polygon: Vec<[f64; 2]> = Vec::with_capacity(8);
+    for e in extremes {
+        if polygon.last() != Some(&e) && polygon.first() != Some(&e) {
+            polygon.push(e);
+        }
+    }
+    if polygon.len() < 3 {
+        return points.to_vec();
+    }
+    // Strictly left of every edge of the counter-clockwise polygon: inside it.
+    let inside = |p: [f64; 2]| {
+        (0..polygon.len()).all(|k| {
+            let (a, b) = (polygon[k], polygon[(k + 1) % polygon.len()]);
+            (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) > 0.
+        })
+    };
+    points.iter().copied().filter(|&p| !inside(p)).collect()
+}
+
+/// The width and depth of `hull` turned `turn_deg` counter-clockwise about the origin.
+#[must_use]
+pub fn turned_size(hull: &[[f64; 2]], turn_deg: f64) -> [f64; 2] {
+    let (sin, cos) = turn_deg.to_radians().sin_cos();
+    let mut low = [f64::INFINITY; 2];
+    let mut high = [f64::NEG_INFINITY; 2];
+    for &[x, y] in hull {
+        let p = [x * cos - y * sin, x * sin + y * cos];
+        for k in 0..2 {
+            low[k] = low[k].min(p[k]);
+            high[k] = high[k].max(p[k]);
+        }
+    }
+    if hull.is_empty() {
+        return [0.; 2];
+    }
+    [high[0] - low[0], high[1] - low[1]]
+}
+
+/// The turns [`footprint_turn`] tries when a footprint fits the plate at no turn of its edges:
+/// one every half degree, from no turn outwards, so the first that fits is the nearest none.
+const FIT_STEP_DEG: f64 = 0.5;
+
+/// The turn about Z, in degrees counter-clockwise from above within (-45, 45], that makes a
+/// footprint of convex `hull` take the least room (TD-162):
+/// - the smallest rectangle around a convex polygon has a side on one of its edges (Freeman and
+///   Shapira, 1975), so each edge is tried, turned to lie along X, and the smallest taken;
+/// - it is taken only when its area is smaller than the hull's rectangle as it stands by at
+///   least `margin` (a fraction: the owner's 1 % keeps the orientation the user chose where a
+///   turn gains almost nothing), else no turn;
+/// - when the rectangle chosen fits the `plate` (width, depth) neither way round but another
+///   turn's does, as a footprint longer than the plate's sides may along its diagonal, the turn
+///   nearest none that fits is taken, tried every half degree.
+#[must_use]
+pub fn footprint_turn(hull: &[[f64; 2]], plate: [f64; 2], margin: f64) -> f64 {
+    let area = |size: [f64; 2]| size[0] * size[1];
+    let fits = |size: [f64; 2]| {
+        (size[0] <= plate[0] && size[1] <= plate[1]) || (size[1] <= plate[0] && size[0] <= plate[1])
+    };
+    // Each edge's direction, turned back to X, folded into (-45, 45].
+    let fold = |turn: f64| {
+        let mut t = turn.rem_euclid(90.);
+        if t > 45. {
+            t -= 90.;
+        }
+        t
+    };
+    let mut best = (area(turned_size(hull, 0.)), 0.);
+    let here = best.0;
+    for (k, &a) in hull.iter().enumerate() {
+        let b = hull[(k + 1) % hull.len()];
+        let direction = (b[1] - a[1]).atan2(b[0] - a[0]).to_degrees();
+        let turn = fold(-direction);
+        let size = area(turned_size(hull, turn));
+        if size < best.0 {
+            best = (size, turn);
+        }
+    }
+    let mut turn = if best.0 <= here * (1. - margin) {
+        best.1
+    } else {
+        0.
+    };
+    if !fits(turned_size(hull, turn)) {
+        #[allow(clippy::cast_possible_truncation)] // 90 steps of half a degree each way.
+        let steps = (45. / FIT_STEP_DEG) as i32;
+        let found = std::iter::once(0.)
+            .chain(
+                (1..=steps)
+                    .flat_map(|k| [f64::from(k), -f64::from(k)])
+                    .map(|k| k * FIT_STEP_DEG),
+            )
+            .find(|&t| fits(turned_size(hull, t)));
+        if let Some(found) = found {
+            turn = found;
+        }
+    }
+    turn
 }
 
 /// The shelf packing [`arrange`] falls back on when the middle-first placement leaves some
@@ -1237,6 +1485,135 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn nothing_turnable_packs_as_arrange_does() {
+        // TD-162: arrange is arrange_turning with nothing to turn, bit for bit.
+        let area = Rect {
+            min: [0., 0.],
+            max: [192., 120.],
+        };
+        let sizes: Vec<[f64; 2]> = (0..30)
+            .map(|k: i32| [12. + f64::from(k % 5), 9. + f64::from(k % 3)])
+            .collect();
+        let corners = arrange(&sizes, area, &[], 2.).unwrap();
+        let placed = arrange_turning(&sizes, &[false; 30], area, &[], 2.).unwrap();
+        assert!(placed.iter().all(|p| !p.turned));
+        assert_eq!(placed.iter().map(|p| p.corner).collect::<Vec<_>>(), corners);
+    }
+
+    #[test]
+    fn a_footprint_that_fits_only_turned_lies_turned() {
+        // 150 × 100 mm on a 120 × 192 mm plate: only turned.
+        let area = Rect {
+            min: [0., 0.],
+            max: [120., 192.],
+        };
+        assert!(arrange(&[[150., 100.]], area, &[], 2.).is_err());
+        let placed = arrange_turning(&[[150., 100.]], &[true], area, &[], 2.).unwrap();
+        assert!(placed[0].turned);
+        let [x, y] = placed[0].corner;
+        assert!(
+            x >= 0. && y >= 0. && x + 100. <= 120. && y + 150. <= 192.,
+            "{placed:?}"
+        );
+    }
+
+    #[test]
+    fn a_convex_hull_leaves_out_inner_and_collinear_points() {
+        let hull = convex_hull(&[
+            [0., 0.],
+            [2., 0.],
+            [4., 0.],
+            [4., 3.],
+            [0., 3.],
+            [1., 1.],
+            [2., 3.],
+        ]);
+        assert_eq!(hull, vec![[0., 0.], [4., 0.], [4., 3.], [0., 3.]]);
+        assert_eq!(convex_hull(&[[1., 1.], [1., 1.]]), vec![[1., 1.]]);
+    }
+
+    #[test]
+    fn leaving_inner_points_out_first_keeps_the_hull() {
+        // A disc of points around a few outer ones: the hull is the same with the filter.
+        let mut points = Vec::new();
+        for k in 0..2000 {
+            let a = f64::from(k) * 0.618_034 * std::f64::consts::TAU;
+            let r = 10. * (f64::from(k % 97) / 97.).sqrt();
+            points.push([r * a.cos(), r * a.sin()]);
+        }
+        points.extend([[12., 0.], [0., 15.], [-11., -2.], [3., -14.]]);
+        let filtered = convex_hull(&points);
+        let mut sorted = points.clone();
+        sorted.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+        let mut plain = Vec::new();
+        for pass in 0..2 {
+            let start = plain.len();
+            let list: Vec<[f64; 2]> = if pass == 0 {
+                sorted.clone()
+            } else {
+                sorted.iter().rev().copied().collect()
+            };
+            for p in list {
+                while plain.len() >= start + 2 {
+                    let (o, a): ([f64; 2], [f64; 2]) =
+                        (plain[plain.len() - 2], plain[plain.len() - 1]);
+                    if (a[0] - o[0]) * (p[1] - o[1]) - (a[1] - o[1]) * (p[0] - o[0]) > 0. {
+                        break;
+                    }
+                    plain.pop();
+                }
+                plain.push(p);
+            }
+            plain.pop();
+        }
+        assert_eq!(filtered, plain);
+        assert!(without_inner(&points).len() < points.len() / 2);
+    }
+
+    #[test]
+    fn the_turn_is_the_smallest_rectangle_s_and_only_when_it_saves_enough() {
+        // A 40 × 10 mm rectangle turned 30°: turning it back by 30° gives its own 400 mm².
+        let turn = |points: &[[f64; 2]], deg: f64| -> Vec<[f64; 2]> {
+            let (sin, cos) = deg.to_radians().sin_cos();
+            points
+                .iter()
+                .map(|&[x, y]| [x * cos - y * sin, x * sin + y * cos])
+                .collect()
+        };
+        let bar = [[0., 0.], [40., 0.], [40., 10.], [0., 10.]];
+        let hull = convex_hull(&turn(&bar, 30.));
+        let back = footprint_turn(&hull, [200., 200.], 0.01);
+        assert!((back + 30.).abs() < 1e-9, "{back}");
+        let [w, d] = turned_size(&hull, back);
+        assert!((w * d - 400.).abs() < 1e-6, "{w} {d}");
+        // As it stands, or within the margin: no turn.
+        assert_eq!(footprint_turn(&convex_hull(&bar), [200., 200.], 0.01), 0.);
+        // Turned 0.05°, its rectangle is 0.4 % larger: within the margin. At 0.2° it is 1.5 %.
+        let nearly = convex_hull(&turn(&bar, 0.05));
+        assert_eq!(footprint_turn(&nearly, [200., 200.], 0.01), 0.);
+        let more = convex_hull(&turn(&bar, 0.2));
+        assert!((footprint_turn(&more, [200., 200.], 0.01) + 0.2).abs() < 1e-9);
+        // A triangle: its smallest rectangle has a side on one of its edges.
+        let triangle = convex_hull(&[[0., 0.], [30., 5.], [10., 20.]]);
+        let t = footprint_turn(&triangle, [200., 200.], 0.);
+        let best = turned_size(&triangle, t);
+        for step in 0..180 {
+            let other = turned_size(&triangle, f64::from(step) * 0.5);
+            assert!(best[0] * best[1] <= other[0] * other[1] + 1e-9, "{step}");
+        }
+    }
+
+    #[test]
+    fn a_bar_longer_than_the_plate_s_sides_lies_along_its_diagonal() {
+        // A 210 × 8 mm bar on a 192 × 120 mm plate (its diagonal 226 mm): along X it does not
+        // fit, nor does its smallest rectangle; some turn does.
+        let bar = convex_hull(&[[0., 0.], [210., 0.], [210., 8.], [0., 8.]]);
+        let turn = footprint_turn(&bar, [192., 120.], 0.01);
+        let [w, d] = turned_size(&bar, turn);
+        assert!(turn != 0. && w <= 192. && d <= 120., "{turn}: {w} {d}");
     }
 
     #[test]

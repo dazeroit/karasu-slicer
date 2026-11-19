@@ -26,9 +26,12 @@ use crate::{
 use karasu_core::{
     cancellation::Cancellation,
     mesh::{formats::LengthUnit, TriangleMesh},
-    plate::{arrange, overlapping_pairs, Rect},
+    plate::{
+        arrange, arrange_turning, convex_hull, footprint_turn, overlapping_pairs, Placed, Rect,
+    },
     preparation::repair::{RepairPreset, RepairSpec},
-    profiles::{store::ProfileDocument, PrinterProfile, MAX_PROFILE_BYTES},
+    print_job::uniform_time_s,
+    profiles::{store::ProfileDocument, PrintSettings, PrinterProfile, MAX_PROFILE_BYTES},
     supports::{BaseSpec, SupportDocument},
 };
 use karasu_project::{
@@ -836,102 +839,73 @@ impl Workspace {
         Ok(landing)
     }
 
-    /// Arrange the shown plate's models (TD-135, phase 5): their footprints (with supports and
-    /// raft) packed on the plate `spacing_mm` apart from the plate's middle outwards, the models that do not
-    /// fit going to new plates after it, with its profiles and settings, named after it ("Arms
-    /// (2)") and arranged the same way, as many as needed; or, with [`Overflow::Stay`], left
-    /// where they are. A model too large for an empty plate stays where it is either way. One
-    /// undoable step; the plate shown stays.
+    /// What Arranging the shown plate with `options` works from, taken now: the plate, its
+    /// printer, its models' meshes (shared, not copied), each model's top, the plates' names and
+    /// the plate's revision, so the planning can run on another thread.
     ///
     /// # Errors
-    /// [`Unarranged`]: no printer, or a model still loading, with nothing changed.
-    pub fn arrange(&mut self, spacing_mm: f64, overflow: Overflow) -> Result<Arranged, Unarranged> {
+    /// [`Unarranged`]: no printer, or a model still loading.
+    pub fn arrange_input(&mut self, options: ArrangeOptions) -> Result<ArrangeInput, Unarranged> {
         let source = self.plate().clone();
-        let printer = source.printer.as_ref().ok_or(Unarranged::NoPrinter)?;
-        let centre = placement::plate_centre(printer);
-        let footprints = source
+        let printer = source.printer.clone().ok_or(Unarranged::NoPrinter)?;
+        let meshes = source
             .objects
             .iter()
-            .map(|o| self.footprint(centre, o))
-            .collect::<Option<Vec<_>>>()
+            .map(|o| {
+                self.meshes
+                    .get(&o.model)
+                    .map(|m| (o.model, Arc::clone(&m.mesh)))
+            })
+            .collect::<Option<HashMap<_, _>>>()
             .ok_or(Unarranged::Loading)?;
-        let [ox, oy] = printer.origin_xy_mm;
-        let [width, depth, _] = printer.build_size_mm;
-        let area = Rect {
-            min: [ox, oy],
-            max: [ox + width, oy + depth],
-        };
-        let sizes: Vec<[f64; 2]> = footprints.iter().map(|(rect, _)| rect.size()).collect();
-        // The object `i` at `corner`, no longer centred by its pose.
-        let moved = |i: usize, corner: [f64; 2]| {
-            let mut object = source.objects[i].clone();
-            let (rect, translation) = footprints[i];
-            object.translate_mm[0] = translation[0] + corner[0] - rect.min[0];
-            object.translate_mm[1] = translation[1] + corner[1] - rect.min[1];
-            object.pose.center = false;
-            object
-        };
-        let all: Vec<usize> = (0..source.objects.len()).collect();
-        let (placed, mut left) = pack(&all, &sizes, area, &[], spacing_mm);
-        let mut arranged = source.clone();
-        let mut out = Arranged {
-            on_plate: placed.len(),
-            ..Arranged::default()
-        };
-        // The overflow on new plates, each packed as the first was.
-        let mut added = Vec::new();
-        if overflow == Overflow::NewPlates {
-            let taken: Vec<String> = self
+        // Each model's top above the plate, lift included: its supports and raft lie under it,
+        // and a turn about Z leaves it.
+        let tops: Vec<f64> = self
+            .placements()
+            .iter()
+            .map(|p| p.as_ref().map_or(0.0, |p| p.max.z))
+            .collect();
+        Ok(ArrangeInput {
+            options,
+            source,
+            printer,
+            meshes,
+            tops,
+            taken: self
                 .project
                 .plates()
                 .iter()
                 .map(|p| p.content().name.clone())
-                .collect();
-            let mut number = 2;
-            while !left.is_empty() {
-                let (on_new, rest) = pack(&left, &sizes, area, &[], spacing_mm);
-                if on_new.is_empty() {
-                    break;
-                }
-                let mut name = format!("{} ({number})", source.name);
-                while taken.contains(&name) || out.new_plates.contains(&name) {
-                    number += 1;
-                    name = format!("{} ({number})", source.name);
-                }
-                number += 1;
-                out.moved += on_new.len();
-                let objects = on_new.iter().map(|&(i, corner)| moved(i, corner)).collect();
-                added.push(PlateContent {
-                    name: name.clone(),
-                    objects,
-                    ..source.clone()
-                });
-                out.new_plates.push(name);
-                left = rest;
-            }
+                .collect(),
+            plate: self.plate,
+            revision: self.revision(),
+            at: self.plate_index() + 1,
+        })
+    }
+
+    /// Make the arrangement `planned`, as one undoable step of the project's structure, when its
+    /// plate is as it was when the planning started.
+    ///
+    /// # Errors
+    /// [`Unarranged::Changed`] when the plate changed meanwhile, with nothing changed.
+    pub fn finish_arrange(&mut self, planned: Planned) -> Result<Arranged, Unarranged> {
+        let now = self
+            .project
+            .plate(planned.plate)
+            .map(karasu_project::project::Plate::revision);
+        if now != Some(planned.revision) {
+            return Err(Unarranged::Changed);
         }
-        out.stayed = left.len();
-        let gone: Vec<usize> = (0..source.objects.len())
-            .filter(|i| !left.contains(i) && !placed.iter().any(|(p, _)| p == i))
-            .collect();
-        out.removed.clone_from(&gone);
-        arranged.objects = (0..source.objects.len())
-            .filter(|i| !gone.contains(i))
-            .map(|i| match placed.iter().find(|(p, _)| *p == i) {
-                Some(&(_, corner)) => moved(i, corner),
-                None => source.objects[i].clone(),
-            })
-            .collect();
-        let at = self.plate_index() + 1;
-        let added = added
+        let added = planned
+            .added
             .into_iter()
             .enumerate()
-            .map(|(k, content)| (at + k, content))
+            .map(|(k, content)| (planned.at + k, content))
             .collect();
         self.project
-            .edit_plates(vec![(self.plate, arranged)], added)
-            .map_err(|_| Unarranged::NoPrinter)?;
-        Ok(out)
+            .edit_plates(vec![(planned.plate, planned.arranged)], added)
+            .map_err(|_| Unarranged::Changed)?;
+        Ok(planned.out)
     }
 
     /// Add `copies` copies of object `index` of the plate shown to plate `to`, the plate shown
@@ -1126,19 +1100,7 @@ impl Workspace {
     /// With it, the translation the placement used. `None` while its model is loading, or when
     /// it cannot be placed.
     fn footprint(&self, centre: [f64; 2], object: &PlateObject) -> Option<(Rect, [f64; 3])> {
-        let mesh = self.meshes.get(&object.model)?;
-        let placement = placement::place(
-            &mesh.mesh,
-            object.translate_mm,
-            &object.pose,
-            centre,
-            &mut Cancellation::never(),
-        )
-        .ok()?;
-        Some((
-            placed_footprint(&placement, object)?,
-            placement.translation_mm,
-        ))
+        footprint_of(&self.meshes.get(&object.model)?.mesh, centre, object)
     }
 
     /// The pairs of objects on the plate shown, in increasing order, whose footprints (supports
@@ -1178,6 +1140,346 @@ impl Workspace {
     }
 }
 
+/// The XY rectangle `object` covers on a plate centred at `centre`, `mesh` being its model's, in
+/// world mm, with the translation its placement used (see [`placed_footprint`]); `None` when it
+/// cannot be placed.
+fn footprint_of(
+    mesh: &TriangleMesh,
+    centre: [f64; 2],
+    object: &PlateObject,
+) -> Option<(Rect, [f64; 3])> {
+    let placement = placement::place(
+        mesh,
+        object.translate_mm,
+        &object.pose,
+        centre,
+        &mut Cancellation::never(),
+    )
+    .ok()?;
+    Some((
+        placed_footprint(&placement, object)?,
+        placement.translation_mm,
+    ))
+}
+
+/// The turn about Z, in degrees, that makes `object`'s convex footprint smallest on a plate of
+/// `plate` (width, depth), or makes it fit there (TD-162; [`footprint_turn`]): zero when it
+/// saves less than [`TURN_MARGIN`]. `None` when it cannot be placed.
+fn turn_of(
+    mesh: &TriangleMesh,
+    centre: [f64; 2],
+    object: &PlateObject,
+    plate: [f64; 2],
+) -> Option<f64> {
+    let placement = placement::place(
+        mesh,
+        object.translate_mm,
+        &object.pose,
+        centre,
+        &mut Cancellation::never(),
+    )
+    .ok()?;
+    let hull = convex_footprint(mesh, &placement, object)?;
+    Some(footprint_turn(&hull, plate, TURN_MARGIN))
+}
+
+/// What Arrange plans from ([`Workspace::arrange_input`]).
+pub struct ArrangeInput {
+    options: ArrangeOptions,
+    source: PlateContent,
+    printer: PrinterProfile,
+    meshes: HashMap<ModelId, Arc<TriangleMesh>>,
+    tops: Vec<f64>,
+    /// The plates' names when it started.
+    taken: Vec<String>,
+    plate: PlateId,
+    revision: u64,
+    /// Where new plates go.
+    at: usize,
+}
+
+/// An arrangement planned, to make with [`Workspace::finish_arrange`].
+pub struct Planned {
+    plate: PlateId,
+    revision: u64,
+    at: usize,
+    /// The plate's contents arranged.
+    arranged: PlateContent,
+    /// The new plates, in order.
+    added: Vec<PlateContent>,
+    out: Arranged,
+}
+
+/// What Arrange is doing (TD-162, owner 2026-11-19): measuring the models, one after another, or
+/// packing them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ArrangeStage {
+    #[default]
+    Measuring,
+    Packing,
+}
+
+/// How far a planning has gone, and whether it is asked to stop; shared between the thread that
+/// plans and the window that shows it.
+#[derive(Debug, Default)]
+pub struct ArrangeProgress {
+    /// The stage, and the models measured of how many.
+    state: std::sync::Mutex<(ArrangeStage, usize, usize)>,
+    stop: std::sync::atomic::AtomicBool,
+}
+
+impl ArrangeProgress {
+    /// The stage, and the models measured of how many.
+    #[must_use]
+    pub fn state(&self) -> (ArrangeStage, usize, usize) {
+        *self
+            .state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Ask the planning to stop at its next step.
+    pub fn stop(&self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn stopped(&self) -> bool {
+        self.stop.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn set(&self, stage: ArrangeStage, done: usize, total: usize) {
+        *self
+            .state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = (stage, done, total);
+    }
+}
+
+/// An arrangement planned on a thread of its own (TD-162, owner 2026-11-19), so the window keeps
+/// drawing its progress and its Cancel.
+pub struct ArrangeJob {
+    progress: Arc<ArrangeProgress>,
+    result: mpsc::Receiver<Result<Planned, Unarranged>>,
+}
+
+impl ArrangeJob {
+    /// Start planning `input` on a thread of its own.
+    #[must_use]
+    pub fn start(input: ArrangeInput) -> Self {
+        let progress = Arc::new(ArrangeProgress::default());
+        let shared = Arc::clone(&progress);
+        let (sender, result) = mpsc::channel();
+        thread::spawn(move || {
+            let planned = plan_arrangement(&input, &shared);
+            // The receiver is gone only when the job was dropped: nothing waits for it.
+            let _ = sender.send(planned);
+        });
+        Self { progress, result }
+    }
+
+    /// How far it has gone.
+    #[must_use]
+    pub fn progress(&self) -> (ArrangeStage, usize, usize) {
+        self.progress.state()
+    }
+
+    /// Ask it to stop: it plans no further, and its result is dropped with it.
+    pub fn cancel(&self) {
+        self.progress.stop();
+    }
+
+    /// Its result, once it is ready.
+    #[must_use]
+    pub fn poll(&self) -> Option<Result<Planned, Unarranged>> {
+        match self.result.try_recv() {
+            Ok(result) => Some(result),
+            Err(mpsc::TryRecvError::Empty) => None,
+            Err(mpsc::TryRecvError::Disconnected) => Some(Err(Unarranged::Cancelled)),
+        }
+    }
+}
+
+/// Plan Arrange on the shown plate's models (TD-135, phase 5): their footprints (with supports
+/// and raft) packed on the plate the options' spacing apart from the plate's middle outwards,
+/// the models that do not fit going to new plates after it, with its profiles and settings,
+/// named after it ("Arms (2)") and arranged the same way, as many as needed; or, with
+/// [`Overflow::Stay`], left where they are. A model too large for an empty plate stays where
+/// it is either way. One undoable step; the plate shown stays.
+///
+/// **By height** (TD-162, with the overflow to new plates): models of similar height share a
+/// plate, the plate shown taking the tallest, when that shortens the plates' estimated time;
+/// see [`Plan::by_height`] and [`Arranged::grouped`].
+///
+/// **Turns about Z** (TD-162): each model first takes the turn that makes its convex
+/// footprint smallest, when that saves at least [`TURN_MARGIN`] of its room, or that makes
+/// it fit a plate it fits no other way; the packer may then turn it a quarter turn more.
+/// The turn changes only the model's Z rotation, which its supports and preparation follow.
+///
+/// This plans the arrangement of `input`, reporting to `progress` and stopping when it asks:
+/// measuring every model (its turn and its footprint), then packing. It touches no workspace,
+/// so it runs on a thread of its own ([`ArrangeJob`]); [`Workspace::finish_arrange`] makes it.
+///
+/// # Errors
+/// [`Unarranged::Loading`] when a model cannot be placed; [`Unarranged::Cancelled`] when asked
+/// to stop.
+pub fn plan_arrangement(
+    input: &ArrangeInput,
+    progress: &ArrangeProgress,
+) -> Result<Planned, Unarranged> {
+    let options = input.options;
+    let source = &input.source;
+    let printer = &input.printer;
+    let centre = placement::plate_centre(printer);
+    let [ox, oy] = printer.origin_xy_mm;
+    let [width, depth, _] = printer.build_size_mm;
+    let area = Rect {
+        min: [ox, oy],
+        max: [ox + width, oy + depth],
+    };
+    let count = source.objects.len();
+    let mesh = |object: &PlateObject| input.meshes.get(&object.model).ok_or(Unarranged::Loading);
+    // Each model's turn (none, or the one that makes its footprint smallest), then its footprint.
+    let mut turns = Vec::with_capacity(count);
+    let mut turned = Vec::with_capacity(count);
+    let mut footprints = Vec::with_capacity(count);
+    for (done, object) in source.objects.iter().enumerate() {
+        if progress.stopped() {
+            return Err(Unarranged::Cancelled);
+        }
+        progress.set(ArrangeStage::Measuring, done, count);
+        let mesh = mesh(object)?;
+        let turn = if options.turn {
+            turn_of(mesh, centre, object, [width, depth]).ok_or(Unarranged::Loading)?
+        } else {
+            0.0
+        };
+        let object = turned_by(object, turn);
+        footprints.push(footprint_of(mesh, centre, &object).ok_or(Unarranged::Loading)?);
+        turns.push(turn);
+        turned.push(object);
+    }
+    if progress.stopped() {
+        return Err(Unarranged::Cancelled);
+    }
+    progress.set(ArrangeStage::Packing, count, count);
+    let sizes: Vec<[f64; 2]> = footprints.iter().map(|(rect, _)| rect.size()).collect();
+    let turnable = vec![options.turn; count];
+    let tops = &input.tops;
+    let all: Vec<usize> = (0..count).collect();
+    let spacing = options.spacing_mm;
+    let packed = Plan::packed(&all, &sizes, &turnable, area, spacing, options.overflow);
+    let grouped = (options.by_height && options.overflow == Overflow::NewPlates)
+        .then(|| Plan::by_height(&all, &sizes, &turnable, tops, area, spacing));
+    let (plan, saved) = Plan::sooner(packed, grouped, tops, printer, source.calibration());
+    if progress.stopped() {
+        return Err(Unarranged::Cancelled);
+    }
+    let mut out = Arranged {
+        grouped: saved.is_some(),
+        saved_s: saved.unwrap_or(0),
+        ..Arranged::default()
+    };
+    let (landed, turned_count) = landed(input, &plan, &turned, &footprints, &turns)?;
+    out.turned = turned_count;
+    let (shown, overflowed) = plan
+        .plates
+        .split_first()
+        .map_or((&[][..], &[][..]), |(f, r)| (f.as_slice(), r));
+    out.on_plate = shown.len();
+    let added = new_plates(input, overflowed, &landed, &mut out);
+    out.stayed = plan.stayed.len();
+    let gone: Vec<usize> = (0..count)
+        .filter(|i| !plan.stayed.contains(i) && !shown.iter().any(|(p, _)| p == i))
+        .collect();
+    out.removed.clone_from(&gone);
+    let mut arranged = source.clone();
+    arranged.objects = (0..count)
+        .filter(|i| !gone.contains(i))
+        .map(|i| {
+            landed[i]
+                .clone()
+                .filter(|_| shown.iter().any(|(p, _)| *p == i))
+                .unwrap_or_else(|| source.objects[i].clone())
+        })
+        .collect();
+    Ok(Planned {
+        plate: input.plate,
+        revision: input.revision,
+        at: input.at,
+        arranged,
+        added,
+        out,
+    })
+}
+
+/// The new plates after the source plate for the models `overflowed` plans on them, as
+/// `landed`, each with its profiles and settings and named after it ("Arms (2)", a name taken
+/// skipped); counted in `out`.
+fn new_plates(
+    input: &ArrangeInput,
+    overflowed: &[Vec<(usize, Placed)>],
+    landed: &[Option<PlateObject>],
+    out: &mut Arranged,
+) -> Vec<PlateContent> {
+    let source = &input.source;
+    let mut added = Vec::new();
+    let mut number = 2;
+    for on_new in overflowed.iter().filter(|p| !p.is_empty()) {
+        let name = fresh_name(&source.name, &mut number, |name| {
+            input.taken.iter().chain(&out.new_plates).any(|t| t == name)
+        });
+        out.moved += on_new.len();
+        let objects = on_new
+            .iter()
+            .filter_map(|&(i, _)| landed[i].clone())
+            .collect();
+        added.push(PlateContent {
+            name: name.clone(),
+            objects,
+            ..source.clone()
+        });
+        out.new_plates.push(name);
+    }
+    added
+}
+
+/// Each model `plan` places, as it lands (indexed as `turned`, `None` for those it does not
+/// place): `turned` (each model with its own turn, `turns`), a quarter turn more where the
+/// packer turned it, then moved so its footprint's lowest corner is the corner planned; and how
+/// many models turned in all.
+///
+/// # Errors
+/// [`Unarranged::Loading`] when a model turned a quarter cannot be placed.
+fn landed(
+    input: &ArrangeInput,
+    plan: &Plan,
+    turned: &[PlateObject],
+    footprints: &[(Rect, [f64; 3])],
+    turns: &[f64],
+) -> Result<(Vec<Option<PlateObject>>, usize), Unarranged> {
+    let centre = placement::plate_centre(&input.printer);
+    let mut landed: Vec<Option<PlateObject>> = vec![None; turned.len()];
+    let mut count = 0;
+    for &(i, placed) in plan.plates.iter().flatten() {
+        let (mut object, (rect, translation)) = if placed.turned {
+            let object = turned_by(&turned[i], 90.0);
+            let mesh = input.meshes.get(&object.model).ok_or(Unarranged::Loading)?;
+            let footprint = footprint_of(mesh, centre, &object).ok_or(Unarranged::Loading)?;
+            (object, footprint)
+        } else {
+            (turned[i].clone(), footprints[i])
+        };
+        object.translate_mm[0] = translation[0] + placed.corner[0] - rect.min[0];
+        object.translate_mm[1] = translation[1] + placed.corner[1] - rect.min[1];
+        object.pose.center = false;
+        if turns[i] != 0.0 || placed.turned {
+            count += 1;
+        }
+        landed[i] = Some(object);
+    }
+    Ok((landed, count))
+}
+
 /// The XY rectangle `object`, placed by `placement`, covers, in world mm: the placed model, its
 /// supports' tips, bends and feet with their pads, and the raft's margin and slope beyond the
 /// pads (drain-hole cutters, inside the model, are left out). `None` when its supports cannot
@@ -1187,38 +1489,79 @@ fn placed_footprint(placement: &Placement, object: &PlateObject) -> Option<Rect>
         min: [placement.min.x, placement.min.y],
         max: [placement.max.x, placement.max.y],
     };
+    for ([x, y], radius) in support_circles(placement, object)? {
+        rect.min = [rect.min[0].min(x - radius), rect.min[1].min(y - radius)];
+        rect.max = [rect.max[0].max(x + radius), rect.max[1].max(y + radius)];
+    }
+    Some(rect)
+}
+
+/// The circles, centre and radius in world mm, that `object`'s supports, placed by `placement`,
+/// cover seen from above: tips, bends, feet with their pads, and the raft's margin and slope
+/// beyond the pads. `None` when they cannot be placed.
+fn support_circles(placement: &Placement, object: &PlateObject) -> Option<Vec<([f64; 2], f64)>> {
     let Some(document) = &object.supports else {
-        return Some(rect);
+        return Some(Vec::new());
     };
     let affine = placement.transform.to_affine().ok()?;
     let placed = document.placed(&affine).ok()?;
-    let mut grow = |[x, y, _]: [f64; 3], radius: f64| {
-        rect.min = [rect.min[0].min(x - radius), rect.min[1].min(y - radius)];
-        rect.max = [rect.max[0].max(x + radius), rect.max[1].max(y + radius)];
-    };
     let raft = placed.raft.as_ref().map_or(0.0, |raft| {
         let run = raft.thickness_mm / raft.slope_deg.to_radians().tan().max(1e-6);
         raft.fillet_diameter_mm / 2.0 + raft.margin_mm + run
     });
+    let mut circles = Vec::new();
     for support in &placed.supports {
         let p = &support.parameters;
-        grow(support.tip_mm, p.tip_body_diameter_mm / 2.0);
+        let at = |[x, y, _]: [f64; 3]| [x, y];
+        circles.push((at(support.tip_mm), p.tip_body_diameter_mm / 2.0));
         for &bend in &support.bends {
-            grow(bend, p.shaft_diameter_mm / 2.0);
+            circles.push((at(bend), p.shaft_diameter_mm / 2.0));
         }
         let foot = (p.pad_diameter_mm / 2.0).max(raft);
         match support.base {
-            BaseSpec::Platform([x, y]) => grow([x, y, 0.0], foot),
+            BaseSpec::Platform(xy) => circles.push((xy, foot)),
             BaseSpec::Vertical => {
                 let last = support.bends.last().copied().unwrap_or(support.tip_mm);
-                grow(last, foot);
+                circles.push((at(last), foot));
             }
-            BaseSpec::Model { point_mm, .. } => grow(point_mm, p.foot_body_diameter_mm / 2.0),
+            BaseSpec::Model { point_mm, .. } => {
+                circles.push((at(point_mm), p.foot_body_diameter_mm / 2.0));
+            }
             // Within its parent's footprint.
             BaseSpec::Support { .. } => {}
         }
     }
-    Some(rect)
+    Some(circles)
+}
+
+/// The sides of the polygon that stands for a support's circle in a convex footprint: drawn
+/// round the circle, so the footprint never falls inside it.
+const CIRCLE_SIDES: u32 = 16;
+
+/// The convex footprint of `mesh` placed by `placement`, with `object`'s supports and raft,
+/// seen from above in world mm (TD-162): the hull of the placed model's vertices and of a
+/// polygon round each support circle. `None` when it cannot be placed.
+fn convex_footprint(
+    mesh: &TriangleMesh,
+    placement: &Placement,
+    object: &PlateObject,
+) -> Option<Vec<[f64; 2]>> {
+    let affine = placement.transform.to_affine().ok()?;
+    let mut points: Vec<[f64; 2]> = Vec::with_capacity(mesh.vertices().len());
+    for &vertex in mesh.vertices() {
+        let p = affine.transform_point(vertex).ok()?;
+        points.push([p.x, p.y]);
+    }
+    // A polygon round the circle: its corners at r / cos(π / n).
+    let step = std::f64::consts::TAU / f64::from(CIRCLE_SIDES);
+    let outside = 1.0 / (step / 2.0).cos();
+    for ([x, y], radius) in support_circles(placement, object)? {
+        for k in 0..CIRCLE_SIDES {
+            let (sin, cos) = (step * f64::from(k)).sin_cos();
+            points.push([x + radius * outside * cos, y + radius * outside * sin]);
+        }
+    }
+    Some(convex_hull(&points))
 }
 
 impl Workspace {
@@ -1954,6 +2297,233 @@ pub struct Arranged {
     pub stayed: usize,
     /// The indices the models moved to new plates had on the plate, ascending.
     pub removed: Vec<usize>,
+    /// The models were grouped by height (TD-162): the plates' estimated time is shorter so,
+    /// by `saved_s` seconds, or as short on fewer plates.
+    pub grouped: bool,
+    pub saved_s: u64,
+    /// The models turned about Z (TD-162).
+    pub turned: usize,
+}
+
+/// How Arrange arranges the plate shown (TD-135, TD-162).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ArrangeOptions {
+    /// The least distance between footprints, in mm.
+    pub spacing_mm: f64,
+    /// Where the models that do not fit go.
+    pub overflow: Overflow,
+    /// Models of similar height share a plate, with the overflow to new plates.
+    pub by_height: bool,
+    /// Models may turn about Z, by any angle, to take less room.
+    pub turn: bool,
+}
+
+/// The least share of its room a turn about Z must save for Arrange to make it (owner,
+/// 2026-11-19, TD-162): below it, the model keeps the orientation the user chose.
+pub const TURN_MARGIN: f64 = 0.01;
+
+/// `object` turned `turn_deg` about Z (counter-clockwise from above), its Z rotation kept
+/// within [-180°, 180°); unchanged for no turn. The fixed-axis order X, Y, Z makes the Z
+/// rotation a turn about the plate's vertical, which its supports and preparation follow.
+fn turned_by(object: &PlateObject, turn_deg: f64) -> PlateObject {
+    let mut object = object.clone();
+    if turn_deg != 0.0 {
+        let z = object.pose.rotate_deg[2] + turn_deg;
+        object.pose.rotate_deg[2] = (z + 180.0).rem_euclid(360.0) - 180.0;
+    }
+    object
+}
+
+/// Where Arrange puts each model (TD-135, TD-162): the plate shown's models with their lowest
+/// corners, then each new plate's, and those that fit not even an empty plate and stay.
+struct Plan {
+    plates: Vec<Vec<(usize, Placed)>>,
+    stayed: Vec<usize>,
+}
+
+impl Plan {
+    /// As Arrange packs a plate (TD-135): `all` the models of `sizes` packed on `area` by
+    /// footprint, the largest first; with the overflow to new plates, those left packed onto
+    /// new plates in turn.
+    fn packed(
+        all: &[usize],
+        sizes: &[[f64; 2]],
+        turnable: &[bool],
+        area: Rect,
+        spacing: f64,
+        overflow: Overflow,
+    ) -> Self {
+        let (placed, mut left) = pack_turning(all, sizes, turnable, area, &[], spacing);
+        let mut plates = vec![placed];
+        if overflow == Overflow::NewPlates {
+            while !left.is_empty() {
+                let (on_new, rest) = pack_turning(&left, sizes, turnable, area, &[], spacing);
+                if on_new.is_empty() {
+                    break;
+                }
+                plates.push(on_new);
+                left = rest;
+            }
+        }
+        Self {
+            plates,
+            stayed: left,
+        }
+    }
+
+    /// Grouped by height (TD-162), after the first-fit, longest-processing-time rule for a batch
+    /// processing machine, where a batch lasts as long as its longest job (Uzsoy, 1994):
+    /// - the models by decreasing height (`tops`), then decreasing footprint, then their order;
+    /// - each plate, the plate shown first, takes the longest run of the tallest left that fits,
+    ///   found by bisection, then the shorter ones left that fit around them: a shorter model on
+    ///   a taller plate costs no time;
+    /// - the next plate takes what is left. A model too large for an empty plate stays.
+    fn by_height(
+        all: &[usize],
+        sizes: &[[f64; 2]],
+        turnable: &[bool],
+        tops: &[f64],
+        area: Rect,
+        spacing: f64,
+    ) -> Self {
+        let (mut order, stayed): (Vec<usize>, Vec<usize>) = all.iter().partition(|&&i| {
+            arrange_turning(&[sizes[i]], &[turnable[i]], area, &[], spacing).is_ok()
+        });
+        let footprint = |i: usize| sizes[i][0] * sizes[i][1];
+        order.sort_by(|&a, &b| {
+            tops[b]
+                .total_cmp(&tops[a])
+                .then(footprint(b).total_cmp(&footprint(a)))
+                .then(a.cmp(&b))
+        });
+        // The first `k` of `order` packed together, if they all fit.
+        let run = |order: &[usize], k: usize| {
+            let wanted: Vec<[f64; 2]> = order[..k].iter().map(|&i| sizes[i]).collect();
+            let free: Vec<bool> = order[..k].iter().map(|&i| turnable[i]).collect();
+            arrange_turning(&wanted, &free, area, &[], spacing)
+                .ok()
+                .map(|placed| order[..k].iter().copied().zip(placed).collect::<Vec<_>>())
+        };
+        let mut plates = Vec::new();
+        while !order.is_empty() {
+            // One fits alone (checked above); the longest run that fits, by bisection.
+            let (mut low, mut high) = (1, order.len());
+            let mut best = run(&order, high);
+            if best.is_some() {
+                low = high;
+            } else {
+                best = run(&order, 1);
+                while high - low > 1 {
+                    let middle = low + (high - low) / 2;
+                    match run(&order, middle) {
+                        Some(placed) => {
+                            low = middle;
+                            best = Some(placed);
+                        }
+                        None => high = middle,
+                    }
+                }
+            }
+            let mut plate = best.unwrap_or_default();
+            let obstacles: Vec<Rect> = plate
+                .iter()
+                .map(|&(i, placed)| {
+                    let [w, d] = if placed.turned {
+                        [sizes[i][1], sizes[i][0]]
+                    } else {
+                        sizes[i]
+                    };
+                    let corner = placed.corner;
+                    Rect {
+                        min: corner,
+                        max: [corner[0] + w, corner[1] + d],
+                    }
+                })
+                .collect();
+            let rest = &order[low..];
+            let (around, _) = pack_turning(rest, sizes, turnable, area, &obstacles, spacing);
+            let rest: Vec<usize> = rest
+                .iter()
+                .copied()
+                .filter(|i| !around.iter().any(|(placed, _)| placed == i))
+                .collect();
+            plate.extend(around);
+            plates.push(plate);
+            order = rest;
+        }
+        if plates.is_empty() {
+            plates.push(Vec::new());
+        }
+        Self { plates, stayed }
+    }
+
+    /// `packed`, or `grouped` when it prints sooner by the estimate (TD-162): shorter by a
+    /// second or more, or as long within a second on fewer plates. With `grouped` chosen, the
+    /// seconds it saves.
+    fn sooner(
+        packed: Self,
+        grouped: Option<Self>,
+        tops: &[f64],
+        printer: &PrinterProfile,
+        settings: Option<&PrintSettings>,
+    ) -> (Self, Option<u64>) {
+        let Some(grouped) = grouped else {
+            return (packed, None);
+        };
+        let before = packed.time_s(tops, printer, settings);
+        let after = grouped.time_s(tops, printer, settings);
+        // Within a second the two take the same time: fewer plates decide, then the packing.
+        let better = if (before - after).abs() < 1.0 {
+            grouped.plates() < packed.plates()
+        } else {
+            after < before
+        };
+        if better {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // Seconds.
+            let saved = (before - after).max(0.0).round() as u64;
+            (grouped, Some(saved))
+        } else {
+            (packed, None)
+        }
+    }
+
+    /// How many plates hold a model: the plate shown always counts.
+    fn plates(&self) -> usize {
+        1 + self.plates.iter().skip(1).filter(|p| !p.is_empty()).count()
+    }
+
+    /// The plates' estimated time (TD-162): each prints as many layers as its tallest model
+    /// needs, the models staying on the plate shown counted on it, timed as a print job of that
+    /// many calibrated layers with `settings` on `printer`. Without settings, the heights stand
+    /// for the time, which they are proportional to.
+    fn time_s(
+        &self,
+        tops: &[f64],
+        printer: &PrinterProfile,
+        settings: Option<&PrintSettings>,
+    ) -> f64 {
+        self.plates
+            .iter()
+            .enumerate()
+            .map(|(k, plate)| {
+                let stayed = if k == 0 { &self.stayed[..] } else { &[] };
+                let top = plate
+                    .iter()
+                    .map(|&(i, _)| i)
+                    .chain(stayed.iter().copied())
+                    .map(|i| tops[i])
+                    .fold(0.0, f64::max);
+                match settings {
+                    Some(settings) => {
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let layers = (top / settings.layer_height_mm).ceil().max(0.0) as u64;
+                        uniform_time_s(printer, settings, layers)
+                    }
+                    None => top,
+                }
+            })
+            .sum()
+    }
 }
 
 /// Where the copies of a model went (owner, 2026-11-10).
@@ -1976,6 +2546,36 @@ pub enum Unarranged {
     NoPrinter,
     /// A model is still loading.
     Loading,
+    /// The plate changed while it was being arranged (TD-162): nothing was changed.
+    Changed,
+    /// The arrangement was cancelled (TD-162): nothing was changed.
+    Cancelled,
+}
+
+/// [`pack`], where the items marked in `turnable` may lie a quarter turn round (TD-162).
+fn pack_turning(
+    items: &[usize],
+    sizes: &[[f64; 2]],
+    turnable: &[bool],
+    area: Rect,
+    obstacles: &[Rect],
+    spacing: f64,
+) -> (Vec<(usize, Placed)>, Vec<usize>) {
+    let mut keep = items.to_vec();
+    let mut left = Vec::new();
+    while !keep.is_empty() {
+        let wanted: Vec<[f64; 2]> = keep.iter().map(|&i| sizes[i]).collect();
+        let free: Vec<bool> = keep.iter().map(|&i| turnable[i]).collect();
+        match arrange_turning(&wanted, &free, area, obstacles, spacing) {
+            Ok(placed) => return (keep.into_iter().zip(placed).collect(), sorted(left)),
+            Err(unplaced) => {
+                for &k in unplaced.items.iter().rev() {
+                    left.push(keep.remove(k));
+                }
+            }
+        }
+    }
+    (Vec::new(), sorted(left))
 }
 
 /// `items` (indices into `sizes`) packed on `area` `spacing` apart and clear of `obstacles`:
@@ -2281,6 +2881,20 @@ pub fn volume_lines(
 
 #[cfg(test)]
 pub(crate) mod tests {
+    impl Workspace {
+        /// Arrange the shown plate on this thread: [`Self::arrange_input`], [`plan_arrangement`] and
+        /// [`Self::finish_arrange`] in turn. The application plans on a thread of its own
+        /// ([`ArrangeJob`]); the tests use this.
+        ///
+        /// # Errors
+        /// [`Unarranged`]: no printer, or a model still loading, with nothing changed.
+        pub(crate) fn arrange(&mut self, options: ArrangeOptions) -> Result<Arranged, Unarranged> {
+            let input = self.arrange_input(options)?;
+            let planned = plan_arrangement(&input, &ArrangeProgress::default())?;
+            self.finish_arrange(planned)
+        }
+    }
+
     use super::*;
     use std::fmt::Write as _;
 
@@ -2503,6 +3117,320 @@ pub(crate) mod tests {
         let _ = std::fs::remove_dir_all(folder);
     }
 
+    /// Arrange's options at a 2 mm spacing.
+    fn options(overflow: Overflow, by_height: bool, turn: bool) -> ArrangeOptions {
+        ArrangeOptions {
+            spacing_mm: 2.0,
+            overflow,
+            by_height,
+            turn,
+        }
+    }
+
+    /// A workspace on a 192 × 120 mm plate (a Photon Mono X's) holding one box of `size`, its
+    /// folder removed by the caller.
+    fn one_box(name: &str, size: [f64; 3]) -> (Workspace, std::path::PathBuf) {
+        let folder = std::env::temp_dir().join(format!("{name}-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let model = folder.join("box.stl");
+        std::fs::write(&model, box_stl([0.0; 3], size)).unwrap();
+        let mut workspace = Workspace::new();
+        let (printer, resin, setting) = catalog_profiles("anycubic-photon-mono-x");
+        workspace.edit(|plate| {
+            plate.printer = Some(printer);
+            plate.resin = Some(resin);
+            plate.print_setting = Some(setting);
+        });
+        workspace.open(model);
+        wait(&mut workspace);
+        (workspace, folder)
+    }
+
+    /// The footprint of the plate shown's object `index`.
+    fn rect_of(workspace: &Workspace, index: usize) -> Rect {
+        let content = workspace.plate().clone();
+        let centre = placement::plate_centre(content.printer.as_ref().unwrap());
+        workspace
+            .footprint(centre, &content.objects[index])
+            .unwrap()
+            .0
+    }
+
+    #[test]
+    fn arrange_turns_a_model_lying_aslant_back_to_its_smallest_room() {
+        // TD-162: a 100 × 10 mm bar turned 30° takes 92 × 59 mm; turned back, 100 × 10.
+        let (mut workspace, folder) = one_box("karasu-arrange-aslant", [100.0, 10.0, 5.0]);
+        workspace.edit(|plate| plate.objects[0].pose.rotate_deg = [0.0, 0.0, 30.0]);
+        let aslant = rect_of(&workspace, 0).size();
+        assert!(aslant[0] * aslant[1] > 5000.0, "{aslant:?}");
+        // Not asked: it keeps its turn.
+        let kept = workspace
+            .arrange(options(Overflow::NewPlates, true, false))
+            .unwrap();
+        assert_eq!(kept.turned, 0);
+        assert!((workspace.plate().objects[0].pose.rotate_deg[2] - 30.0).abs() < 1e-9);
+        assert!(workspace.undo());
+        // Asked: turned back, along X or Y, and said so.
+        let turned = workspace
+            .arrange(options(Overflow::NewPlates, true, true))
+            .unwrap();
+        assert_eq!((turned.turned, turned.on_plate), (1, 1));
+        let z = workspace.plate().objects[0].pose.rotate_deg[2];
+        assert!((z / 90.0 - (z / 90.0).round()).abs() < 1e-9, "{z}");
+        let [w, d] = rect_of(&workspace, 0).size();
+        assert!((w * d - 1000.0).abs() < 1e-6, "{w} {d}");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn arrange_turns_a_model_that_fits_only_turned_or_along_the_diagonal() {
+        // TD-162: 110 × 150 mm fits the 192 × 120 mm plate only turned a quarter.
+        let (mut workspace, folder) = one_box("karasu-arrange-quarter", [110.0, 150.0, 5.0]);
+        let stays = workspace
+            .arrange(options(Overflow::NewPlates, true, false))
+            .unwrap();
+        assert_eq!(stays.stayed, 1);
+        assert!(workspace.undo());
+        let fits = workspace
+            .arrange(options(Overflow::NewPlates, true, true))
+            .unwrap();
+        assert_eq!((fits.on_plate, fits.stayed, fits.turned), (1, 0, 1));
+        let [w, d] = rect_of(&workspace, 0).size();
+        assert!(w <= 192.0 && d <= 120.0, "{w} {d}");
+        let _ = std::fs::remove_dir_all(&folder);
+        // A 205 × 8 mm bar is longer than both sides; along the diagonal it fits.
+        let (mut workspace, folder) = one_box("karasu-arrange-diagonal", [205.0, 8.0, 5.0]);
+        let fits = workspace
+            .arrange(options(Overflow::NewPlates, true, true))
+            .unwrap();
+        assert_eq!((fits.on_plate, fits.stayed, fits.turned), (1, 0, 1));
+        let rect = rect_of(&workspace, 0);
+        assert!(rect.max[0] - rect.min[0] <= 192.0 && rect.max[1] - rect.min[1] <= 120.0);
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn a_turned_model_takes_its_supports_with_it() {
+        // TD-162: supports are kept in the model's frame (TD-108), so a turn about Z carries
+        // them; the footprint, with them, still lies on the plate.
+        use karasu_core::supports::{AxisSpec, ManualSupport, Preset, SupportKind, SupportOrigin};
+        let (mut workspace, folder) = one_box("karasu-arrange-supported", [60.0, 10.0, 10.0]);
+        let mut document = SupportDocument::new(Preset::Medium);
+        document.supports.push(ManualSupport {
+            id: 1,
+            tip_mm: [60.0, 5.0, 5.0],
+            tip_axis: AxisSpec::Normal,
+            bends: Vec::new(),
+            base: BaseSpec::Platform([75.0, 5.0]),
+            parameters: Preset::Medium.parameters(),
+            accept_collision: true,
+            origin: SupportOrigin::Placed,
+            kind: SupportKind::Standard,
+        });
+        workspace.edit(|plate| {
+            plate.objects[0].supports = Some(document.clone());
+            plate.objects[0].pose.rotate_deg = [0.0, 0.0, 40.0];
+        });
+        let turned = workspace
+            .arrange(options(Overflow::NewPlates, false, true))
+            .unwrap();
+        assert_eq!(turned.turned, 1);
+        let object = &workspace.plate().objects[0];
+        assert_eq!(object.supports.as_ref(), Some(&document));
+        let rect = rect_of(&workspace, 0);
+        let [w, d] = rect.size();
+        // The bar and the support beyond its end, about 80 mm along one axis once turned back.
+        assert!(w.max(d) > 75.0 && w.min(d) < 20.0, "{w} {d}");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    #[ignore = "times a local large model; set KARASU_INTERFACE_MODEL"]
+    fn the_turn_of_a_local_model_is_timed() {
+        // TD-162: the convex footprint's cost on a large model.
+        let Ok(path) = std::env::var("KARASU_INTERFACE_MODEL") else {
+            eprintln!("KARASU_INTERFACE_MODEL is not set: nothing to time");
+            return;
+        };
+        let mut workspace = Workspace::new();
+        let (printer, _, _) = catalog_profiles("anycubic-photon-mono-x");
+        workspace.edit(|plate| plate.printer = Some(printer.clone()));
+        workspace.open(std::path::PathBuf::from(path));
+        wait(&mut workspace);
+        let object = workspace.plate().objects[0].clone();
+        let centre = placement::plate_centre(&printer);
+        let triangles = workspace.meshes()[&object.model].mesh.triangles().len();
+        let start = std::time::Instant::now();
+        let mesh = Arc::clone(&workspace.meshes()[&object.model].mesh);
+        let turn = turn_of(&mesh, centre, &object, [192.0, 120.0]);
+        eprintln!(
+            "{triangles} triangles: turn {turn:?} in {:.0} ms",
+            start.elapsed().as_secs_f64() * 1000.0
+        );
+        // The whole Arrange, as packed today and with turns.
+        for turn in [false, true] {
+            let start = std::time::Instant::now();
+            let arranged = workspace.arrange(options(Overflow::NewPlates, true, turn));
+            eprintln!(
+                "Arrange, turn {turn}: {:.0} ms, {arranged:?}",
+                start.elapsed().as_secs_f64() * 1000.0
+            );
+            workspace.undo();
+        }
+    }
+
+    #[test]
+    fn an_arrangement_planned_on_its_own_thread_is_the_same_cancels_and_spots_a_changed_plate() {
+        // Owner, 2026-11-19: Arrange works beside the window; done, cancelled, or the plate
+        // changed meanwhile.
+        let (mut workspace, folder) = one_box("karasu-arrange-job", [90.0, 50.0, 5.0]);
+        workspace.edit(|plate| {
+            let object = plate.objects[0].clone();
+            for k in 1..6 {
+                let mut copy = object.clone();
+                copy.translate_mm = [f64::from(k) * 3.0, 0.0, 0.0];
+                plate.objects.push(copy);
+            }
+        });
+        let options = options(Overflow::NewPlates, true, true);
+        let before = workspace.plate().clone();
+        // On a thread of its own: the same arrangement as on this one.
+        let job = ArrangeJob::start(workspace.arrange_input(options).unwrap());
+        let started = std::time::Instant::now();
+        let result = loop {
+            if let Some(result) = job.poll() {
+                break result;
+            }
+            assert!(started.elapsed().as_secs() < 60, "{:?}", job.progress());
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        };
+        let threaded = workspace.finish_arrange(result.unwrap()).unwrap();
+        let shown = workspace.plate().clone();
+        let plates = workspace.project().plates().len();
+        assert!(workspace.undo());
+        assert_eq!(workspace.plate(), &before);
+        let here = workspace.arrange(options).unwrap();
+        assert_eq!(threaded, here);
+        assert_eq!(workspace.plate(), &shown);
+        assert_eq!(workspace.project().plates().len(), plates);
+        assert!(workspace.undo());
+        // Asked to stop: nothing planned.
+        let progress = ArrangeProgress::default();
+        progress.stop();
+        let input = workspace.arrange_input(options).unwrap();
+        assert!(matches!(
+            plan_arrangement(&input, &progress),
+            Err(Unarranged::Cancelled)
+        ));
+        // The plate changed meanwhile: refused, the plate as the user left it.
+        let planned = plan_arrangement(&input, &ArrangeProgress::default()).unwrap();
+        workspace.edit(|plate| plate.objects[0].translate_mm = [1.0, 2.0, 0.0]);
+        let edited = workspace.plate().clone();
+        assert_eq!(workspace.finish_arrange(planned), Err(Unarranged::Changed));
+        assert_eq!(workspace.plate(), &edited);
+        assert_eq!(workspace.project().plates().len(), 1);
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn grouping_by_height_is_timed_on_many_footprints() {
+        // TD-162: footprints of mixed sizes and heights over several 218 × 123 mm plates; the
+        // bisection packs a few times per plate. Each model lands on one plate, or stays.
+        let area = Rect {
+            min: [0., 0.],
+            max: [218., 123.],
+        };
+        for (count, side) in [(50, 30.), (100, 25.), (200, 20.), (400, 15.)] {
+            let sizes: Vec<[f64; 2]> = (0..count)
+                .map(|k: i32| [side + f64::from(k % 3), side + f64::from(k % 2)])
+                .collect();
+            let tops: Vec<f64> = (0..count).map(|k| f64::from(10 + (k * 37) % 90)).collect();
+            let all: Vec<usize> = (0..sizes.len()).collect();
+            let start = std::time::Instant::now();
+            let plan = Plan::by_height(&all, &sizes, &vec![false; sizes.len()], &tops, area, 2.);
+            let elapsed = start.elapsed().as_secs_f64() * 1000.;
+            let placed: usize = plan.plates.iter().map(Vec::len).sum();
+            assert_eq!(placed + plan.stayed.len(), sizes.len());
+            eprintln!(
+                "{count} footprints of {side} mm by height: {} plates, {elapsed:.0} ms",
+                plan.plates.len()
+            );
+        }
+    }
+
+    #[test]
+    fn arrange_groups_models_by_height_when_the_plates_print_sooner() {
+        // TD-162: four slabs 100 mm tall and four 20 mm tall, 90 × 50 mm each, four to a
+        // 192 × 120 mm plate, opened tall and short in turn.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-workspace-height-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let tall = folder.join("tall.stl");
+        std::fs::write(&tall, box_stl([0.0; 3], [90.0, 50.0, 100.0])).unwrap();
+        let short = folder.join("short.stl");
+        std::fs::write(&short, box_stl([0.0; 3], [90.0, 50.0, 20.0])).unwrap();
+        let mut workspace = Workspace::new();
+        let (printer, resin, setting) = catalog_profiles("anycubic-photon-mono-x");
+        workspace.edit(|plate| {
+            plate.name = "Arms".into();
+            plate.printer = Some(printer);
+            plate.resin = Some(resin);
+            plate.print_setting = Some(setting);
+        });
+        for _ in 0..4 {
+            for model in [&tall, &short] {
+                workspace.open(model.clone());
+                wait(&mut workspace);
+            }
+        }
+        let tops = |w: &mut Workspace, id: PlateId| -> Vec<f64> {
+            w.show_plate(id);
+            let tops = w
+                .placements()
+                .iter()
+                .map(|p| (p.as_ref().unwrap().max.z * 1e6).round() / 1e6)
+                .collect();
+            tops
+        };
+        let first = workspace.plate_id();
+        // As packed today: by footprint, so tall and short share both plates.
+        let packed = workspace
+            .arrange(options(Overflow::NewPlates, false, false))
+            .unwrap();
+        assert_eq!(
+            (packed.on_plate, packed.moved, packed.grouped),
+            (4, 4, false)
+        );
+        let second = workspace.project().plates()[1].id();
+        assert!(tops(&mut workspace, second).contains(&100.0));
+        workspace.show_plate(first);
+        assert!(workspace.undo());
+        // Grouped: the tall ones on the plate shown, the short ones on the new plate.
+        let grouped = workspace
+            .arrange(options(Overflow::NewPlates, true, false))
+            .unwrap();
+        assert_eq!((grouped.on_plate, grouped.moved), (4, 4));
+        assert!(grouped.grouped);
+        assert_eq!(tops(&mut workspace, first), vec![100.0; 4]);
+        let second = workspace.project().plates()[1].id();
+        assert_eq!(tops(&mut workspace, second), vec![20.0; 4]);
+        // What it saves: one plate of 100 mm printed as one of 20 mm.
+        workspace.show_plate(first);
+        let printer = workspace.plate().printer.clone().unwrap();
+        let settings = workspace.plate().calibration().cloned().unwrap();
+        let layers = |mm: f64| {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let layers = (mm / settings.layer_height_mm).ceil() as u64;
+            layers
+        };
+        let saved = uniform_time_s(&printer, &settings, layers(100.0))
+            - uniform_time_s(&printer, &settings, layers(20.0));
+        #[allow(clippy::cast_precision_loss)]
+        let reported = grouped.saved_s as f64;
+        assert!((reported - saved).abs() <= 1.0, "{reported} {saved}");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
     #[test]
     fn arrange_packs_the_plate_and_takes_the_overflow_to_new_plates_or_leaves_it() {
         // TD-135, phase 5: six slabs of 90 × 50 mm on a 192 × 120 mm plate, four fit; a slab
@@ -2531,7 +3459,9 @@ pub(crate) mod tests {
         let first = workspace.plate_id();
         assert_eq!(workspace.plate().objects.len(), 7);
         let revision = workspace.revision();
-        let arranged = workspace.arrange(2.0, Overflow::NewPlates).unwrap();
+        let arranged = workspace
+            .arrange(options(Overflow::NewPlates, false, false))
+            .unwrap();
         assert_eq!(
             arranged,
             Arranged {
@@ -2540,6 +3470,9 @@ pub(crate) mod tests {
                 new_plates: vec!["Arms (2)".into()],
                 stayed: 1,
                 removed: arranged.removed.clone(),
+                grouped: false,
+                saved_s: 0,
+                turned: 0,
             }
         );
         assert_eq!(arranged.removed.len(), 2);
@@ -2575,8 +3508,20 @@ pub(crate) mod tests {
         assert!(workspace.undo());
         assert_eq!(workspace.project().plates().len(), 1);
         assert_eq!(workspace.plate().objects.len(), 7);
+        // Slabs all of one height: grouping by height saves nothing, so the packing is the
+        // same (TD-162).
+        let same = workspace
+            .arrange(options(Overflow::NewPlates, true, false))
+            .unwrap();
+        assert_eq!(
+            (same.on_plate, same.moved, same.stayed, same.grouped),
+            (4, 2, 1, false)
+        );
+        assert!(workspace.undo());
         // Left where they are: no new plate, three stay.
-        let arranged = workspace.arrange(2.0, Overflow::Stay).unwrap();
+        let arranged = workspace
+            .arrange(options(Overflow::Stay, true, false))
+            .unwrap();
         assert_eq!(
             (arranged.on_plate, arranged.moved, arranged.stayed),
             (4, 0, 3)

@@ -115,6 +115,16 @@ arrange-overflow-stay = Stay where they are
 arrange-hint-new = Footprints include supports and rafts. A new plate takes this plate's printer, resin, print setting and slicing options, and is arranged the same way; more plates follow while models are left.
 arrange-hint-stay = Footprints include supports and rafts. What fits is arranged; the rest stays where it is, and the notification says so.
 arrange-action = Arrange
+arrange-by-height = Group by height
+arrange-by-height-hint = A plate prints as long as its tallest model: models of similar height share a plate when that makes the plates' estimated time shorter, the plate shown taking the tallest
+arrange-turn = Turn about Z
+arrange-turn-hint = Models may turn about the plate's vertical, by any angle, to take less room or to fit the plate: a turn changes the orientation chosen for the model
+arrange-turned = { $count ->
+    [one] { $count } model turned about Z.
+   *[other] { $count } models turned about Z.
+}
+arrange-grouped-saved = Grouped by height: about { $saved } shorter in all.
+arrange-grouped-fewer = Grouped by height: as long, on fewer plates.
 arrange-done = Arranged: { $count ->
         [one] 1 model
        *[other] { $count } models
@@ -131,6 +141,10 @@ arrange-stayed = { $count ->
        *[other] { $count } did not fit and stay where they were.
     }
 arrange-undo = Ctrl+Z undoes the whole arrangement.
+arrange-measuring = Measuring the models: { $number } of { $count }
+arrange-packing = Placing the models on the plates
+arrange-changed = The plate changed while it was being arranged: nothing was changed, arrange it again
+arrange-cancelled = Arrange cancelled: nothing was changed
 arrange-no-printer = Choose a printer for the plate first: Arrange places the models on its plate
 arrange-loading = A model is still loading: arrange once it has opened
 export-all-title = Export every plate

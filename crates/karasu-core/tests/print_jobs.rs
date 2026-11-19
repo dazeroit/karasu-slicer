@@ -1,7 +1,9 @@
 //! Job scheduling, explicit physical settings and immutable profile snapshot regressions.
 use karasu_core::{
     cancellation::{Cancellation, Checkpoint},
-    print_job::{JobError, JobLimits, LayerOverride, LayerPhase, PrintJob},
+    print_job::{
+        layer_time_s, uniform_time_s, JobError, JobLimits, LayerOverride, LayerPhase, PrintJob,
+    },
     profiles::{
         LayerSettings, MotionStage, PrintSettings, PrinterCalibration, PrinterLimits,
         PrinterProfile, ResinProfile,
@@ -349,6 +351,40 @@ fn time_estimate_includes_exposure_waits_and_each_motion_stage() {
         })
         .sum();
     assert!((j.estimated_time_s() - expected).abs() < 1e-12);
+}
+#[test]
+fn a_uniform_plan_s_time_is_the_jobs_estimate() {
+    // TD-162: Arrange estimates a plate by its layer count, as a job of that plan would.
+    let settings = resin().calibrations[0].settings.clone();
+    let mut printer = printer();
+    for fixed in [None, Some(0.45)] {
+        printer.fixed_layer_time_s = fixed;
+        // Ending with the transition, and beyond it (a job holds at least those layers).
+        for count in [5_u64, 7, 20] {
+            let job = PrintJob::new(
+                "job-a",
+                &printer,
+                &resin(),
+                &schedule(0.05, 0.1, count),
+                &[],
+                JobLimits::default(),
+            )
+            .unwrap();
+            let time = uniform_time_s(&printer, &settings, count);
+            assert!(
+                (time - job.estimated_time_s()).abs() < 1e-9,
+                "{count} {fixed:?}: {time} {}",
+                job.estimated_time_s()
+            );
+        }
+    }
+    // Fewer layers than the bottom ones, as on a plate of a short model: bottom layers only.
+    let one = uniform_time_s(&printer, &settings, 1);
+    assert!(
+        (one - layer_time_s(&settings.bottom, 0.45)).abs() < 1e-12,
+        "{one}"
+    );
+    assert_eq!(uniform_time_s(&printer, &settings, 0), 0.0);
 }
 #[test]
 fn a_printers_fixed_time_is_added_to_every_layer_and_bounded() {
