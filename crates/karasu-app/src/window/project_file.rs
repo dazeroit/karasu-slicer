@@ -54,6 +54,8 @@ pub(super) enum Intent {
 /// A save running on its thread.
 struct Saving {
     path: PathBuf,
+    /// When it started: the status bar says so once it takes a moment.
+    started: Instant,
     /// The project's state as it is saved.
     state: Vec<(PlateId, u64)>,
     result: mpsc::Receiver<Result<(), String>>,
@@ -65,6 +67,9 @@ struct Opening {
     path: Option<PathBuf>,
     /// The recovery copy's folder, removed once it is restored.
     recovered: Option<PathBuf>,
+    /// The name the status bar gives it, and when it started.
+    name: String,
+    started: Instant,
     result: mpsc::Receiver<Result<Project, String>>,
 }
 
@@ -220,6 +225,24 @@ impl ProjectFile {
     /// Whether a project being opened is not ready to show yet: the scene draws no model.
     pub(super) fn loading(&self) -> bool {
         self.loading.is_some()
+    }
+
+    /// The status bar's line for the project file, with its spinner (owner, 2026-11-19):
+    /// "Saving" while a save runs, "Opening" while a file is read with its dialog closed ("Show
+    /// now"), which otherwise says so itself. Shown once it takes a moment, as a slice is.
+    pub(super) fn status(&self) -> Option<String> {
+        let late = |started: Instant| started.elapsed() >= crate::slicing_ui::BUSY_DELAY;
+        if let Some(saving) = self.saving.as_ref().filter(|s| late(s.started)) {
+            let name = saving
+                .path
+                .file_name()
+                .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+            return Some(tr!("status-saving", name = name));
+        }
+        self.opening
+            .as_ref()
+            .filter(|o| self.loading.is_none() && late(o.started))
+            .map(|opening| tr!("status-opening", name = &opening.name))
     }
 }
 
@@ -402,6 +425,7 @@ impl MainWindow {
         });
         self.project_file.saving = Some(Saving {
             path,
+            started: Instant::now(),
             state,
             result,
         });
@@ -422,7 +446,10 @@ impl MainWindow {
             || tr!("project-untitled"),
             |n| n.to_string_lossy().into_owned(),
         );
-        self.project_file.loading = Some(Loading { name, done: None });
+        self.project_file.loading = Some(Loading {
+            name: name.clone(),
+            done: None,
+        });
         thread::spawn(move || {
             let opened = if folder {
                 file::open_folder(&source)
@@ -435,6 +462,8 @@ impl MainWindow {
         self.project_file.opening = Some(Opening {
             path,
             recovered,
+            name,
+            started: Instant::now(),
             result,
         });
     }
@@ -531,9 +560,11 @@ impl MainWindow {
         }
     }
 
-    /// Each frame: saves and opens that finished, what was asked for, the questions, the
-    /// window's title and the recovery copy.
+    /// Each frame, once every panel and window was drawn: a Save or Save as pressed while a
+    /// value was typed (issue #32), saves and opens that finished, what was asked for, the
+    /// questions, the window's title and the recovery copy.
     pub(super) fn project_frame(&mut self, ctx: &egui::Context) {
+        self.run_after_typing(ctx);
         self.poll_save();
         self.poll_open(ctx);
         // Closing the window with unsaved changes asks first, and waits for a save running.
@@ -1075,6 +1106,42 @@ mod tests {
         assert!(!file.exists());
         assert_eq!(window.workspace.plate_id(), first);
         assert!(window.current_facts(first).is_none());
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn the_status_bar_says_while_a_project_is_saved_or_read() {
+        // Owner, 2026-11-19: "Saving" with the spinner until the notification comes.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-window-status-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let model = folder.join("cube.stl");
+        std::fs::write(&model, crate::workspace::tests::box_stl([0.0; 3], [8.0; 3])).unwrap();
+        let mut window = MainWindow::new(Vec::new());
+        let ctx = egui::Context::default();
+        window.workspace.open(model);
+        crate::workspace::tests::wait(&mut window.workspace);
+        let path = folder.join("cube.karasu");
+        window.start_save(path.clone());
+        // Kept until the frame takes the result: said once it takes a moment, first in line.
+        thread::sleep(crate::slicing_ui::BUSY_DELAY + Duration::from_millis(20));
+        let saving = tr!("status-saving", name = "cube.karasu");
+        assert_eq!(window.project_file.status(), Some(saving.clone()));
+        let first = window.statuses().into_iter().next().expect("a status");
+        assert!(first.busy && first.text == saving, "{}", first.text);
+        until(&mut window, &ctx, Vec::new(), |w| !w.project_file.busy());
+        assert_eq!(window.project_file.status(), None);
+        // Read again: its dialog says so; closed ("Show now"), the status bar does.
+        window.start_open(Some(path), None);
+        thread::sleep(crate::slicing_ui::BUSY_DELAY + Duration::from_millis(20));
+        assert_eq!(window.project_file.status(), None);
+        window.project_file.loading = None;
+        let opening = tr!("status-opening", name = "cube.karasu");
+        assert_eq!(window.project_file.status(), Some(opening));
+        until(&mut window, &ctx, Vec::new(), |w| {
+            !w.project_file.busy() && w.workspace.importing().next().is_none()
+        });
+        assert_eq!(window.project_file.status(), None);
         let _ = std::fs::remove_dir_all(&folder);
     }
 

@@ -227,7 +227,15 @@ impl egui::Widget for UnitField<'_> {
             egui::pos2(value_rect.right() - FIELD_INSET / 2.0, value_rect.bottom()),
         );
         let typed = ui.put(text_rect, edit);
-        if typed.has_focus() {
+        let entering = typed.has_focus() && take_enter_typed(ui.ctx());
+        if entering {
+            // A shortcut acts on what was typed: enter it, and give the keyboard back.
+            if let Some(v) = parse(&text) {
+                *self.value = clamp(v);
+            }
+            ui.data_mut(|d| d.remove::<String>(text_id));
+            ui.memory_mut(|m| m.surrender_focus(text_id));
+        } else if typed.has_focus() {
             let (up, down) = ui.input_mut(|i| {
                 (
                     i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp),
@@ -502,6 +510,35 @@ fn icon_button_framed(
         egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), on, hint)
     });
     response
+}
+
+/// Whether a text or value field holds the keyboard: the user is typing, and the keys are the
+/// field's (issue #32). Any other control with the keyboard (a slider, a button reached with
+/// Tab) leaves the shortcuts working.
+#[must_use]
+pub fn typing(ctx: &egui::Context) -> bool {
+    ctx.memory(egui::Memory::focused)
+        .is_some_and(|id| egui::text_edit::TextEditState::load(ctx, id).is_some())
+}
+
+/// Where [`enter_typed`] leaves its request.
+fn entering_id() -> egui::Id {
+    egui::Id::new("karasu-enter-typed")
+}
+
+/// Ask the value field with the keyboard to enter what was typed in it and give the keyboard
+/// back, the next time it is drawn: a shortcut that acts on what was typed (Save, Save as;
+/// owner, 2026-11-19) runs once it has. A value field enters its value only when it loses the
+/// keyboard, and the focus taken from outside it does not tell it so.
+pub fn enter_typed(ctx: &egui::Context) {
+    ctx.data_mut(|d| d.insert_temp(entering_id(), true));
+}
+
+/// Whether the request of [`enter_typed`] still waits, no value field having taken it; it is
+/// dropped either way.
+pub fn take_enter_typed(ctx: &egui::Context) -> bool {
+    ctx.data_mut(|d| d.remove_temp::<bool>(entering_id()))
+        .unwrap_or(false)
 }
 
 /// A one-line text field with inner padding, one height with the other controls (owner,

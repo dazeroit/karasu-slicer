@@ -378,6 +378,8 @@ status-outside = { $count ->
    *[other] { $count } models outside the build volume
 }
 status-importing = Importing { $names }
+status-saving = Saving { $name }
+status-opening = Opening { $name }
 status-checking = Checking { $names } for defects
 status-gpu = GPU: { $adapter } · { $backend } · { $samples }x
 status-gpu-none = GPU: not selected
