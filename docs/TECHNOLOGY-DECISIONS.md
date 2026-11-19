@@ -4044,8 +4044,9 @@ put off on 2026-11-06, implemented on 2026-11-07 (owner: "terminare fase 4 e 5")
    plates and New plate) or a drop on a card. The object moves whole: source, transform and its
    whole preparation (repair, hollowing, drain holes, blockers, supports, protected points,
    copies). It lands at the same place when it fits there clear of the others, otherwise beside
-   them as Arrange places it; where it fits nowhere it stays, and a notification says so. A
-   target with another printer keeps its own profiles; a model outside its volume shows so.
+   them as Arrange places it; where it fits nowhere it stays, and a notification says so
+   (changed by TD-163: it goes to the middle of the plate). A target with another printer keeps
+   its own profiles; a model outside its volume shows so.
 6. **Export every plate:** a modal dialog with the folder, a file-name pattern
    (`{project} {number} {plate}`), the plates with a check box, file, format and state, and a
    switch to slice first the plates not sliced or out of date (off: they are left out and
@@ -6270,6 +6271,232 @@ its workflow path and its allowed events. **Verified** on 2026-11-16 at 17:42 UT
 brownout: the CLA check of pull request #27 ran on `pull_request_target` and passed, where seven
 minutes earlier, before the event rule was added, a run of the same workflow had failed to start.
 Should a run fail to start all the same, a `recheck` comment runs it again.
+
+## TD-162 — Arrange: plates grouped by height, and turns about Z
+
+**Status:** Accepted on 2026-11-19 by the owner ("confermo entrambi"), as proposed below with
+the 1 % margin, and with Clone and moves to another plate packing without turns. Not
+implemented yet. The design follows the owner's proposals of the same day. The owner decided:
+- both are options of the Arrange dialog;
+- grouping by height is on by default, turning off;
+- turns are about Z only, at any angle;
+- the Arrange of the plate shown comes first, and an arrangement of every plate later.
+
+**Context:**
+- **Arrange today** (TD-135, phase 5; [PLATE-SPEC](PLATE-SPEC.md), "Packer"):
+  - the models of the plate shown are packed from the middle outwards by their footprints,
+    supports and raft included, taken by decreasing area;
+  - those that do not fit go to new plates after it, packed the same way, or stay where they
+    are;
+  - the packer only moves models. Footprints are rectangles aligned with the plate, and nothing
+    is turned (`karasu_core::plate`).
+- **What a plate's time depends on (inferred from how a masked resin printer works):**
+  - each layer is exposed whole, and the plate moves once per layer;
+  - so a plate's time follows its number of layers, set by its tallest object, and hardly
+    depends on its area;
+  - over several plates, the time is about the sum of each plate's tallest height.
+- **An example on the Photon P1** at 0.05 mm, about 9.7 s per layer (E-SUP-06's plate: 280
+  layers in 2,726 s). Four objects 100 mm tall and four 20 mm tall, four to a plate:
+  - mixed two and two: 200 mm of layers, about 10.8 h;
+  - grouped by height: 120 mm, about 6.5 h.
+
+  Arrange today takes objects by area, so it can mix them.
+- **Turning:** a long model lying diagonally takes its whole rectangle, and a model that fits
+  only when turned does not fit at all.
+
+**Requirements (owner, 2026-11-19):**
+1. When Arrange spreads models over several plates, models of similar height go to the same
+   plate where there is room. This is an option of the Arrange dialog, on by default.
+2. Arrange may turn models about Z only, by any angle, so that they fit. This is an option of
+   the Arrange dialog, off by default, since a turn changes the orientation the user chose.
+3. Both choices are kept across restarts (TD-097).
+4. First the Arrange of the plate shown, with its overflow to new plates; later, an arrangement
+   of every plate.
+
+**Decision (proposed):**
+1. **An object's height:** the top of its placed geometry above the plate, model and supports,
+   lift and raft included. Arrange moves and turns objects only in the plane, so it never changes
+   a height.
+2. **Grouping by height** applies to the overflow to new plates only. With "Stay where they are"
+   there is one plate, and the option is hidden, as dependent settings are (M6.8, R3). The rule
+   is adapted from the first-fit, longest-processing-time rule for a batch processing machine
+   with jobs of different sizes, where a batch lasts as long as its longest job (Uzsoy, 1994):
+   - **Order:** the objects by decreasing height, then decreasing footprint area, then their
+     order on the plate.
+   - **Each plate, the plate shown first:**
+     - the longest run of the tallest objects left that the packer fits, found by bisection;
+     - then the objects left, all shorter, packed around them as obstacles. Every one that fits
+       stays, since a shorter object on a taller plate costs no time.
+   - **The next plate** takes what is left, until nothing is. The plate shown thus holds the
+     tallest group, and the new plates follow by decreasing height.
+   - **Never worse than today, by the estimate:**
+     - today's arrangement is computed too;
+     - the one with the shorter estimated total time is kept; on a tie, the one with fewer
+       plates; then today's;
+     - the estimate counts each plate's layers up to its tallest object, from its print setting,
+       as the slice's estimate counts their exposures and motion.
+   - **Cost:** a few packer runs per plate, from the bisection, not one per object.
+3. **Turns about Z:**
+   - **The footprint becomes a convex polygon:**
+     - the hull of the model's vertices seen from above, as placed;
+     - and of the support parts' circles: tip bodies, bends, feet and the raft's margin around
+       them;
+     - each circle is replaced by a polygon around it, so the hull never falls inside the true
+       footprint.
+
+     Today's rectangle is this polygon's bounding rectangle at the current angle.
+   - **The angle:**
+     - the smallest rectangle around a convex polygon has a side on one of its edges (Freeman
+       and Shapira, 1975); rotating calipers find it in one pass (Toussaint, 1983);
+     - an object takes that rectangle's angle when the rectangle is at least 1 % smaller in area
+       than at its current angle (proposed); otherwise it keeps its angle. The margin keeps the
+       user's orientation where a turn gains almost nothing, and absorbs rounding;
+     - the packer then tries each rectangle both ways, at its angle and 90° more, at every
+       candidate place, choosing as today: nearest the plate's middle.
+   - **Longer than the plate's sides:** an object that fits the plate at none of these angles,
+     but fits it at another, along the plate's diagonal, takes such an angle. The search is
+     deterministic and set in the implementation.
+   - **What a turn changes:** the object's Z rotation (`rotate_deg[2]`) and its translation.
+     - The fixed-axis order X, Y, Z makes it a turn about the plate's vertical, so verticals
+       stay vertical and heights do not change.
+     - Supports, drain holes, blockers and protected points are kept in the model's frame and
+       follow it (TD-108, TD-089). So does the hollowing's cavity, which is not computed again
+       (TD-089).
+     - The supports are checked again, as after any turn.
+   - **The Photon P1's pixels are not square** (16.8 × 24.6 µm): a turned model is rasterised
+     with different steps along its sides. The option's help says that turning changes the
+     orientation the user chose.
+   - **Cost:** the hull of a model of millions of triangles is computed off the interface thread.
+     It is kept until the model, its turn about X or Y, its scale, its mirror or its supports
+     change. The time is measured with the implementation.
+4. **The dialog** ("Arrange models · Arms"):
+   - "Group by height" sits under the overflow's "Go to a new plate", hidden with "Stay where they
+     are";
+   - "Turn about Z" has its help line;
+   - both choices are kept across restarts, as the overflow's choice is;
+   - the notification adds the plates, the time saved when grouping changed the result, and the
+     models turned. For example: "Arranged: 9 models on 3 plates, grouped by height, about 1 h
+     20 min shorter. 2 models turned."
+
+   Clone and moving a model to another plate keep today's packing, without turns.
+5. **The command line** gains the same turn for `--copies`, `--arrange` and a plate document's
+   arranged objects; the option and the document field are named when implemented. Copies of one
+   model may lie both ways of its rectangle. Grouping has no place there, since the command line
+   slices one plate and fails when something does not fit.
+6. **Arrange every plate (a later phase):** an action that takes every model of the plates
+   sharing the shown plate's printer, print setting and resin, and arranges them again over
+   those plates, with both options and new plates when needed, as one undoable step. Open for
+   the owner before that phase:
+   - whether plates left empty are deleted;
+   - how the plates are ordered and named;
+   - that plates with other profiles are left alone.
+
+**Phases:**
+1. Grouping by height in Arrange (the plate shown and its overflow), with the estimate.
+2. Turns about Z: the convex footprint, the angle, the packer's two directions, and the command
+   line's turn.
+3. Arrange every plate.
+
+**Alternatives rejected:**
+- **Height bands with a fixed tolerance,** such as objects within 10 mm on one plate: a
+  threshold to choose, and it ignores that a short object on a tall plate is free.
+- **Grouping by height alone, without the comparison:** it can need one more plate and take
+  longer than today.
+- **Turning in 90° steps only:** the owner chose any angle.
+- **Packing the true outlines (no-fit polygons):** much more complex and slower. The convex hull
+  with its smallest rectangle covers the long, diagonal models that call for a turn.
+- **Turning about X or Y:** it changes what needs supports. That is the Orient tool's job
+  (TD-119), not Arrange's.
+
+**Tests (planned):**
+- **Grouping:**
+  - the example above (four tall and four short, four to a plate) on two plates by height;
+  - a short object filling a gap on a tall plate;
+  - today's arrangement kept when grouping would take longer;
+  - the same plates, bit for bit, on every run.
+- **Turns:**
+  - the smallest rectangle of known polygons (a rectangle turned 30°, a triangle) and the 1 %
+    margin;
+  - a long bar that fits only along the plate's diagonal;
+  - a turned, supported model: its supports valid, and its layers equal to those of the same
+    turn made by hand.
+- **Interface and command line:** the dialog's options hidden and kept; the command line's
+  turn.
+
+**References:**
+- R. Uzsoy, "Scheduling a single batch processing machine with non-identical job sizes",
+  *International Journal of Production Research* 32(7), 1994, pp. 1615–1635.
+- H. Freeman and R. Shapira, "Determining the minimum-area encasing rectangle for an arbitrary
+  closed curve", *Communications of the ACM* 18(7), 1975, pp. 409–413.
+- G. T. Toussaint, "Solving geometric problems with the rotating calipers", *Proceedings of IEEE
+  MELECON '83*, Athens, 1983.
+
+## TD-163 — A model moved, copied or cloned to a plate always lands
+
+**Status:** Accepted on 2026-11-19 by the owner ("confermo entrambi"), from the owner's proposal
+of the same day. Not implemented yet. It changes TD-135's item 5, which left a model where it was
+when it fitted nowhere on the target.
+
+**Context:**
+- **Move to plate, Copy to plate, and a drop on a plate's card** (TD-135, phase 3,
+  `Workspace::transfer`):
+  - the model lands where it is when its footprint, supports and raft included, lies on the
+    target's plate clear of the models there by the target's spacing;
+  - otherwise it lands beside them, where the packer places it;
+  - when the packer finds no room, the operation is refused (`Refused::NoRoom`), and a warning
+    says the model stays where it is.
+- **Clone** (owner, 2026-11-10, `Workspace::clone_object`):
+  - arranged, the copies that do not fit go to new plates. That is no refusal. A model that does
+    not fit even an empty plate is refused;
+  - not arranged, every copy goes to the middle of the plate.
+- **The owner (2026-11-19):** moving or copying a model to another plate must always be possible.
+  The arrangement in that operation is silent, so the user does not expect a refusal. When there
+  is no room, the model goes to the middle of the plate, and the user then moves or turns it.
+- **Overlaps are not shown in the interface.** A model outside the build volume is shown and
+  counted in the status bar, but two models whose footprints overlap are not. Slicing such a
+  plate prints the models joined where they touch. When one of them has drain holes, the slice
+  is refused, since the holes would cut both (TD-065, `karasu_project::pipeline::plate`).
+
+**Decision:**
+1. **Move and Copy to plate:**
+   - the model lands where it is, or beside the models there, as today;
+   - when the packer finds no room, it goes to the middle of the target's plate: its footprint,
+     supports and raft included, centred there, even over other models or beyond the build
+     volume;
+   - the notification then says so, as a warning instead of a refusal. For example: "Arms moved
+     to Plate 2, in the middle of the plate: there was no room, and it overlaps other models."
+2. **Clone:**
+   - arranged, the copies that do not fit still go to new plates;
+   - a model that does not fit even an empty plate is no longer refused: its copies go to the
+     middle of the target's plate, as Clone does when not arranged, and the notification says
+     why. On the model's own plate, the model itself stays where it is.
+3. **No refusal for lack of room remains:** `Refused::NoRoom` and its message go. A model still
+   loading and an unknown plate are still refused, as today.
+4. **The status bar warns when footprints overlap,** as it does for models outside the volume:
+   - for example, "2 models overlap";
+   - the test is the one the slice applies: footprints with supports and raft, as rectangles
+     (`karasu_core::plate::overlapping_pairs`);
+   - it is computed when the plate changes, never per frame;
+   - rectangles can overlap where the models do not touch, so a few warnings may be false. TD-162's
+     convex footprints can narrow the test later.
+5. **The command line does not change:** copies that do not fit still fail the command. Nobody
+   can move them afterwards, and a file with models that overlap must not be written silently
+   (`AGENTS.md`).
+
+**Alternatives rejected:**
+- **Refusing, as today:** the operation looks silent, and its refusal surprises the user.
+- **A new plate for the model that does not fit:** the user chose the target plate.
+- **Placing the model beyond the plate's edge, clear of the others:** it would be outside the
+  build volume, and harder to find than in the middle.
+
+**Tests (planned):**
+- **Landing:**
+  - a model moved and copied to a full plate lands in its middle, and the notification says so;
+  - a model larger than the plate lands in its middle, outside the volume;
+  - Clone of such a model puts its copies in the middle of the target's plate.
+- **Unchanged:** the landings where there is room.
+- **The overlap warning:** shown for overlapping footprints, and gone when they are moved apart.
+- **Undo:** each of these operations is undone in one step.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
