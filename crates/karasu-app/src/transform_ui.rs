@@ -11,8 +11,10 @@
 //! - Move: the position of the model's centre in X and Y, and the height of its lowest point in
 //!   Z, in millimetres on the plate; Drop to plate and Center.
 //! - Rotate: the model's angles about the plate's X, Y and Z, in degrees; Reset.
-//! - Scale: the model's scale along its own axes, in percent; Uniform (a typed value scales
-//!   the three axes alike; the handles have their own uniform handle), Reset, and Fit to plate.
+//! - Scale: the model's size along each of its own axes in millimetres (issue #40), then its
+//!   scale along it in percent; either is typed. Uniform (a typed value
+//!   scales the three axes alike; the handles have their own uniform handle), Reset, and Fit to
+//!   plate.
 //!
 //! **Locks:** each section's lock (a setting of the tool, kept until turned off) stops its
 //! handles, values and buttons from changing any model; the other sections stay free.
@@ -335,6 +337,11 @@ fn values(
         Mode::Scale => [100.0; 3],
         Mode::Move | Mode::Rotate => [0.0; 3],
     });
+    // The size along the model's own axes, beside the scale (issue #40).
+    let size = index
+        .filter(|_| section == Mode::Scale)
+        .and_then(|i| workspace.own_size(i));
+    let mut sized = size.unwrap_or([0.0; 3]);
     let (unit, range, step, decimals) = match section {
         Mode::Move => (Unit::Millimetre, -10_000.0..=10_000.0, 0.1, 2),
         Mode::Rotate => (Unit::Degree, -360.0..=360.0, 1.0, 1),
@@ -352,6 +359,9 @@ fn values(
                             .color(appearance.axes[axis].color()),
                     ),
                 );
+                // In Scale the size comes first, then its percentage (owner, 2026-11-19).
+                let resized =
+                    section == Mode::Scale && size_field(ui, &mut sized, size, axis, letter);
                 let field = ui.add(
                     UnitField::new(&mut shown[axis], unit)
                         .range(range.clone())
@@ -364,10 +374,14 @@ fn values(
                     Mode::Scale => tr!("mode-scale"),
                 };
                 crate::widgets::name(&field, &tr!("a11y-axis", mode = mode, axis = letter));
-                field.changed()
+                (field.changed(), resized)
             })
             .inner;
-        if let (true, Some(index), Some(before)) = (changed, index, current) {
+        let (Some(index), Some(before)) = (index, current) else {
+            continue;
+        };
+        let (scaled, resized) = changed;
+        if scaled {
             apply(
                 workspace,
                 index,
@@ -377,8 +391,61 @@ fn values(
                 before,
                 uniform,
             );
+        } else if resized {
+            resize(workspace, index, axis, sized[axis], uniform);
         }
     }
+}
+
+/// Give model `index` the size `size_mm` along its own axis `axis`: the scale that gives it, as
+/// if that percentage were typed, so Uniform scales the three axes by the same ratio.
+fn resize(workspace: &mut Workspace, index: usize, axis: usize, size_mm: f64, uniform: bool) {
+    let (Some(before), Some(size)) = (
+        current(workspace, index, Mode::Scale),
+        workspace.own_size(index),
+    ) else {
+        return;
+    };
+    if size[axis] > 1e-6 && size_mm > 0.0 {
+        let percent = before[axis] * size_mm / size[axis];
+        apply(
+            workspace,
+            index,
+            Mode::Scale,
+            axis,
+            percent,
+            before,
+            uniform,
+        );
+    }
+}
+
+/// The model's size along its own axis `axis` (`letter`), in millimetres, before its scale,
+/// typed into `sized`; `size` is the size as it stands. The scale's limits (1 % to 100,000 %)
+/// bound a typed size, as the scale is clamped where it is applied. A model with no extent along
+/// that axis, or none selected, shows zero, disabled. Returns whether a size was typed.
+fn size_field(
+    ui: &mut egui::Ui,
+    sized: &mut [f64; 3],
+    size: Option<[f64; 3]>,
+    axis: usize,
+    letter: &str,
+) -> bool {
+    // A flat model has no size to scale along that axis (1 nm and less is none).
+    let free = size.is_some_and(|s| s[axis] > 1e-6);
+    let field = ui
+        .add_enabled_ui(free, |ui| {
+            ui.add(
+                UnitField::new(&mut sized[axis], Unit::Millimetre)
+                    .range(0.0..=1_000_000.0)
+                    .step(0.1)
+                    .decimals(2),
+            )
+            .on_hover_text(tr!("transform-size-hint"))
+        })
+        .inner;
+    crate::widgets::name(&field, &tr!("a11y-axis-size", axis = letter));
+    free && field.changed() && sized[axis] > 0.0
 }
 
 /// The values of model `index` for `section`: its centre's X and Y and its lowest point's
@@ -540,6 +607,72 @@ mod tests {
             }
         }
         crate::i18n::install(crate::i18n::Catalog::reference());
+    }
+
+    #[test]
+    fn sizes_follow_the_scale_and_a_typed_size_scales_the_model() {
+        // Issue #40: the model's size along its own axes beside the scale, typed in either.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-transform-size-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let model = folder.join("box.stl");
+        std::fs::write(
+            &model,
+            crate::workspace::tests::box_stl([0.0; 3], [20.0, 10.0, 5.0]),
+        )
+        .unwrap();
+        let mut workspace = Workspace::new();
+        workspace.open(model);
+        crate::workspace::tests::wait(&mut workspace);
+        let close = |a: [f64; 3], b: [f64; 3]| (0..3).all(|k| (a[k] - b[k]).abs() < 1e-9);
+        let size = |w: &Workspace| w.own_size(0).unwrap();
+        assert!(
+            close(size(&workspace), [20.0, 10.0, 5.0]),
+            "{:?}",
+            size(&workspace)
+        );
+        // A percentage typed changes the size: 50 % on X gives 10 mm.
+        let before = current(&mut workspace, 0, Mode::Scale).unwrap();
+        apply(&mut workspace, 0, Mode::Scale, 0, 50.0, before, false);
+        assert!(
+            close(size(&workspace), [10.0, 10.0, 5.0]),
+            "{:?}",
+            size(&workspace)
+        );
+        // A size typed, one axis: 40 mm on X is 200 % of its 20 mm.
+        resize(&mut workspace, 0, 0, 40.0, false);
+        assert!(
+            close(size(&workspace), [40.0, 10.0, 5.0]),
+            "{:?}",
+            size(&workspace)
+        );
+        let scale = current(&mut workspace, 0, Mode::Scale).unwrap();
+        assert!(close(scale, [200.0, 100.0, 100.0]), "{scale:?}");
+        // Uniform: 15 mm on Y is one and a half times its 10 mm, and the others follow.
+        resize(&mut workspace, 0, 1, 15.0, true);
+        assert!(
+            close(size(&workspace), [60.0, 15.0, 7.5]),
+            "{:?}",
+            size(&workspace)
+        );
+        // Turned about Z, the sizes along the model's own axes stay.
+        workspace.edit(|p| p.objects[0].pose.rotate_deg = [0.0, 0.0, 45.0]);
+        assert!(
+            close(size(&workspace), [60.0, 15.0, 7.5]),
+            "{:?}",
+            size(&workspace)
+        );
+        // Nothing typed, or zero: nothing changes.
+        resize(&mut workspace, 0, 2, 0.0, true);
+        assert!(close(size(&workspace), [60.0, 15.0, 7.5]));
+        // The scale's limits bound a typed size: 100,000 % of 5 mm at most.
+        resize(&mut workspace, 0, 2, 1.0e9, false);
+        assert!(
+            (size(&workspace)[2] - 5000.0).abs() < 1e-6,
+            "{:?}",
+            size(&workspace)
+        );
+        let _ = std::fs::remove_dir_all(&folder);
     }
 
     #[test]
