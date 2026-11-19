@@ -1436,6 +1436,15 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
      - **Long names (owner, 2026-11-16, issue #18):** the sidebar's printer, resin and print
        setting menus and the plates' menu cut a long name to their width, with the whole name
        in the tooltip and for screen readers; the sidebar keeps its width.
+     - **Arrange by height, and turns about Z (owner, 2026-11-19, TD-162, accepted, not
+       implemented):** two options of the Arrange dialog. Models of similar height share a plate
+       when the overflow goes to new plates (on by default, kept only when the estimated time is
+       shorter), and models may turn about Z at any angle to fit (off by default). Then an
+       arrangement of every plate.
+     - **A model moved, copied or cloned to a plate always lands (owner, 2026-11-19, TD-163,
+       accepted, not implemented):** with no room, it goes to the middle of the plate instead of
+       being refused, and the notification says so; the status bar warns when footprints
+       overlap. The command line still refuses copies that do not fit.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the
