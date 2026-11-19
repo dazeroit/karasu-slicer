@@ -3,8 +3,10 @@
 //! (from the plate's middle outwards), their footprints with supports and rafts, the spacing
 //! between them the plate's own to start with. The models that do not fit go to new plates after it, with its printer,
 //! resin, print setting and slicing options, arranged the same way, as many as needed; or, by
-//! choice, stay where they are. The choice is kept across restarts; the spacing is not (it is
-//! the plate's). One undoable step; a notification says what happened.
+//! choice, stay where they are. With the overflow to new plates, "Group by height" (TD-162, on
+//! by default) puts models of similar height on one plate when that shortens the plates'
+//! estimated time. The choices are kept across restarts; the spacing is not (it is the
+//! plate's). One undoable step; a notification says what happened.
 use crate::{
     dialog::{self, Part, Size},
     i18n::tr,
@@ -30,6 +32,7 @@ impl MainWindow {
             return;
         };
         let mut overflow = self.plates.choices.arrange_overflow;
+        let mut by_height = self.plates.choices.arrange_by_height;
         let models = self.workspace.plate().objects.len();
         let title = tr!("arrange-title", plate = &self.workspace.plate().name);
         let mut done = None;
@@ -57,6 +60,16 @@ impl MainWindow {
                             Overflow::Stay
                         };
                     }
+                    // Only plates that are added can be grouped (TD-162).
+                    if overflow == Overflow::NewPlates {
+                        ui.add_space(4.0);
+                        crate::widgets::default_switch(
+                            ui,
+                            &mut by_height,
+                            (tr!("arrange-by-height"), tr!("arrange-by-height-hint")),
+                            None,
+                        );
+                    }
                     ui.add_space(4.0);
                     let hint = match overflow {
                         Overflow::NewPlates => tr!("arrange-hint-new"),
@@ -82,18 +95,25 @@ impl MainWindow {
             },
         );
         self.plates.choices.arrange_overflow = overflow;
+        self.plates.choices.arrange_by_height = by_height;
         match done {
-            Some(true) => self.arrange(spacing, overflow),
+            Some(true) => self.arrange(spacing, overflow, by_height),
             Some(false) => {}
             None if response.cancel => {}
             None => self.plates.arranging = Some(spacing),
         }
     }
 
-    /// Arrange the plate shown, `spacing_mm` apart, and say what happened.
-    pub(in crate::window) fn arrange(&mut self, spacing_mm: f64, overflow: Overflow) {
+    /// Arrange the plate shown, `spacing_mm` apart, grouped `by_height` over new plates, and say
+    /// what happened.
+    pub(in crate::window) fn arrange(
+        &mut self,
+        spacing_mm: f64,
+        overflow: Overflow,
+        by_height: bool,
+    ) {
         let plate = self.workspace.plate().name.clone();
-        let message = match self.workspace.arrange(spacing_mm, overflow) {
+        let message = match self.workspace.arrange(spacing_mm, overflow, by_height) {
             Ok(arranged) => {
                 // From the last, so that each index is still the model's.
                 for &index in arranged.removed.iter().rev() {
@@ -115,8 +135,21 @@ fn arranged_message(plate: &str, arranged: &Arranged) -> Message {
     let undo = tr!("arrange-undo");
     if arranged.moved > 0 {
         let plates = arranged.new_plates.join(", ");
+        // Grouped by height: what it saved (TD-162).
+        let grouped = match (arranged.grouped, arranged.saved_s) {
+            (false, _) => String::new(),
+            (true, 0) => format!(" {}", tr!("arrange-grouped-fewer")),
+            #[allow(clippy::cast_precision_loss)] // Seconds of a print.
+            (true, saved) => format!(
+                " {}",
+                tr!(
+                    "arrange-grouped-saved",
+                    saved = crate::slicing_ui::duration(saved as f64)
+                )
+            ),
+        };
         Message::new(Level::Success, text).detail(format!(
-            "{} {undo}",
+            "{}{grouped} {undo}",
             tr!(
                 "arrange-moved",
                 count = arranged.moved,
@@ -173,15 +206,34 @@ mod tests {
             tr!("arrange-title", plate = plate.as_str()),
             tr!("arrange-overflow-new"),
             tr!("arrange-overflow-stay"),
+            tr!("arrange-by-height"),
             tr!("arrange-action"),
         ] {
             assert!(texts.contains(&expected), "{expected} in {texts:?}");
         }
+        // Grouping by height shows only with the overflow to new plates (TD-162).
+        window.plates.choices.arrange_overflow = Overflow::Stay;
+        for _ in 0..2 {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                window.arrange_dialog(&ui.ctx().clone());
+            });
+            output.textures_delta.clear();
+            texts = output
+                .shapes
+                .iter()
+                .filter_map(|s| match &s.shape {
+                    egui::epaint::Shape::Text(t) => Some(t.galley.text().to_owned()),
+                    _ => None,
+                })
+                .collect();
+        }
+        assert!(!texts.contains(&tr!("arrange-by-height")), "{texts:?}");
+        window.plates.choices.arrange_overflow = Overflow::NewPlates;
         assert_eq!(window.plates.arranging, Some(spacing));
         window.plates.arranging = None;
         // Arranged: the one model fits, nothing goes elsewhere.
         window.selected = Some(0);
-        window.arrange(spacing, Overflow::NewPlates);
+        window.arrange(spacing, Overflow::NewPlates, true);
         let latest = window.messages.latest().unwrap();
         assert_eq!(
             latest.text,
@@ -190,10 +242,13 @@ mod tests {
         assert_eq!(latest.detail, Some(tr!("arrange-undo")));
         assert_eq!(window.selected, Some(0));
         assert_eq!(window.workspace.plates().len(), 1);
-        // The choice is kept across restarts.
+        // The choices are kept across restarts; grouping by height is on to start with.
+        assert!(window.plates.choices.arrange_by_height);
         window.plates.choices.arrange_overflow = Overflow::Stay;
+        window.plates.choices.arrange_by_height = false;
         let settings = window.collect_settings(&ctx);
         assert_eq!(settings.plates.arrange_overflow, Overflow::Stay);
+        assert!(!settings.plates.arrange_by_height);
         // An empty plate has nothing to arrange.
         window.perform(Action::NewPlate);
         window.follow_plate(&ctx);

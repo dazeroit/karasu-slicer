@@ -141,6 +141,50 @@ pub struct PrintJob {
     overrides: Vec<LayerOverride>,
     estimated_time_s: f64,
 }
+/// One layer's nominal time with `settings`, the printer spending `fixed_s` on each layer besides
+/// it (TD-122): its exposure, its waits, and its lift and retract stages. A print job's estimate
+/// is the sum over its layers ([`PrintJob::estimated_time_s`]).
+#[must_use]
+pub fn layer_time_s(settings: &LayerSettings, fixed_s: f64) -> f64 {
+    let motion: f64 = settings
+        .lift
+        .iter()
+        .chain(&settings.retract)
+        .map(|s| s.distance_mm / s.speed_mm_s)
+        .sum();
+    settings.exposure_s
+        + settings.wait_before_exposure_s
+        + settings.wait_after_exposure_s
+        + settings.wait_after_lift_s
+        + motion
+        + fixed_s
+}
+
+/// The nominal duration of `layers` layers at the calibrated height with `settings` on
+/// `printer`, as a print job of that uniform plan estimates it: the bottom layers, the
+/// transition layers with their exposure stepped from the bottom's to the normal's, then the
+/// normal layers. Arrange compares arrangements over several plates by it (TD-162).
+#[must_use]
+pub fn uniform_time_s(printer: &PrinterProfile, settings: &PrintSettings, layers: u64) -> f64 {
+    let fixed = printer.fixed_layer_time_s.unwrap_or(0.);
+    let bottom = layers.min(u64::from(settings.bottom_layer_count));
+    let transition = (layers - bottom).min(u64::from(settings.transition_layer_count));
+    let normal = layers - bottom - transition;
+    #[allow(clippy::cast_precision_loss)] // Layer counts far below 2^52.
+    let mut total = bottom as f64 * layer_time_s(&settings.bottom, fixed)
+        + normal as f64 * layer_time_s(&settings.normal, fixed);
+    let steps = f64::from(settings.transition_layer_count) + 1.;
+    for j in 1..=transition {
+        let mut layer = settings.normal.clone();
+        #[allow(clippy::cast_precision_loss)] // At most the transition count.
+        let fraction = j as f64 / steps;
+        layer.exposure_s = settings.bottom.exposure_s
+            + (settings.normal.exposure_s - settings.bottom.exposure_s) * fraction;
+        total += layer_time_s(&layer, fixed);
+    }
+    total
+}
+
 impl PrintJob {
     /// Snapshot profiles and validate the complete layer plan with no inferred machine calibration.
     /// # Errors
@@ -315,19 +359,7 @@ impl PrintJob {
                     "layer {index} position plus lift exceeds printer Z envelope"
                 )));
             }
-            let motion: f64 = layer
-                .settings
-                .lift
-                .iter()
-                .chain(&layer.settings.retract)
-                .map(|s| s.distance_mm / s.speed_mm_s)
-                .sum();
-            estimated_time_s += layer.settings.exposure_s
-                + layer.settings.wait_before_exposure_s
-                + layer.settings.wait_after_exposure_s
-                + layer.settings.wait_after_lift_s
-                + motion
-                + fixed;
+            estimated_time_s += layer_time_s(&layer.settings, fixed);
             if !estimated_time_s.is_finite() {
                 return Err(invalid("estimated job duration exceeds finite range"));
             }

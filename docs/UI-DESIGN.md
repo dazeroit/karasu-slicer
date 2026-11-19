@@ -494,8 +494,12 @@ plate", 2026-11-07):
 - **Arrange models…** (Plate menu): a modal dialog "Arrange models · Arms": Spacing between
   models (mm, the plate's spacing to start with), Models "All on the plate (n)", Models that do
   not fit as a two-way choice "Go to a new plate" / "Stay where they are" with a weak help line
-  for the choice; footer Arrange (primary) and Cancel. The notification "Arranged: 4 models on
-  Arms" says in its detail where the others went and that Ctrl+Z undoes the whole arrangement.
+  for the choice; footer Arrange (primary) and Cancel.
+  - **Group by height** (TD-162): a switch, on to start with and kept across restarts. It shows
+    only with "Go to a new plate".
+  - **The notification** "Arranged: 4 models on Arms" says in its detail where the others went
+    and that Ctrl+Z undoes the whole arrangement. When grouping was used, it adds "Grouped by
+    height: about 1:20:00 shorter in all", or "as long, on fewer plates".
 
 ## The project file (TD-130, owner 2026-11-04)
 

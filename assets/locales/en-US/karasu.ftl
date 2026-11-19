@@ -115,6 +115,10 @@ arrange-overflow-stay = Stay where they are
 arrange-hint-new = Footprints include supports and rafts. A new plate takes this plate's printer, resin, print setting and slicing options, and is arranged the same way; more plates follow while models are left.
 arrange-hint-stay = Footprints include supports and rafts. What fits is arranged; the rest stays where it is, and the notification says so.
 arrange-action = Arrange
+arrange-by-height = Group by height
+arrange-by-height-hint = A plate prints as long as its tallest model: models of similar height share a plate when that makes the plates' estimated time shorter, the plate shown taking the tallest
+arrange-grouped-saved = Grouped by height: about { $saved } shorter in all.
+arrange-grouped-fewer = Grouped by height: as long, on fewer plates.
 arrange-done = Arranged: { $count ->
         [one] 1 model
        *[other] { $count } models

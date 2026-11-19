@@ -28,7 +28,8 @@ use karasu_core::{
     mesh::{formats::LengthUnit, TriangleMesh},
     plate::{arrange, overlapping_pairs, Rect},
     preparation::repair::{RepairPreset, RepairSpec},
-    profiles::{store::ProfileDocument, PrinterProfile, MAX_PROFILE_BYTES},
+    print_job::uniform_time_s,
+    profiles::{store::ProfileDocument, PrintSettings, PrinterProfile, MAX_PROFILE_BYTES},
     supports::{BaseSpec, SupportDocument},
 };
 use karasu_project::{
@@ -837,18 +838,27 @@ impl Workspace {
     }
 
     /// Arrange the shown plate's models (TD-135, phase 5): their footprints (with supports and
-    /// raft) packed on the plate `spacing_mm` apart from the plate's middle outwards, the models that do not
-    /// fit going to new plates after it, with its profiles and settings, named after it ("Arms
-    /// (2)") and arranged the same way, as many as needed; or, with [`Overflow::Stay`], left
-    /// where they are. A model too large for an empty plate stays where it is either way. One
-    /// undoable step; the plate shown stays.
+    /// raft) packed on the plate `spacing_mm` apart from the plate's middle outwards, the models
+    /// that do not fit going to new plates after it, with its profiles and settings, named after
+    /// it ("Arms (2)") and arranged the same way, as many as needed; or, with
+    /// [`Overflow::Stay`], left where they are. A model too large for an empty plate stays where
+    /// it is either way. One undoable step; the plate shown stays.
+    ///
+    /// **By height** (TD-162, with the overflow to new plates): models of similar height share a
+    /// plate, the plate shown taking the tallest, when that shortens the plates' estimated time;
+    /// see [`Plan::by_height`] and [`Arranged::grouped`].
     ///
     /// # Errors
     /// [`Unarranged`]: no printer, or a model still loading, with nothing changed.
-    pub fn arrange(&mut self, spacing_mm: f64, overflow: Overflow) -> Result<Arranged, Unarranged> {
+    pub fn arrange(
+        &mut self,
+        spacing_mm: f64,
+        overflow: Overflow,
+        by_height: bool,
+    ) -> Result<Arranged, Unarranged> {
         let source = self.plate().clone();
-        let printer = source.printer.as_ref().ok_or(Unarranged::NoPrinter)?;
-        let centre = placement::plate_centre(printer);
+        let printer = source.printer.clone().ok_or(Unarranged::NoPrinter)?;
+        let centre = placement::plate_centre(&printer);
         let footprints = source
             .objects
             .iter()
@@ -862,6 +872,12 @@ impl Workspace {
             max: [ox + width, oy + depth],
         };
         let sizes: Vec<[f64; 2]> = footprints.iter().map(|(rect, _)| rect.size()).collect();
+        // Each model's top above the plate, lift included: its supports and raft lie under it.
+        let tops: Vec<f64> = self
+            .placements()
+            .iter()
+            .map(|p| p.as_ref().map_or(0.0, |p| p.max.z))
+            .collect();
         // The object `i` at `corner`, no longer centred by its pose.
         let moved = |i: usize, corner: [f64; 2]| {
             let mut object = source.objects[i].clone();
@@ -872,52 +888,54 @@ impl Workspace {
             object
         };
         let all: Vec<usize> = (0..source.objects.len()).collect();
-        let (placed, mut left) = pack(&all, &sizes, area, &[], spacing_mm);
-        let mut arranged = source.clone();
+        let packed = Plan::packed(&all, &sizes, area, spacing_mm, overflow);
+        let grouped = (by_height && overflow == Overflow::NewPlates)
+            .then(|| Plan::by_height(&all, &sizes, &tops, area, spacing_mm));
+        let (plan, saved) = Plan::sooner(packed, grouped, &tops, &printer, source.calibration());
         let mut out = Arranged {
-            on_plate: placed.len(),
+            grouped: saved.is_some(),
+            saved_s: saved.unwrap_or(0),
             ..Arranged::default()
         };
-        // The overflow on new plates, each packed as the first was.
+        let (shown, overflowed) = plan
+            .plates
+            .split_first()
+            .map_or((&[][..], &[][..]), |(f, r)| (f.as_slice(), r));
+        out.on_plate = shown.len();
+        // The new plates, each holding the models planned for it.
         let mut added = Vec::new();
-        if overflow == Overflow::NewPlates {
-            let taken: Vec<String> = self
-                .project
-                .plates()
-                .iter()
-                .map(|p| p.content().name.clone())
-                .collect();
-            let mut number = 2;
-            while !left.is_empty() {
-                let (on_new, rest) = pack(&left, &sizes, area, &[], spacing_mm);
-                if on_new.is_empty() {
-                    break;
-                }
-                let mut name = format!("{} ({number})", source.name);
-                while taken.contains(&name) || out.new_plates.contains(&name) {
-                    number += 1;
-                    name = format!("{} ({number})", source.name);
-                }
+        let taken: Vec<String> = self
+            .project
+            .plates()
+            .iter()
+            .map(|p| p.content().name.clone())
+            .collect();
+        let mut number = 2;
+        for on_new in overflowed.iter().filter(|p| !p.is_empty()) {
+            let mut name = format!("{} ({number})", source.name);
+            while taken.contains(&name) || out.new_plates.contains(&name) {
                 number += 1;
-                out.moved += on_new.len();
-                let objects = on_new.iter().map(|&(i, corner)| moved(i, corner)).collect();
-                added.push(PlateContent {
-                    name: name.clone(),
-                    objects,
-                    ..source.clone()
-                });
-                out.new_plates.push(name);
-                left = rest;
+                name = format!("{} ({number})", source.name);
             }
+            number += 1;
+            out.moved += on_new.len();
+            let objects = on_new.iter().map(|&(i, corner)| moved(i, corner)).collect();
+            added.push(PlateContent {
+                name: name.clone(),
+                objects,
+                ..source.clone()
+            });
+            out.new_plates.push(name);
         }
-        out.stayed = left.len();
+        out.stayed = plan.stayed.len();
         let gone: Vec<usize> = (0..source.objects.len())
-            .filter(|i| !left.contains(i) && !placed.iter().any(|(p, _)| p == i))
+            .filter(|i| !plan.stayed.contains(i) && !shown.iter().any(|(p, _)| p == i))
             .collect();
         out.removed.clone_from(&gone);
+        let mut arranged = source.clone();
         arranged.objects = (0..source.objects.len())
             .filter(|i| !gone.contains(i))
-            .map(|i| match placed.iter().find(|(p, _)| *p == i) {
+            .map(|i| match shown.iter().find(|(p, _)| *p == i) {
                 Some(&(_, corner)) => moved(i, corner),
                 None => source.objects[i].clone(),
             })
@@ -1954,6 +1972,191 @@ pub struct Arranged {
     pub stayed: usize,
     /// The indices the models moved to new plates had on the plate, ascending.
     pub removed: Vec<usize>,
+    /// The models were grouped by height (TD-162): the plates' estimated time is shorter so,
+    /// by `saved_s` seconds, or as short on fewer plates.
+    pub grouped: bool,
+    pub saved_s: u64,
+}
+
+/// Where Arrange puts each model (TD-135, TD-162): the plate shown's models with their lowest
+/// corners, then each new plate's, and those that fit not even an empty plate and stay.
+struct Plan {
+    plates: Vec<Vec<(usize, [f64; 2])>>,
+    stayed: Vec<usize>,
+}
+
+impl Plan {
+    /// As Arrange packs a plate (TD-135): `all` the models of `sizes` packed on `area` by
+    /// footprint, the largest first; with the overflow to new plates, those left packed onto
+    /// new plates in turn.
+    fn packed(
+        all: &[usize],
+        sizes: &[[f64; 2]],
+        area: Rect,
+        spacing: f64,
+        overflow: Overflow,
+    ) -> Self {
+        let (placed, mut left) = pack(all, sizes, area, &[], spacing);
+        let mut plates = vec![placed];
+        if overflow == Overflow::NewPlates {
+            while !left.is_empty() {
+                let (on_new, rest) = pack(&left, sizes, area, &[], spacing);
+                if on_new.is_empty() {
+                    break;
+                }
+                plates.push(on_new);
+                left = rest;
+            }
+        }
+        Self {
+            plates,
+            stayed: left,
+        }
+    }
+
+    /// Grouped by height (TD-162), after the first-fit, longest-processing-time rule for a batch
+    /// processing machine, where a batch lasts as long as its longest job (Uzsoy, 1994):
+    /// - the models by decreasing height (`tops`), then decreasing footprint, then their order;
+    /// - each plate, the plate shown first, takes the longest run of the tallest left that fits,
+    ///   found by bisection, then the shorter ones left that fit around them: a shorter model on
+    ///   a taller plate costs no time;
+    /// - the next plate takes what is left. A model too large for an empty plate stays.
+    fn by_height(
+        all: &[usize],
+        sizes: &[[f64; 2]],
+        tops: &[f64],
+        area: Rect,
+        spacing: f64,
+    ) -> Self {
+        let (mut order, stayed): (Vec<usize>, Vec<usize>) = all
+            .iter()
+            .partition(|&&i| arrange(&[sizes[i]], area, &[], spacing).is_ok());
+        let footprint = |i: usize| sizes[i][0] * sizes[i][1];
+        order.sort_by(|&a, &b| {
+            tops[b]
+                .total_cmp(&tops[a])
+                .then(footprint(b).total_cmp(&footprint(a)))
+                .then(a.cmp(&b))
+        });
+        // The first `k` of `order` packed together, if they all fit.
+        let run = |order: &[usize], k: usize| {
+            let wanted: Vec<[f64; 2]> = order[..k].iter().map(|&i| sizes[i]).collect();
+            arrange(&wanted, area, &[], spacing)
+                .ok()
+                .map(|corners| order[..k].iter().copied().zip(corners).collect::<Vec<_>>())
+        };
+        let mut plates = Vec::new();
+        while !order.is_empty() {
+            // One fits alone (checked above); the longest run that fits, by bisection.
+            let (mut low, mut high) = (1, order.len());
+            let mut best = run(&order, high);
+            if best.is_some() {
+                low = high;
+            } else {
+                best = run(&order, 1);
+                while high - low > 1 {
+                    let middle = low + (high - low) / 2;
+                    match run(&order, middle) {
+                        Some(placed) => {
+                            low = middle;
+                            best = Some(placed);
+                        }
+                        None => high = middle,
+                    }
+                }
+            }
+            let mut plate = best.unwrap_or_default();
+            let obstacles: Vec<Rect> = plate
+                .iter()
+                .map(|&(i, corner)| Rect {
+                    min: corner,
+                    max: [corner[0] + sizes[i][0], corner[1] + sizes[i][1]],
+                })
+                .collect();
+            let rest = &order[low..];
+            let (around, _) = pack(rest, sizes, area, &obstacles, spacing);
+            let rest: Vec<usize> = rest
+                .iter()
+                .copied()
+                .filter(|i| !around.iter().any(|(placed, _)| placed == i))
+                .collect();
+            plate.extend(around);
+            plates.push(plate);
+            order = rest;
+        }
+        if plates.is_empty() {
+            plates.push(Vec::new());
+        }
+        Self { plates, stayed }
+    }
+
+    /// `packed`, or `grouped` when it prints sooner by the estimate (TD-162): shorter by a
+    /// second or more, or as long within a second on fewer plates. With `grouped` chosen, the
+    /// seconds it saves.
+    fn sooner(
+        packed: Self,
+        grouped: Option<Self>,
+        tops: &[f64],
+        printer: &PrinterProfile,
+        settings: Option<&PrintSettings>,
+    ) -> (Self, Option<u64>) {
+        let Some(grouped) = grouped else {
+            return (packed, None);
+        };
+        let before = packed.time_s(tops, printer, settings);
+        let after = grouped.time_s(tops, printer, settings);
+        // Within a second the two take the same time: fewer plates decide, then the packing.
+        let better = if (before - after).abs() < 1.0 {
+            grouped.plates() < packed.plates()
+        } else {
+            after < before
+        };
+        if better {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // Seconds.
+            let saved = (before - after).max(0.0).round() as u64;
+            (grouped, Some(saved))
+        } else {
+            (packed, None)
+        }
+    }
+
+    /// How many plates hold a model: the plate shown always counts.
+    fn plates(&self) -> usize {
+        1 + self.plates.iter().skip(1).filter(|p| !p.is_empty()).count()
+    }
+
+    /// The plates' estimated time (TD-162): each prints as many layers as its tallest model
+    /// needs, the models staying on the plate shown counted on it, timed as a print job of that
+    /// many calibrated layers with `settings` on `printer`. Without settings, the heights stand
+    /// for the time, which they are proportional to.
+    fn time_s(
+        &self,
+        tops: &[f64],
+        printer: &PrinterProfile,
+        settings: Option<&PrintSettings>,
+    ) -> f64 {
+        self.plates
+            .iter()
+            .enumerate()
+            .map(|(k, plate)| {
+                let stayed = if k == 0 { &self.stayed[..] } else { &[] };
+                let top = plate
+                    .iter()
+                    .map(|&(i, _)| i)
+                    .chain(stayed.iter().copied())
+                    .map(|i| tops[i])
+                    .fold(0.0, f64::max);
+                match settings {
+                    Some(settings) => {
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                        let layers = (top / settings.layer_height_mm).ceil().max(0.0) as u64;
+                        uniform_time_s(printer, settings, layers)
+                    }
+                    None => top,
+                }
+            })
+            .sum()
+    }
 }
 
 /// Where the copies of a model went (owner, 2026-11-10).
@@ -2504,6 +2707,101 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn grouping_by_height_is_timed_on_many_footprints() {
+        // TD-162: footprints of mixed sizes and heights over several 218 × 123 mm plates; the
+        // bisection packs a few times per plate. Each model lands on one plate, or stays.
+        let area = Rect {
+            min: [0., 0.],
+            max: [218., 123.],
+        };
+        for (count, side) in [(50, 30.), (100, 25.), (200, 20.), (400, 15.)] {
+            let sizes: Vec<[f64; 2]> = (0..count)
+                .map(|k: i32| [side + f64::from(k % 3), side + f64::from(k % 2)])
+                .collect();
+            let tops: Vec<f64> = (0..count).map(|k| f64::from(10 + (k * 37) % 90)).collect();
+            let all: Vec<usize> = (0..sizes.len()).collect();
+            let start = std::time::Instant::now();
+            let plan = Plan::by_height(&all, &sizes, &tops, area, 2.);
+            let elapsed = start.elapsed().as_secs_f64() * 1000.;
+            let placed: usize = plan.plates.iter().map(Vec::len).sum();
+            assert_eq!(placed + plan.stayed.len(), sizes.len());
+            eprintln!(
+                "{count} footprints of {side} mm by height: {} plates, {elapsed:.0} ms",
+                plan.plates.len()
+            );
+        }
+    }
+
+    #[test]
+    fn arrange_groups_models_by_height_when_the_plates_print_sooner() {
+        // TD-162: four slabs 100 mm tall and four 20 mm tall, 90 × 50 mm each, four to a
+        // 192 × 120 mm plate, opened tall and short in turn.
+        let folder =
+            std::env::temp_dir().join(format!("karasu-workspace-height-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let tall = folder.join("tall.stl");
+        std::fs::write(&tall, box_stl([0.0; 3], [90.0, 50.0, 100.0])).unwrap();
+        let short = folder.join("short.stl");
+        std::fs::write(&short, box_stl([0.0; 3], [90.0, 50.0, 20.0])).unwrap();
+        let mut workspace = Workspace::new();
+        let (printer, resin, setting) = catalog_profiles("anycubic-photon-mono-x");
+        workspace.edit(|plate| {
+            plate.name = "Arms".into();
+            plate.printer = Some(printer);
+            plate.resin = Some(resin);
+            plate.print_setting = Some(setting);
+        });
+        for _ in 0..4 {
+            for model in [&tall, &short] {
+                workspace.open(model.clone());
+                wait(&mut workspace);
+            }
+        }
+        let tops = |w: &mut Workspace, id: PlateId| -> Vec<f64> {
+            w.show_plate(id);
+            let tops = w
+                .placements()
+                .iter()
+                .map(|p| (p.as_ref().unwrap().max.z * 1e6).round() / 1e6)
+                .collect();
+            tops
+        };
+        let first = workspace.plate_id();
+        // As packed today: by footprint, so tall and short share both plates.
+        let packed = workspace.arrange(2.0, Overflow::NewPlates, false).unwrap();
+        assert_eq!(
+            (packed.on_plate, packed.moved, packed.grouped),
+            (4, 4, false)
+        );
+        let second = workspace.project().plates()[1].id();
+        assert!(tops(&mut workspace, second).contains(&100.0));
+        workspace.show_plate(first);
+        assert!(workspace.undo());
+        // Grouped: the tall ones on the plate shown, the short ones on the new plate.
+        let grouped = workspace.arrange(2.0, Overflow::NewPlates, true).unwrap();
+        assert_eq!((grouped.on_plate, grouped.moved), (4, 4));
+        assert!(grouped.grouped);
+        assert_eq!(tops(&mut workspace, first), vec![100.0; 4]);
+        let second = workspace.project().plates()[1].id();
+        assert_eq!(tops(&mut workspace, second), vec![20.0; 4]);
+        // What it saves: one plate of 100 mm printed as one of 20 mm.
+        workspace.show_plate(first);
+        let printer = workspace.plate().printer.clone().unwrap();
+        let settings = workspace.plate().calibration().cloned().unwrap();
+        let layers = |mm: f64| {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let layers = (mm / settings.layer_height_mm).ceil() as u64;
+            layers
+        };
+        let saved = uniform_time_s(&printer, &settings, layers(100.0))
+            - uniform_time_s(&printer, &settings, layers(20.0));
+        #[allow(clippy::cast_precision_loss)]
+        let reported = grouped.saved_s as f64;
+        assert!((reported - saved).abs() <= 1.0, "{reported} {saved}");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
     fn arrange_packs_the_plate_and_takes_the_overflow_to_new_plates_or_leaves_it() {
         // TD-135, phase 5: six slabs of 90 × 50 mm on a 192 × 120 mm plate, four fit; a slab
         // larger than the plate fits nowhere.
@@ -2531,7 +2829,7 @@ pub(crate) mod tests {
         let first = workspace.plate_id();
         assert_eq!(workspace.plate().objects.len(), 7);
         let revision = workspace.revision();
-        let arranged = workspace.arrange(2.0, Overflow::NewPlates).unwrap();
+        let arranged = workspace.arrange(2.0, Overflow::NewPlates, false).unwrap();
         assert_eq!(
             arranged,
             Arranged {
@@ -2540,6 +2838,8 @@ pub(crate) mod tests {
                 new_plates: vec!["Arms (2)".into()],
                 stayed: 1,
                 removed: arranged.removed.clone(),
+                grouped: false,
+                saved_s: 0,
             }
         );
         assert_eq!(arranged.removed.len(), 2);
@@ -2575,8 +2875,16 @@ pub(crate) mod tests {
         assert!(workspace.undo());
         assert_eq!(workspace.project().plates().len(), 1);
         assert_eq!(workspace.plate().objects.len(), 7);
+        // Slabs all of one height: grouping by height saves nothing, so the packing is the
+        // same (TD-162).
+        let same = workspace.arrange(2.0, Overflow::NewPlates, true).unwrap();
+        assert_eq!(
+            (same.on_plate, same.moved, same.stayed, same.grouped),
+            (4, 2, 1, false)
+        );
+        assert!(workspace.undo());
         // Left where they are: no new plate, three stay.
-        let arranged = workspace.arrange(2.0, Overflow::Stay).unwrap();
+        let arranged = workspace.arrange(2.0, Overflow::Stay, true).unwrap();
         assert_eq!(
             (arranged.on_plate, arranged.moved, arranged.stayed),
             (4, 0, 3)

@@ -130,6 +130,8 @@ pub const DEFAULT_EXPORT_PATTERN: &str = karasu_project::project::batch::DEFAULT
 pub struct PlateSettings {
     /// Where Arrange puts the models that do not fit.
     pub arrange_overflow: crate::workspace::Overflow,
+    /// Arrange groups the models by height over new plates (TD-162; on by default, owner).
+    pub arrange_by_height: bool,
     /// The folder Export every plate wrote to last.
     pub export_folder: Option<PathBuf>,
     /// The file names' pattern: `{project}`, `{number}` and `{plate}` are replaced.
@@ -142,6 +144,7 @@ impl Default for PlateSettings {
     fn default() -> Self {
         Self {
             arrange_overflow: crate::workspace::Overflow::default(),
+            arrange_by_height: true,
             export_folder: None,
             export_pattern: DEFAULT_EXPORT_PATTERN.to_owned(),
             export_slice_first: true,

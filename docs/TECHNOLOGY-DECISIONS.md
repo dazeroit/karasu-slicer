@@ -6284,7 +6284,8 @@ Should a run fail to start all the same, a `recheck` comment runs it again.
 ## TD-162 — Arrange: plates grouped by height, and turns about Z
 
 **Status:** Accepted on 2026-11-19 by the owner ("confermo entrambi"), as proposed below with
-the 1 % margin, and with Clone and moves to another plate packing without turns. Not
+the 1 % margin, and with Clone and moves to another plate packing without turns. Phase 1
+(grouping by height) was implemented the same day (issue #38); phases 2 and 3 are not
 implemented yet. The design follows the owner's proposals of the same day. The owner decided:
 - both are options of the Arrange dialog;
 - grouping by height is on by default, turning off;
@@ -6416,6 +6417,33 @@ implemented yet. The design follows the owner's proposals of the same day. The o
   with its smallest rectangle covers the long, diagonal models that call for a turn.
 - **Turning about X or Y:** it changes what needs supports. That is the Orient tool's job
   (TD-119), not Arrange's.
+
+**Phase 1, as implemented (2026-11-19, issue #38):**
+- **The estimate:** `karasu_core::print_job::uniform_time_s` times a plan of so many
+  calibrated layers as a print job of it would.
+  - Bottom layers, transition layers with their stepped exposure, then normal layers.
+  - Each layer through `layer_time_s`, which the print job's own estimate now uses too, so
+    estimates are bit for bit what they were.
+  - A test matches it with jobs of 5, 7 and 20 layers.
+- **The plans:** `Workspace::arrange` builds today's packing (`Plan::packed`) and, with the
+  option on and the overflow to new plates, the grouping (`Plan::by_height`). It keeps the
+  grouping when `Plan::sooner` finds it shorter by a second or more, or as long on fewer plates.
+  - **A plate's time** counts the layers up to its tallest model, the models that stay on the
+    plate shown counted on it.
+  - **Without a print setting,** the heights stand in for the time.
+  - **A model's height** is its top above the plate, from the placements the scene keeps.
+- **The dialog and the notification:**
+  - "Group by height" is a switch kept in `PlateSettings::arrange_by_height`, on by default.
+  - `Arranged::grouped` and `saved_s` give the notification its line.
+- **Measured** (release build, 218 × 123 mm plate, mixed footprints and heights): 50 models in
+  3 ms, 100 in 9 ms, 200 in 45 ms, 400 in 181 ms. That is the same order as Arrange itself, so
+  it runs where Arrange does.
+- **Tests:**
+  - four 100 mm and four 20 mm slabs, four to a plate, opened in turn: mixed when packed,
+    grouped (the tall ones on the plate shown) with the option, the time saved as estimated;
+  - slabs of one height: the packing is kept;
+  - the dialog's switch, hidden with "Stay where they are" and kept across restarts;
+  - the timing.
 
 **Tests (planned):**
 - **Grouping:**
