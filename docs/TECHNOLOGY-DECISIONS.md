@@ -4154,8 +4154,9 @@ inactive plates' preparation is recomputed only when they are opened or sliced.
   model). It stays where it is when that footprint lies on the target's plate clear of the
   models there by the target's spacing; otherwise the shelf packer (the command line's, TD-065)
   places it beside them, centred on an empty plate, and the object is no longer centred by its
-  pose. With no room, it stays on its plate and a warning says so; with a model still loading,
-  nothing moves. A target with another printer keeps its own profiles.
+  pose. With no room, it stays on its plate and a warning says so (until TD-163, 2026-11-19:
+  it now lands in the middle of the target's plate, with a warning); with a model still
+  loading, nothing moves. A target with another printer keeps its own profiles.
 - **Undo:** the project's structure has a step that replaces several plates' contents at once,
   and one that is several steps (the move and the new plate): a move or a copy is one step,
   undone and redone whole. A plate it changed and edited since is undone first, newest first
@@ -6442,8 +6443,27 @@ implemented yet. The design follows the owner's proposals of the same day. The o
 ## TD-163 — A model moved, copied or cloned to a plate always lands
 
 **Status:** Accepted on 2026-11-19 by the owner ("confermo entrambi"), from the owner's proposal
-of the same day. Not implemented yet. It changes TD-135's item 5, which left a model where it was
-when it fitted nowhere on the target.
+of the same day, and implemented the same day (issue #39). It changes TD-135's item 5, which left
+a model where it was when it fitted nowhere on the target.
+
+**As implemented (2026-11-19):**
+- **Moving:** `Workspace::transfer` returns `Landing::Middle` for a model placed in the middle
+  with no room. The notification is then a warning: "Arms copied to Plate 2, in the middle of
+  the plate: there was no room beside the models there, so it may overlap them".
+- **Cloning:** `Workspace::clone_object` checks first whether the model fits an empty plate.
+  When it does not, the copies go to the middle, arranged or not, and `Cloned::too_large`
+  makes the notification a warning that says why.
+- **No refusal for lack of room:** `Refused::NoRoom` and its text are gone.
+- **Overlaps:** `Workspace::overlapping` lists the overlapping footprints of the plate shown.
+  - It works them out from the placements the scene already keeps, so no model is placed
+    again.
+  - It is cached by plate and revision.
+  - The status bar's warning counts the models in those pairs.
+- **Tests:**
+  - a model larger than the free room lands centred on the target over the model there, is
+    found overlapping, and is undone in one step;
+  - the clone of a model larger than an empty plate lands centred;
+  - the window's notification is a warning, and the status bar says "2 models overlap".
 
 **Context:**
 - **Move to plate, Copy to plate, and a drop on a plate's card** (TD-135, phase 3,

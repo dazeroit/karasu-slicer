@@ -463,7 +463,9 @@ Phase 3 (2026-11-06):
   plate under the pointer is outlined in Electric Violet while it can take the model, and a line
   beside the pointer says "Drop on a plate to move … there; hold Ctrl to copy it". A
   notification says where the model went ("…, beside the models there" when it could not keep
-  its place) or that there is no room for it.
+  its place). With no room beside them, it lands in the middle of the plate all the same, over
+  them or beyond the build volume, and the notification is a warning that says so (TD-163); the
+  status bar counts the models whose footprints overlap ("2 models overlap").
 - **Clone** (owner, 2026-11-10): the same menu, in the sidebar or the viewport, has Clone. A
   modal dialog "Clone <model>" asks for the copies (1 to 100, one to start with), the plate
   (the one shown, marked "(shown)", another plate, or New plate) and "Arrange the copies" (on).
@@ -474,7 +476,8 @@ Phase 3 (2026-11-06):
   them, the model staying on its plate. Off, every copy goes to the middle of the plate,
   its footprint (supports and raft included) centred there. One undoable step; a notification
   says how many copies the plate got and where the others went. A model too large for an empty
-  plate is refused, nothing added.
+  plate is no longer refused (TD-163): its copies go to the middle of the plate chosen, over each
+  other, and the notification is a warning that says why.
 
 Phases 4 and 5 (owner mockups "Export every plate" and "Arrange with the overflow to a new
 plate", 2026-11-07):

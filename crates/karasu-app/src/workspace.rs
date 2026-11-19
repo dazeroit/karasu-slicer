@@ -26,7 +26,7 @@ use crate::{
 use karasu_core::{
     cancellation::Cancellation,
     mesh::{formats::LengthUnit, TriangleMesh},
-    plate::{arrange, Rect},
+    plate::{arrange, overlapping_pairs, Rect},
     preparation::repair::{RepairPreset, RepairSpec},
     profiles::{store::ProfileDocument, PrinterProfile, MAX_PROFILE_BYTES},
     supports::{BaseSpec, SupportDocument},
@@ -112,6 +112,9 @@ pub struct SurfaceHit {
     pub normal: [f64; 3],
 }
 
+/// The overlapping footprints of a plate (its pairs of object indices) at a revision.
+type Overlaps = ((PlateId, u64), Vec<(usize, usize)>);
+
 /// The project being edited, the plate shown, and the meshes and placements to draw it.
 pub struct Workspace {
     project: Project,
@@ -135,6 +138,8 @@ pub struct Workspace {
     memory_budget: Option<u64>,
     /// Which objects the scene hides: a state of the view, not of the plate.
     visibility: Visibility,
+    /// The overlapping footprints of a plate at a revision, worked out when it changed.
+    overlaps: Option<Overlaps>,
 }
 
 impl Default for Workspace {
@@ -282,6 +287,7 @@ impl Workspace {
             diagnoses: HashMap::new(),
             memory_budget: machine_memory_budget(),
             visibility: Visibility::default(),
+            overlaps: None,
         }
     }
 
@@ -739,11 +745,12 @@ impl Workspace {
     ///
     /// It lands where it is when its footprint (the model with its supports and raft) lies on
     /// the target's plate clear of the models there by the target's spacing, otherwise beside
-    /// them as the packer places it (centred on an empty plate). The shown plate stays.
+    /// them as the packer places it (centred on an empty plate). With no room for it, it lands
+    /// in the middle of the target's plate all the same, over the models there or beyond the
+    /// build volume, for the user to place (owner, 2026-11-19, TD-163). The shown plate stays.
     ///
     /// # Errors
-    /// [`Refused`]: no such object or plate, a model still loading, or no room on the target,
-    /// with nothing changed.
+    /// [`Refused`]: no such object or plate, or a model still loading, with nothing changed.
     pub fn transfer(
         &mut self,
         index: usize,
@@ -796,13 +803,16 @@ impl Workspace {
                 if on_plate && others.iter().all(|o| !rect.within(o, spacing)) {
                     Landing::Kept
                 } else {
-                    let corner = arrange(&[rect.size()], area, &others, spacing)
-                        .map_err(|_| Refused::NoRoom)?[0];
+                    let (corner, landing) = arrange(&[rect.size()], area, &others, spacing)
+                        .map_or_else(
+                            |_| (middle_corner(area, rect.size()), Landing::Middle),
+                            |corners| (corners[0], Landing::Beside),
+                        );
                     // The place it was given, no longer centred on the plate.
                     placed.translate_mm[0] = translation[0] + corner[0] - rect.min[0];
                     placed.translate_mm[1] = translation[1] + corner[1] - rect.min[1];
                     placed.pose.center = false;
-                    Landing::Beside
+                    landing
                 }
             }
         };
@@ -931,13 +941,14 @@ impl Workspace {
     /// plate's spacing apart; on the model's own plate the model is arranged with them, the
     /// first in the middle. Those that do not fit go to new plates after it, named after it
     /// ("Arms (2)") and arranged the same way. Not arranged, every copy goes to the middle of
-    /// the plate, its footprint (supports and raft included) centred there. Without a printer
-    /// there is no plate to place on: the copies keep the model's place. One undoable step.
+    /// the plate, its footprint (supports and raft included) centred there; so do they, arranged
+    /// or not, when the model fits not even an empty plate (TD-163), and [`Cloned::too_large`]
+    /// says so. Without a printer there is no plate to place on: the copies keep the model's
+    /// place. One undoable step.
     ///
     /// # Errors
     /// [`Refused::Unknown`] for an unknown model or plate, [`Refused::Loading`] while a model
-    /// loads, [`Refused::NoRoom`] when the model does not fit even an empty plate; nothing is
-    /// changed then.
+    /// loads; nothing is changed then.
     pub fn clone_object(
         &mut self,
         index: usize,
@@ -986,7 +997,9 @@ impl Workspace {
                     min: [ox, oy],
                     max: [ox + width, oy + depth],
                 };
-                if arranged {
+                // A model larger than an empty plate goes to its middle, as when not arranged.
+                out.too_large = arrange(&[rect.size()], area, &[], 0.0).is_err();
+                if arranged && !out.too_large {
                     // On the model's own plate the model is packed with its copies, item 0, as
                     // Arrange models would (owner, 2026-11-10); the other models stay.
                     let here = to == Some(self.plate);
@@ -1020,12 +1033,9 @@ impl Workspace {
                         (area, spacing),
                         at,
                         &mut out,
-                    )?;
+                    );
                 } else {
-                    let size = rect.size();
-                    let corner = std::array::from_fn(|k| {
-                        f64::midpoint(area.min[k], area.max[k]) - size[k] / 2.0
-                    });
+                    let corner = middle_corner(area, rect.size());
                     target.objects.extend((0..copies).map(|_| at(corner)));
                     out.on_plate = copies;
                 }
@@ -1037,7 +1047,8 @@ impl Workspace {
 
     /// New plates after `target`, as many as needed, holding the copies `left` (of `sizes`)
     /// placed by `at`, each packed on `area` `spacing` apart as an empty plate and named after
-    /// `target` ("Arms (2)"); counted in `out`.
+    /// `target` ("Arms (2)"); counted in `out`. Each copy fits an empty plate: the caller
+    /// checked the model does.
     fn overflow_plates(
         &self,
         target: &PlateContent,
@@ -1045,7 +1056,7 @@ impl Workspace {
         (area, spacing): (Rect, f64),
         at: impl Fn([f64; 2]) -> PlateObject,
         out: &mut Cloned,
-    ) -> Result<Vec<PlateContent>, Refused> {
+    ) -> Vec<PlateContent> {
         let taken: Vec<String> = self
             .project
             .plates()
@@ -1057,8 +1068,10 @@ impl Workspace {
         let mut number = 2;
         while !left.is_empty() {
             let (on_new, remaining) = pack(&left, sizes, area, &[], spacing);
+            // Never empty, each copy fitting an empty plate; stopping is the safe end all the
+            // same, the copies left uncounted in `out`.
             if on_new.is_empty() {
-                return Err(Refused::NoRoom);
+                break;
             }
             let plate = fresh_name(&target.name, &mut number, |name| {
                 taken.iter().chain(&out.new_plates).any(|t| t == name)
@@ -1072,7 +1085,7 @@ impl Workspace {
             out.new_plates.push(plate);
             left = remaining;
         }
-        Ok(plates)
+        plates
     }
 
     /// Plate `to` (a new one after the plate shown for `None`) as `target`, and the plates
@@ -1122,45 +1135,93 @@ impl Workspace {
             &mut Cancellation::never(),
         )
         .ok()?;
-        let mut rect = Rect {
-            min: [placement.min.x, placement.min.y],
-            max: [placement.max.x, placement.max.y],
-        };
-        let translation = placement.translation_mm;
-        let Some(document) = &object.supports else {
-            return Some((rect, translation));
-        };
-        let affine = placement.transform.to_affine().ok()?;
-        let placed = document.placed(&affine).ok()?;
-        let mut grow = |[x, y, _]: [f64; 3], radius: f64| {
-            rect.min = [rect.min[0].min(x - radius), rect.min[1].min(y - radius)];
-            rect.max = [rect.max[0].max(x + radius), rect.max[1].max(y + radius)];
-        };
-        let raft = placed.raft.as_ref().map_or(0.0, |raft| {
-            let run = raft.thickness_mm / raft.slope_deg.to_radians().tan().max(1e-6);
-            raft.fillet_diameter_mm / 2.0 + raft.margin_mm + run
-        });
-        for support in &placed.supports {
-            let p = &support.parameters;
-            grow(support.tip_mm, p.tip_body_diameter_mm / 2.0);
-            for &bend in &support.bends {
-                grow(bend, p.shaft_diameter_mm / 2.0);
-            }
-            let foot = (p.pad_diameter_mm / 2.0).max(raft);
-            match support.base {
-                BaseSpec::Platform([x, y]) => grow([x, y, 0.0], foot),
-                BaseSpec::Vertical => {
-                    let last = support.bends.last().copied().unwrap_or(support.tip_mm);
-                    grow(last, foot);
-                }
-                BaseSpec::Model { point_mm, .. } => grow(point_mm, p.foot_body_diameter_mm / 2.0),
-                // Within its parent's footprint.
-                BaseSpec::Support { .. } => {}
-            }
-        }
-        Some((rect, translation))
+        Some((
+            placed_footprint(&placement, object)?,
+            placement.translation_mm,
+        ))
     }
 
+    /// The pairs of objects on the plate shown, in increasing order, whose footprints (supports
+    /// and raft included) overlap as rectangles: the test a slice applies, which prints them
+    /// joined, or refuses them with drain holes (TD-065). The status bar warns of them
+    /// (TD-163). Worked out from the placements when the plate changes, never per frame.
+    pub fn overlapping(&mut self) -> Vec<(usize, usize)> {
+        let revision = self
+            .project
+            .plate(self.plate)
+            .map_or(0, karasu_project::project::Plate::revision);
+        let key = (self.plate, revision);
+        if let Some((cached, pairs)) = &self.overlaps {
+            if *cached == key {
+                return pairs.clone();
+            }
+        }
+        self.placements();
+        let rects: Vec<(usize, Rect)> = self
+            .placements
+            .1
+            .iter()
+            .zip(&self.plate().objects)
+            .enumerate()
+            .filter_map(|(index, (placed, object))| {
+                let placed = placed.as_ref().ok()?;
+                Some((index, placed_footprint(placed, object)?))
+            })
+            .collect();
+        let only: Vec<Rect> = rects.iter().map(|&(_, rect)| rect).collect();
+        let pairs: Vec<(usize, usize)> = overlapping_pairs(&only)
+            .into_iter()
+            .map(|(a, b)| (rects[a].0, rects[b].0))
+            .collect();
+        self.overlaps = Some((key, pairs.clone()));
+        pairs
+    }
+}
+
+/// The XY rectangle `object`, placed by `placement`, covers, in world mm: the placed model, its
+/// supports' tips, bends and feet with their pads, and the raft's margin and slope beyond the
+/// pads (drain-hole cutters, inside the model, are left out). `None` when its supports cannot
+/// be placed.
+fn placed_footprint(placement: &Placement, object: &PlateObject) -> Option<Rect> {
+    let mut rect = Rect {
+        min: [placement.min.x, placement.min.y],
+        max: [placement.max.x, placement.max.y],
+    };
+    let Some(document) = &object.supports else {
+        return Some(rect);
+    };
+    let affine = placement.transform.to_affine().ok()?;
+    let placed = document.placed(&affine).ok()?;
+    let mut grow = |[x, y, _]: [f64; 3], radius: f64| {
+        rect.min = [rect.min[0].min(x - radius), rect.min[1].min(y - radius)];
+        rect.max = [rect.max[0].max(x + radius), rect.max[1].max(y + radius)];
+    };
+    let raft = placed.raft.as_ref().map_or(0.0, |raft| {
+        let run = raft.thickness_mm / raft.slope_deg.to_radians().tan().max(1e-6);
+        raft.fillet_diameter_mm / 2.0 + raft.margin_mm + run
+    });
+    for support in &placed.supports {
+        let p = &support.parameters;
+        grow(support.tip_mm, p.tip_body_diameter_mm / 2.0);
+        for &bend in &support.bends {
+            grow(bend, p.shaft_diameter_mm / 2.0);
+        }
+        let foot = (p.pad_diameter_mm / 2.0).max(raft);
+        match support.base {
+            BaseSpec::Platform([x, y]) => grow([x, y, 0.0], foot),
+            BaseSpec::Vertical => {
+                let last = support.bends.last().copied().unwrap_or(support.tip_mm);
+                grow(last, foot);
+            }
+            BaseSpec::Model { point_mm, .. } => grow(point_mm, p.foot_body_diameter_mm / 2.0),
+            // Within its parent's footprint.
+            BaseSpec::Support { .. } => {}
+        }
+    }
+    Some(rect)
+}
+
+impl Workspace {
     /// Show a plate that still exists: the shown one, or the first.
     fn keep_a_plate(&mut self) {
         if self.project.plate(self.plate).is_none() {
@@ -1856,6 +1917,9 @@ pub enum Landing {
     Kept,
     /// Beside the target's models, as the packer places it.
     Beside,
+    /// In the middle of the target's plate: there was no room beside its models, so it may lie
+    /// over them or beyond the build volume (TD-163).
+    Middle,
 }
 
 /// Why an object could not be moved or copied to another plate (TD-135, phase 3).
@@ -1865,8 +1929,6 @@ pub enum Refused {
     Unknown,
     /// Its model or a model of the target is still loading.
     Loading,
-    /// It fits nowhere on the target's plate clear of the models there.
-    NoRoom,
 }
 
 /// What Arrange does with the models that do not fit on the plate (TD-135, phase 5).
@@ -1902,6 +1964,9 @@ pub struct Cloned {
     /// Copies on new plates after it, and those plates' names.
     pub moved: usize,
     pub new_plates: Vec<String>,
+    /// The model fits not even an empty plate: its copies are in the middle of the plate
+    /// chosen, arranged or not (TD-163).
+    pub too_large: bool,
 }
 
 /// Why a plate could not be arranged (TD-135, phase 5).
@@ -1937,6 +2002,11 @@ fn pack(
         }
     }
     (Vec::new(), sorted(left))
+}
+
+/// The lowest corner that centres a footprint of `size` on `area`, whether it fits or not.
+fn middle_corner(area: Rect, size: [f64; 2]) -> [f64; 2] {
+    std::array::from_fn(|k| f64::midpoint(area.min[k], area.max[k]) - size[k] / 2.0)
 }
 
 /// `base` followed by the first number from `number` on whose name `taken` refuses: "Arms (2)",
@@ -2518,9 +2588,9 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn a_model_moves_or_copies_to_another_plate_where_it_is_beside_the_others_or_not_at_all() {
+    fn a_model_moves_or_copies_to_another_plate_where_it_is_or_beside_the_others() {
         // TD-135, phase 3: the object goes whole, at its place when that is free, beside the
-        // models there otherwise, and stays when there is no room; one undoable step.
+        // models there otherwise; one undoable step. With no room, see the next test (TD-163).
         let folder =
             std::env::temp_dir().join(format!("karasu-workspace-transfer-{}", std::process::id()));
         std::fs::create_dir_all(&folder).unwrap();
@@ -2596,25 +2666,7 @@ pub(crate) mod tests {
         assert!(workspace.undo());
         assert_eq!(objects(&workspace, first), 1);
         assert!(workspace.project().plate(third).is_none());
-        // A model larger than the plate's free room stays where it is.
         workspace.show_plate(second);
-        workspace.open(huge);
-        wait(&mut workspace);
-        workspace.edit(|plate| {
-            let width = plate.printer.as_ref().unwrap().build_size_mm[0];
-            plate.objects[2].pose.scale = [width / 100.0 * 0.95; 3];
-        });
-        workspace.show_plate(first);
-        workspace
-            .transfer(0, Some(second), false, String::new())
-            .ok();
-        workspace.show_plate(second);
-        let revision = workspace.revision();
-        assert_eq!(
-            workspace.transfer(2, Some(first), false, String::new()),
-            Err(Refused::NoRoom)
-        );
-        assert_eq!(workspace.revision(), revision);
         assert_eq!(
             workspace.transfer(0, Some(second), false, String::new()),
             Err(Refused::Unknown)
@@ -2622,6 +2674,96 @@ pub(crate) mod tests {
         let _ = std::fs::remove_dir_all(&folder);
     }
 
+    /// A workspace whose plate has a 10 mm cube in its middle, and a second plate after it with
+    /// a model wider than the plate: those plates and the folder, removed by the caller.
+    fn crowded_plates(name: &str) -> (Workspace, PlateId, PlateId, std::path::PathBuf) {
+        let folder = std::env::temp_dir().join(format!("{name}-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let cube = folder.join("cube.stl");
+        std::fs::write(&cube, box_stl([0.0; 3], [10.0; 3])).unwrap();
+        let mut workspace = Workspace::new();
+        let (printer, resin, setting) = catalog_profiles("anycubic-photon-mono-x");
+        workspace.edit(|plate| {
+            plate.printer = Some(printer);
+            plate.resin = Some(resin);
+            plate.print_setting = Some(setting);
+        });
+        workspace.open(cube.clone());
+        wait(&mut workspace);
+        let first = workspace.plate_id();
+        workspace.new_plate("Second".into());
+        let second = workspace.plate_id();
+        workspace.open(cube);
+        wait(&mut workspace);
+        workspace.edit(|plate| {
+            let width = plate.printer.as_ref().unwrap().build_size_mm[0];
+            plate.objects[0].pose.scale = [width / 8.0; 3];
+        });
+        (workspace, first, second, folder)
+    }
+
+    /// The middle of the plate shown's build area, and the centre of object `index`'s footprint.
+    fn middle_and_centre(workspace: &Workspace, index: usize) -> ([f64; 2], [f64; 2]) {
+        let printer = workspace.plate().printer.clone().unwrap();
+        let [ox, oy] = printer.origin_xy_mm;
+        let [width, depth, _] = printer.build_size_mm;
+        let centre = placement::plate_centre(&printer);
+        let object = workspace.plate().objects[index].clone();
+        let (rect, _) = workspace.footprint(centre, &object).unwrap();
+        (
+            [ox + width / 2.0, oy + depth / 2.0],
+            std::array::from_fn(|k| f64::midpoint(rect.min[k], rect.max[k])),
+        )
+    }
+
+    #[test]
+    fn a_model_with_no_room_lands_in_the_middle_over_the_models_there() {
+        // TD-163 (owner, 2026-11-19): never refused; in the middle, the overlap found, one step.
+        let (mut workspace, first, second, folder) = crowded_plates("karasu-workspace-middle");
+        assert_eq!(
+            workspace.transfer(0, Some(first), false, String::new()),
+            Ok(Landing::Middle)
+        );
+        assert_eq!(workspace.plate().objects.len(), 0);
+        workspace.show_plate(first);
+        assert_eq!(workspace.plate().objects.len(), 2);
+        let (middle, centre) = middle_and_centre(&workspace, 1);
+        assert!(
+            (0..2).all(|k| (centre[k] - middle[k]).abs() < 1e-6),
+            "{centre:?}"
+        );
+        assert_eq!(workspace.overlapping(), vec![(0, 1)]);
+        assert!(workspace.undo());
+        workspace.show_plate(first);
+        assert_eq!(workspace.plate().objects.len(), 1);
+        assert_eq!(workspace.overlapping(), Vec::new());
+        workspace.show_plate(second);
+        assert_eq!(workspace.plate().objects.len(), 1);
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    #[test]
+    fn a_clone_of_a_model_larger_than_an_empty_plate_lands_in_its_middle() {
+        // TD-163: no longer refused, arranged or not; every copy in the middle, and said so.
+        let (mut workspace, _, second, folder) = crowded_plates("karasu-workspace-big-clone");
+        let cloned = workspace
+            .clone_object(0, 2, Some(second), true, "unused".into())
+            .unwrap();
+        assert!(cloned.too_large);
+        assert_eq!((cloned.on_plate, cloned.moved), (2, 0));
+        assert_eq!(workspace.project().plates().len(), 2);
+        assert_eq!(workspace.plate().objects.len(), 3);
+        for index in 1..3 {
+            let (middle, centre) = middle_and_centre(&workspace, index);
+            assert!(
+                (0..2).all(|k| (centre[k] - middle[k]).abs() < 1e-6),
+                "{centre:?}"
+            );
+        }
+        assert!(workspace.undo());
+        assert_eq!(workspace.plate().objects.len(), 1);
+        let _ = std::fs::remove_dir_all(&folder);
+    }
     #[test]
     fn a_footprint_holds_the_supports_pads_beyond_the_model() {
         // TD-135, phase 3: what lands clear of the others is the whole print of the object.
