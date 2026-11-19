@@ -6285,8 +6285,9 @@ Should a run fail to start all the same, a `recheck` comment runs it again.
 
 **Status:** Accepted on 2026-11-19 by the owner ("confermo entrambi"), as proposed below with
 the 1 % margin, and with Clone and moves to another plate packing without turns. Phase 1
-(grouping by height) was implemented the same day (issue #38); phases 2 and 3 are not
-implemented yet. The design follows the owner's proposals of the same day. The owner decided:
+(grouping by height) and phase 2's turns in the application were implemented the same day
+(issue #38); phase 2's command line and phase 3 are not implemented yet. The design follows the
+owner's proposals of the same day. The owner decided:
 - both are options of the Arrange dialog;
 - grouping by height is on by default, turning off;
 - turns are about Z only, at any angle;
@@ -6444,6 +6445,73 @@ implemented yet. The design follows the owner's proposals of the same day. The o
   - slabs of one height: the packing is kept;
   - the dialog's switch, hidden with "Stay where they are" and kept across restarts;
   - the timing.
+
+**Phase 2 in the application, as implemented (2026-11-19, issue #38):**
+- **Core (`karasu_core::plate`):**
+  - `convex_hull` uses Andrew's monotone chain. First it leaves out the points inside the
+    octagon of the extreme points (Akl and Toussaint, 1978).
+  - `turned_size` gives the width and depth of a hull turned by an angle.
+  - `footprint_turn` chooses the turn:
+    - the turn of the edge whose rectangle is smallest, within (-45°, 45°], only when it saves
+      at least the margin;
+    - when that rectangle fits the plate neither way round, the turn nearest none that fits,
+      tried every 0.5°.
+  - `arrange_turning` lets each footprint also lie a quarter turn round, taking the candidate
+    nearest the plate's middle, the footprint as it was on a tie. `arrange` is it with nothing
+    turnable, bit for bit.
+- **Application:**
+  - `Workspace::arrange` takes `ArrangeOptions`.
+  - **Choosing the turn:** with "Turn about Z" on, each model takes `footprint_turn`'s turn,
+    with `TURN_MARGIN` of 1 %. The turn is computed on its convex footprint: the hull of the
+    placed model's vertices and of a 16-sided polygon round each support circle.
+  - **Packing:** the packer may add a quarter turn, in the grouping by height too. A turn adds
+    to `rotate_deg[2]`, kept within [-180°, 180°), and the footprint is placed again.
+  - **The notification** counts the models turned.
+  - **The dialog:** "Turn about Z" is a switch kept in `PlateSettings::arrange_turn`, off by
+    default, shown with either overflow choice.
+- **Measured** (release build, a 7.2-million-triangle model): the turn in 202 ms, against 424
+  ms before the octagon filter. A whole Arrange took 391 ms with turns and 61 ms without.
+  - **Where it runs:** first on the interface thread, which the owner accepted, then, at the
+    owner's request the same day, on a thread of its own, as point 3 has it (below). The hull is
+    worked out at each Arrange, not kept between them.
+- **Arrange on a thread of its own (owner, 2026-11-19):**
+  - **On the interface thread:** `Workspace::arrange_input` takes a snapshot: the plate, its
+    printer, its models' meshes (shared `Arc`s), each model's top, the plates' names and the
+    plate's revision.
+  - **On its own thread:** `plan_arrangement` measures every model (its turn and its
+    footprint), then packs. It reports to `ArrangeProgress` and stops when that asks, between
+    models and before packing.
+  - **Making it:** `Workspace::finish_arrange` makes the arrangement as one undoable step. It
+    does so only while the plate keeps the revision it had (`Unarranged::Changed` otherwise).
+    `ArrangeJob` runs the planning. The tests run all three steps on their own thread
+    (`Workspace::arrange`, a test helper).
+  - **The dialog** stays open while it works, its controls disabled. After 150 ms it shows a
+    progress bar, "Measuring the models: 3 of 12", then "Placing the models on the plates".
+    Only Cancel remains, and Escape cancels too. Done, it closes and the notification comes.
+    Cancelled, nothing changes, and a notification says so.
+  - **Tests:**
+    - the plan made on its own thread equals the one made on the caller's;
+    - asked to stop, nothing is planned;
+    - a plate changed meanwhile is refused and kept as the user left it;
+    - the window's run closes the dialog with its notification, and its Cancel changes
+      nothing.
+- **The command line's turns are put off (owner, 2026-11-19)**, to an issue of their own (#48):
+  - slicing would turn each arranged copy's vertices and its drain rings;
+  - `export-models` would turn the copies it writes, whose vertices lie on the export grid
+    (TD-140) and would need placing on it again.
+- **Tests:**
+  - core:
+    - nothing turnable packs as `arrange` does;
+    - a footprint that fits only turned lies turned;
+    - the hull, with and without the octagon filter;
+    - the smallest rectangle and the 1 % margin;
+    - a bar along the plate's diagonal;
+  - application:
+    - a bar lying at 30° turned back to its 100 × 10 mm;
+    - a 110 × 150 mm slab that fits the 192 × 120 mm plate only turned;
+    - a 205 mm bar along the diagonal;
+    - a supported model whose support document is unchanged by the turn;
+    - the dialog's switch.
 
 **Tests (planned):**
 - **Grouping:**

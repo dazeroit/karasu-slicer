@@ -5,17 +5,34 @@
 //! resin, print setting and slicing options, arranged the same way, as many as needed; or, by
 //! choice, stay where they are. With the overflow to new plates, "Group by height" (TD-162, on
 //! by default) puts models of similar height on one plate when that shortens the plates'
-//! estimated time. The choices are kept across restarts; the spacing is not (it is the
-//! plate's). One undoable step; a notification says what happened.
+//! estimated time. "Turn about Z" (TD-162, off by default) lets models turn about the plate's
+//! vertical, by any angle, to take less room. The choices are kept across restarts; the spacing
+//! is not (it is the plate's). One undoable step; a notification says what happened.
+//!
+//! **On a thread of its own** (owner, 2026-11-19): Arrange measures every model, which takes
+//! long on large ones, so it works beside the window. The dialog stays, its controls disabled,
+//! with a progress bar after a moment and only Cancel; done, it closes and the notification
+//! comes. Cancelled, or with the plate changed meanwhile, nothing changes.
 use crate::{
     dialog::{self, Part, Size},
     i18n::tr,
     messages::{Level, Message},
     widgets::{choice, value_row, Unit, UnitField},
     window::MainWindow,
-    workspace::{Arranged, Overflow, Unarranged},
+    workspace::{
+        ArrangeJob, ArrangeOptions, ArrangeStage, Arranged, Overflow, Planned, Unarranged,
+    },
 };
 use eframe::egui;
+use std::time::{Duration, Instant};
+
+/// Arrange working on a thread of its own, its dialog showing how far it has gone.
+pub(in crate::window) struct Running {
+    job: ArrangeJob,
+    started: Instant,
+    /// The plate's name, for the notification.
+    plate: String,
+}
 
 /// The spacing Arrange accepts, in mm.
 const SPACING_MM: std::ops::RangeInclusive<f64> = 0.0..=50.0;
@@ -26,13 +43,30 @@ impl MainWindow {
         self.plates.arranging = Some(self.workspace.plate().settings.spacing_mm);
     }
 
-    /// Arrange models…, while it is open: modal, Enter arranges, Escape cancels.
+    /// Arrange models…, while it is open: modal, Enter arranges, Escape cancels; while it works,
+    /// its progress and Cancel, until it is done.
     pub(in crate::window) fn arrange_dialog(&mut self, ctx: &egui::Context) {
         let Some(mut spacing) = self.plates.arranging.take() else {
             return;
         };
+        // Working: done once its result arrives, the dialog closed.
+        if let Some(result) = self.plates.arrange_job.as_ref().and_then(|r| r.job.poll()) {
+            if let Some(running) = self.plates.arrange_job.take() {
+                self.finish_arrange(&running.plate, result);
+            }
+            return;
+        }
+        let working = self
+            .plates
+            .arrange_job
+            .as_ref()
+            .map(|r| (r.job.progress(), r.started.elapsed()));
+        if working.is_some() {
+            ctx.request_repaint_after(Duration::from_millis(50));
+        }
         let mut overflow = self.plates.choices.arrange_overflow;
         let mut by_height = self.plates.choices.arrange_by_height;
+        let mut turn = self.plates.choices.arrange_turn;
         let models = self.workspace.plate().objects.len();
         let title = tr!("arrange-title", plate = &self.workspace.plate().name);
         let mut done = None;
@@ -43,49 +77,19 @@ impl MainWindow {
             Size::Fixed(400.0),
             |ui, part| match part {
                 Part::Body => {
-                    value_row(ui, tr!("arrange-spacing"), |ui| {
-                        ui.add(UnitField::new(&mut spacing, Unit::Millimetre).range(SPACING_MM))
-                    });
-                    value_row(ui, tr!("arrange-models"), |ui| {
-                        ui.label(tr!("arrange-models-all", count = models))
-                    });
-                    ui.add_space(4.0);
-                    ui.label(tr!("arrange-overflow"));
-                    let mut chosen = usize::from(overflow == Overflow::Stay);
-                    let labels = [tr!("arrange-overflow-new"), tr!("arrange-overflow-stay")];
-                    if choice(ui, &mut chosen, &labels).changed() {
-                        overflow = if chosen == 0 {
-                            Overflow::NewPlates
-                        } else {
-                            Overflow::Stay
-                        };
-                    }
-                    // Only plates that are added can be grouped (TD-162).
-                    if overflow == Overflow::NewPlates {
-                        ui.add_space(4.0);
-                        crate::widgets::default_switch(
-                            ui,
-                            &mut by_height,
-                            (tr!("arrange-by-height"), tr!("arrange-by-height-hint")),
-                            None,
-                        );
-                    }
-                    ui.add_space(4.0);
-                    let hint = match overflow {
-                        Overflow::NewPlates => tr!("arrange-hint-new"),
-                        Overflow::Stay => tr!("arrange-hint-stay"),
+                    let mut choices = Choices {
+                        spacing: &mut spacing,
+                        overflow: &mut overflow,
+                        by_height: &mut by_height,
+                        turn: &mut turn,
                     };
-                    ui.add(
-                        egui::Label::new(
-                            egui::RichText::new(hint)
-                                .small()
-                                .color(ui.visuals().weak_text_color()),
-                        )
-                        .wrap(),
-                    );
+                    arrange_body(ui, &mut choices, models, working);
                 }
                 Part::Footer { enter } => {
-                    if dialog::main_action(ui, &tr!("arrange-action"), models > 0, enter) {
+                    // Working, only Cancel.
+                    if working.is_none()
+                        && dialog::main_action(ui, &tr!("arrange-action"), models > 0, enter)
+                    {
                         done = Some(true);
                     }
                     if dialog::cancel_action(ui) {
@@ -94,37 +98,192 @@ impl MainWindow {
                 }
             },
         );
+        if working.is_some() {
+            if done == Some(false) || response.cancel {
+                self.cancel_arrange();
+            } else {
+                self.plates.arranging = Some(spacing);
+            }
+            return;
+        }
         self.plates.choices.arrange_overflow = overflow;
         self.plates.choices.arrange_by_height = by_height;
+        self.plates.choices.arrange_turn = turn;
         match done {
-            Some(true) => self.arrange(spacing, overflow, by_height),
+            Some(true) => {
+                let options = ArrangeOptions {
+                    spacing_mm: spacing,
+                    overflow,
+                    by_height,
+                    turn,
+                };
+                if self.start_arrange(options) {
+                    self.plates.arranging = Some(spacing);
+                }
+            }
             Some(false) => {}
             None if response.cancel => {}
             None => self.plates.arranging = Some(spacing),
         }
     }
 
-    /// Arrange the plate shown, `spacing_mm` apart, grouped `by_height` over new plates, and say
-    /// what happened.
-    pub(in crate::window) fn arrange(
-        &mut self,
-        spacing_mm: f64,
-        overflow: Overflow,
-        by_height: bool,
-    ) {
-        let plate = self.workspace.plate().name.clone();
-        let message = match self.workspace.arrange(spacing_mm, overflow, by_height) {
+    /// Start arranging the plate shown with `options` on a thread of its own. Returns whether
+    /// it started; otherwise a notification says why.
+    pub(in crate::window) fn start_arrange(&mut self, options: ArrangeOptions) -> bool {
+        match self.workspace.arrange_input(options) {
+            Ok(input) => {
+                self.plates.arrange_job = Some(Running {
+                    job: ArrangeJob::start(input),
+                    started: Instant::now(),
+                    plate: self.workspace.plate().name.clone(),
+                });
+                true
+            }
+            Err(why) => {
+                self.messages.push(unarranged_message(why));
+                false
+            }
+        }
+    }
+
+    /// Stop the arrangement working: nothing changes, and a notification says so.
+    pub(in crate::window) fn cancel_arrange(&mut self) {
+        if let Some(running) = self.plates.arrange_job.take() {
+            running.job.cancel();
+            self.messages
+                .push(unarranged_message(Unarranged::Cancelled));
+        }
+    }
+
+    /// Make the arrangement `result` planned for plate `plate`, and say what happened.
+    fn finish_arrange(&mut self, plate: &str, result: Result<Planned, Unarranged>) {
+        let message = match result.and_then(|planned| self.workspace.finish_arrange(planned)) {
             Ok(arranged) => {
                 // From the last, so that each index is still the model's.
                 for &index in arranged.removed.iter().rev() {
                     self.forget_object(index);
                 }
-                arranged_message(&plate, &arranged)
+                arranged_message(plate, &arranged)
             }
-            Err(Unarranged::NoPrinter) => Message::new(Level::Warning, tr!("arrange-no-printer")),
-            Err(Unarranged::Loading) => Message::new(Level::Info, tr!("arrange-loading")),
+            Err(why) => unarranged_message(why),
         };
         self.messages.push(message);
+    }
+}
+
+/// The dialog's choices, edited in its body.
+struct Choices<'a> {
+    spacing: &'a mut f64,
+    overflow: &'a mut Overflow,
+    by_height: &'a mut bool,
+    turn: &'a mut bool,
+}
+
+/// The dialog's body: its choices for the plate's `models`, disabled while it works, with its
+/// progress (`working`: how far, and for how long) once it takes a moment.
+fn arrange_body(
+    ui: &mut egui::Ui,
+    choices: &mut Choices<'_>,
+    models: usize,
+    working: Option<((ArrangeStage, usize, usize), Duration)>,
+) {
+    let Choices {
+        spacing,
+        overflow,
+        by_height,
+        turn,
+    } = choices;
+    ui.add_enabled_ui(working.is_none(), |ui| {
+        value_row(ui, tr!("arrange-spacing"), |ui| {
+            ui.add(UnitField::new(spacing, Unit::Millimetre).range(SPACING_MM))
+        });
+        value_row(ui, tr!("arrange-models"), |ui| {
+            ui.label(tr!("arrange-models-all", count = models))
+        });
+        ui.add_space(4.0);
+        ui.label(tr!("arrange-overflow"));
+        let mut chosen = usize::from(**overflow == Overflow::Stay);
+        let labels = [tr!("arrange-overflow-new"), tr!("arrange-overflow-stay")];
+        if choice(ui, &mut chosen, &labels).changed() {
+            **overflow = if chosen == 0 {
+                Overflow::NewPlates
+            } else {
+                Overflow::Stay
+            };
+        }
+        // Only plates that are added can be grouped (TD-162).
+        if **overflow == Overflow::NewPlates {
+            ui.add_space(4.0);
+            crate::widgets::default_switch(
+                ui,
+                by_height,
+                (tr!("arrange-by-height"), tr!("arrange-by-height-hint")),
+                None,
+            );
+        }
+        // Turning changes the orientation the user chose: off to start with.
+        ui.add_space(4.0);
+        crate::widgets::default_switch(
+            ui,
+            turn,
+            (tr!("arrange-turn"), tr!("arrange-turn-hint")),
+            None,
+        );
+        ui.add_space(4.0);
+        let hint = match **overflow {
+            Overflow::NewPlates => tr!("arrange-hint-new"),
+            Overflow::Stay => tr!("arrange-hint-stay"),
+        };
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(hint)
+                    .small()
+                    .color(ui.visuals().weak_text_color()),
+            )
+            .wrap(),
+        );
+        // Its progress, once it takes a moment, as a slice's.
+        if let Some(((stage, measured, count), elapsed)) = working {
+            if elapsed >= crate::slicing_ui::BUSY_DELAY {
+                progress_line(ui, stage, measured, count);
+            }
+        }
+    });
+}
+
+/// The progress of an arrangement working: a bar, and what it does.
+fn progress_line(ui: &mut egui::Ui, stage: ArrangeStage, measured: usize, count: usize) {
+    ui.add_space(6.0);
+    let (text, share) = match stage {
+        ArrangeStage::Measuring => {
+            #[allow(clippy::cast_precision_loss)] // Model counts.
+            let share = measured as f32 / count.max(1) as f32;
+            (
+                tr!(
+                    "arrange-measuring",
+                    number = (measured + 1).min(count),
+                    count = count
+                ),
+                share,
+            )
+        }
+        ArrangeStage::Packing => (tr!("arrange-packing"), 1.0),
+    };
+    ui.label(text);
+    ui.add(
+        egui::ProgressBar::new(share)
+            .desired_height(6.0)
+            .animate(stage == ArrangeStage::Packing),
+    );
+}
+
+/// The notification of an arrangement that was not made.
+fn unarranged_message(why: Unarranged) -> Message {
+    match why {
+        Unarranged::NoPrinter => Message::new(Level::Warning, tr!("arrange-no-printer")),
+        Unarranged::Loading => Message::new(Level::Info, tr!("arrange-loading")),
+        Unarranged::Changed => Message::new(Level::Warning, tr!("arrange-changed")),
+        Unarranged::Cancelled => Message::new(Level::Info, tr!("arrange-cancelled")),
     }
 }
 
@@ -132,7 +291,16 @@ impl MainWindow {
 /// where the others went or that they stayed.
 fn arranged_message(plate: &str, arranged: &Arranged) -> Message {
     let text = tr!("arrange-done", count = arranged.on_plate, plate = plate);
-    let undo = tr!("arrange-undo");
+    // The models turned about Z, said before the undo (TD-162).
+    let undo = if arranged.turned > 0 {
+        format!(
+            "{} {}",
+            tr!("arrange-turned", count = arranged.turned),
+            tr!("arrange-undo")
+        )
+    } else {
+        tr!("arrange-undo")
+    };
     if arranged.moved > 0 {
         let plates = arranged.new_plates.join(", ");
         // Grouped by height: what it saved (TD-162).
@@ -169,8 +337,82 @@ fn arranged_message(plate: &str, arranged: &Arranged) -> Message {
 
 #[cfg(test)]
 mod tests {
+    use super::{arranged_message, unarranged_message};
+    use crate::workspace::ArrangeOptions;
+
+    impl MainWindow {
+        /// Arrange the plate shown with `options` on this thread, and say what happened: the
+        /// tests' way, where the window starts [`Self::start_arrange`].
+        pub(in crate::window) fn arrange(&mut self, options: ArrangeOptions) {
+            let plate = self.workspace.plate().name.clone();
+            let message = match self.workspace.arrange(options) {
+                Ok(arranged) => {
+                    // From the last, so that each index is still the model's.
+                    for &index in arranged.removed.iter().rev() {
+                        self.forget_object(index);
+                    }
+                    arranged_message(&plate, &arranged)
+                }
+                Err(why) => unarranged_message(why),
+            };
+            self.messages.push(message);
+        }
+    }
+
     use crate::{actions::Action, i18n::tr, window::MainWindow, workspace::Overflow};
     use eframe::egui;
+
+    #[test]
+    fn arrange_works_beside_the_window_and_cancels() {
+        // Owner, 2026-11-19: the dialog stays while Arrange works on its own thread, its
+        // controls disabled with Cancel; done, it closes and the notification comes.
+        let ctx = egui::Context::default();
+        let folder =
+            std::env::temp_dir().join(format!("karasu-window-arrange-job-{}", std::process::id()));
+        let mut window = MainWindow::new(Vec::new());
+        window.workspace = crate::slicing_ui::tests::hollowed_cube(&folder);
+        window.follow_plate(&ctx);
+        let plate = window.workspace.plate().name.clone();
+        let options = crate::workspace::ArrangeOptions {
+            spacing_mm: 2.0,
+            overflow: Overflow::NewPlates,
+            by_height: true,
+            turn: true,
+        };
+        let frame = |window: &mut MainWindow| {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                window.arrange_dialog(&ui.ctx().clone());
+            });
+            output.textures_delta.clear();
+        };
+        // Started from the dialog: it stays open until the result arrives, then closes.
+        window.perform(Action::ArrangeModels);
+        assert!(window.start_arrange(options));
+        let started = std::time::Instant::now();
+        while window.plates.arranging.is_some() {
+            frame(&mut window);
+            assert!(started.elapsed().as_secs() < 60, "still arranging");
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(window.plates.arrange_job.is_none());
+        let latest = window.messages.latest().unwrap();
+        assert_eq!(
+            latest.text,
+            tr!("arrange-done", count = 1usize, plate = plate.as_str())
+        );
+        // Cancelled: nothing changes, and it is said.
+        let revision = window.workspace.revision();
+        window.perform(Action::ArrangeModels);
+        assert!(window.start_arrange(options));
+        window.cancel_arrange();
+        assert!(window.plates.arrange_job.is_none());
+        assert_eq!(window.workspace.revision(), revision);
+        assert_eq!(
+            window.messages.latest().unwrap().text,
+            tr!("arrange-cancelled")
+        );
+        let _ = std::fs::remove_dir_all(&folder);
+    }
 
     #[test]
     fn arrange_opens_with_the_plate_s_spacing_and_says_what_it_did() {
@@ -207,6 +449,7 @@ mod tests {
             tr!("arrange-overflow-new"),
             tr!("arrange-overflow-stay"),
             tr!("arrange-by-height"),
+            tr!("arrange-turn"),
             tr!("arrange-action"),
         ] {
             assert!(texts.contains(&expected), "{expected} in {texts:?}");
@@ -228,12 +471,18 @@ mod tests {
                 .collect();
         }
         assert!(!texts.contains(&tr!("arrange-by-height")), "{texts:?}");
+        assert!(texts.contains(&tr!("arrange-turn")), "{texts:?}");
         window.plates.choices.arrange_overflow = Overflow::NewPlates;
         assert_eq!(window.plates.arranging, Some(spacing));
         window.plates.arranging = None;
         // Arranged: the one model fits, nothing goes elsewhere.
         window.selected = Some(0);
-        window.arrange(spacing, Overflow::NewPlates, true);
+        window.arrange(crate::workspace::ArrangeOptions {
+            spacing_mm: spacing,
+            overflow: Overflow::NewPlates,
+            by_height: true,
+            turn: false,
+        });
         let latest = window.messages.latest().unwrap();
         assert_eq!(
             latest.text,
@@ -242,13 +491,17 @@ mod tests {
         assert_eq!(latest.detail, Some(tr!("arrange-undo")));
         assert_eq!(window.selected, Some(0));
         assert_eq!(window.workspace.plates().len(), 1);
-        // The choices are kept across restarts; grouping by height is on to start with.
+        // The choices are kept across restarts; grouping by height is on to start with, turning
+        // off (owner, 2026-11-19).
         assert!(window.plates.choices.arrange_by_height);
+        assert!(!window.plates.choices.arrange_turn);
         window.plates.choices.arrange_overflow = Overflow::Stay;
         window.plates.choices.arrange_by_height = false;
+        window.plates.choices.arrange_turn = true;
         let settings = window.collect_settings(&ctx);
         assert_eq!(settings.plates.arrange_overflow, Overflow::Stay);
         assert!(!settings.plates.arrange_by_height);
+        assert!(settings.plates.arrange_turn);
         // An empty plate has nothing to arrange.
         window.perform(Action::NewPlate);
         window.follow_plate(&ctx);

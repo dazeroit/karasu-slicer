@@ -82,6 +82,8 @@ pub(super) struct Plates {
     pub(super) deleting: Option<PlateId>,
     /// Arrange models… is open, with this spacing in mm.
     arranging: Option<f64>,
+    /// Arrange working on a thread of its own, its dialog showing how far (TD-162).
+    arrange_job: Option<arrange::Running>,
     /// Clone is open (owner, 2026-11-10).
     cloning: Option<clone::CloneForm>,
     /// Export every plate… is open.

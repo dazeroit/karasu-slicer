@@ -132,6 +132,8 @@ pub struct PlateSettings {
     pub arrange_overflow: crate::workspace::Overflow,
     /// Arrange groups the models by height over new plates (TD-162; on by default, owner).
     pub arrange_by_height: bool,
+    /// Arrange may turn models about Z (TD-162; off by default, owner).
+    pub arrange_turn: bool,
     /// The folder Export every plate wrote to last.
     pub export_folder: Option<PathBuf>,
     /// The file names' pattern: `{project}`, `{number}` and `{plate}` are replaced.
@@ -145,6 +147,7 @@ impl Default for PlateSettings {
         Self {
             arrange_overflow: crate::workspace::Overflow::default(),
             arrange_by_height: true,
+            arrange_turn: false,
             export_folder: None,
             export_pattern: DEFAULT_EXPORT_PATTERN.to_owned(),
             export_slice_first: true,

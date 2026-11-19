@@ -497,6 +497,15 @@ plate", 2026-11-07):
   for the choice; footer Arrange (primary) and Cancel.
   - **Group by height** (TD-162): a switch, on to start with and kept across restarts. It shows
     only with "Go to a new plate".
+  - **Turn about Z** (TD-162): a switch, off to start with and kept across restarts. Models may
+    then turn about the plate's vertical, by any angle, to take less room or to fit the plate.
+    Its help says that a turn changes the orientation chosen for the model, and the
+    notification counts the models turned.
+  - **While it works** (owner, 2026-11-19), on a thread of its own: the dialog stays, its
+    controls disabled. After 150 ms it shows a progress bar with "Measuring the models: 3 of
+    12", then "Placing the models on the plates". The footer holds only Cancel, and Escape
+    cancels too. Done, the dialog closes. Cancelled, or with the plate changed meanwhile,
+    nothing changes and a notification says so.
   - **The notification** "Arranged: 4 models on Arms" says in its detail where the others went
     and that Ctrl+Z undoes the whole arrangement. When grouping was used, it adds "Grouped by
     height: about 1:20:00 shorter in all", or "as long, on fewer plates".
