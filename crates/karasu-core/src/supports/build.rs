@@ -12,11 +12,12 @@ use super::{
     },
     shapes::{add, dot, frustum, length, scale, sphere, sub, unit, Part, V},
     tip::{reach, surface_normal, Reach, TipCone, NEAR_FOOTPRINTS},
+    walls::is_wall,
     FindingKind, Severity, SupportError, SupportFinding, SupportPart,
 };
 use crate::{
     cancellation::{Cancellation, Checkpoint},
-    geometry::{sin_cos_degrees, Point3},
+    geometry::{acos_degrees, plan_length, sin_cos_degrees, Point3},
     mesh::TriangleMesh,
     preparation::hollow::{convex_component, HollowLimits},
 };
@@ -226,6 +227,9 @@ struct Owned {
     /// Of an exempt contact or foot, the stretch of its cone away from where it touches, which
     /// must not meet the model (TD-124).
     reach: Option<Reach>,
+    /// Of a contact in a document with `contact_clearance`: the point it holds and the surface's
+    /// unit outward normal there. It keeps the clearance from the walls beside it (TD-164).
+    held: Option<(V, V)>,
 }
 
 /// The built path of a valid support: points from the tip join down to the base join, with the
@@ -373,7 +377,7 @@ impl Builder<'_, '_, '_> {
         };
         let cosine = dot(axis, anchor.normal);
         if cosine < self.cos_deviation {
-            let degrees = cosine.clamp(-1.0, 1.0).acos().to_degrees();
+            let degrees = acos_degrees(cosine);
             self.error(
                 id,
                 part,
@@ -423,7 +427,21 @@ impl Builder<'_, '_, '_> {
             exempt,
             shape,
             reach: None,
+            held: None,
         });
+    }
+
+    /// Give every part of `part` pushed for support `id` the surface it holds (TD-164).
+    fn set_held(&mut self, id: u64, part: SupportPart, held: (V, V)) {
+        for owned in self
+            .parts
+            .iter_mut()
+            .rev()
+            .take_while(|o| o.entity == id)
+            .filter(|o| o.part == part)
+        {
+            owned.held = Some(held);
+        }
     }
 
     /// Give the last contact or foot part pushed for support `id` its `reach` (TD-124).
@@ -724,6 +742,9 @@ impl Builder<'_, '_, '_> {
             self.push(s, part, exempt, shape);
         }
         self.set_reach(id, SupportPart::Contact, tip_reach);
+        if self.doc.contact_clearance {
+            self.set_held(id, SupportPart::Contact, (tip, anchor.normal));
+        }
         if foot_reach.is_some() {
             self.set_reach(id, SupportPart::Foot, foot_reach);
         }
@@ -963,6 +984,7 @@ impl Builder<'_, '_, '_> {
                 accepted: false,
                 exempt: false,
                 reach: None,
+                held: None,
                 shape,
             });
         }
@@ -1043,7 +1065,7 @@ fn raft_groups(centres: &[[f64; 2]], layout: RaftLayout) -> Vec<Vec<usize>> {
             for dy in -1..=1 {
                 for &j in cells.get(&[cx + dx, cy + dy]).into_iter().flatten() {
                     let q = centres[j];
-                    if j > k && (p[0] - q[0]).hypot(p[1] - q[1]) < join_mm {
+                    if j > k && plan_length(p[0] - q[0], p[1] - q[1]) < join_mm {
                         let (a, c) = (root(&mut parent, k), root(&mut parent, j));
                         parent[a.max(c)] = a.min(c);
                     }
@@ -1121,6 +1143,7 @@ fn raft_part(
         accepted: false,
         exempt: false,
         reach: None,
+        held: None,
         shape: Part {
             vertices,
             triangles: mesh.triangles().to_vec(),
@@ -1393,6 +1416,31 @@ pub fn build_supports(
                     detail: format!(
                         "meets the model away from where it touches it (triangle {t}): the {} crosses the surface beside it",
                         if owned.part == SupportPart::Foot { "foot" } else { "tip" }
+                    ),
+                });
+            }
+        }
+        if let Some((point, normal)) = owned.held {
+            // Clear of the walls beside its contact (TD-164).
+            let grow = |v: V, d: f64| v.map(|c| c + d);
+            if let Some(t) = b
+                .index
+                .candidates(grow(lo, -clearance), grow(hi, clearance))
+                .into_iter()
+                .find(|&t| {
+                    let triangle = b.index.corners(t);
+                    is_wall(point, normal, triangle, shape)
+                        && !proven_clear(shape, triangle, clearance)
+                })
+            {
+                let accepted = owned.accepted || options.accept_all_collisions;
+                checks.push(SupportFinding {
+                    entity: owned.entity,
+                    part: owned.part,
+                    kind: FindingKind::Collision,
+                    severity: if accepted { Severity::Accepted } else { Severity::Error },
+                    detail: format!(
+                        "not proven {clearance} mm clear of the wall beside its contact (triangle {t})"
                     ),
                 });
             }

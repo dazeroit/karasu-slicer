@@ -3987,8 +3987,8 @@ fn automatic_supports_hold_a_lifted_model_and_are_reported() {
     assert!(planned >= 4, "{report}");
     assert_eq!(
         field(&report, "Automatic supports values"),
-        "medium, density 100%, islands and overhangs, everywhere, minis on, branches on, lift 5 \
-         mm, critical angle 45 degrees"
+        "medium, density 100%, islands and overhangs, everywhere, minis on, branches on, \
+         clearance 0.3 mm, lift 5 mm, critical angle 45 degrees"
     );
     assert!(
         field(&report, "Automatic supports held").starts_with("islands 2 of 2"),
@@ -4024,14 +4024,16 @@ fn automatic_supports_hold_a_lifted_model_and_are_reported() {
             "islands",
             "--auto-minis",
             "off",
+            "--auto-clearance",
+            "0.4",
             "--overhang-angle",
             "40",
         ],
     ));
     assert_eq!(
         field(&report, "Automatic supports values"),
-        "heavy, density 150%, islands only, everywhere, minis off, branches on, lift 7 mm, \
-         critical angle 40 degrees"
+        "heavy, density 150%, islands only, everywhere, minis off, branches on, clearance 0.4 \
+         mm, lift 7 mm, critical angle 40 degrees"
     );
     assert!(
         field(&report, "Translation (mm)").ends_with(" 7"),
@@ -4167,8 +4169,8 @@ fn auto_settings_take_the_application_s_settings_file() {
     // The preset named is not among the presets: the weight is taken, as the application does.
     assert_eq!(
         field(&report, "Automatic supports values"),
-        "light, density 80%, islands and overhangs, everywhere, minis on, branches off, lift 6 \
-         mm, critical angle 35 degrees"
+        "light, density 80%, islands and overhangs, everywhere, minis on, branches off, \
+         clearance 0.3 mm, lift 6 mm, critical angle 35 degrees"
     );
     // Options given beside it override it.
     let report = success(&with(&["--support-weight", "medium"], "medium.goo"));

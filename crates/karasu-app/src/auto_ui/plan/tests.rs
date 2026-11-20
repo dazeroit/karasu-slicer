@@ -2,7 +2,7 @@ use super::*;
 use crate::{preparation_ui::PreparationUi, supports_ui::SupportsUi, workspace::Workspace};
 use karasu_core::{
     analysis::unsupported::RegionKind,
-    supports::{BuildVolume, DrainCylinder, SupportOrigin},
+    supports::{AxisSpec, BaseSpec, BuildVolume, DrainCylinder, SupportOrigin},
 };
 use karasu_project::support_plan::{
     auto::{candidates, edges::Rank, tilt},
@@ -126,7 +126,7 @@ fn radius() -> f64 {
     plain().next(&[]).parameters().surface_width_mm() / 2.0
 }
 
-/// The tips `values` plan under the slab's overhang.
+/// The tips `values` plan under the slab's overhang, from the slab's bottom corner.
 fn tips_under_slab(values: AutoSupports) -> Vec<[f64; 3]> {
     let (workspace, surface, corner, directory) = slab();
     let made = plan(
@@ -146,8 +146,24 @@ fn tips_under_slab(values: AutoSupports) -> Vec<[f64; 3]> {
     made.plan
         .supports
         .iter()
-        .map(|p| p.routed.support.tip_mm)
+        .map(|p| std::array::from_fn(|k| p.routed.support.tip_mm[k] - corner[k]))
         .collect()
+}
+
+/// How far from the pillar under the slab (its side at 4 mm along X from the slab's corner) a tip
+/// moved away from it may stand, in mm: a Medium support's widest radius and clearance, and the
+/// ring it moves by (TD-164).
+const BESIDE_PILLAR_MM: f64 = 4.0 + 0.5 + 0.3 + 0.25 + 1e-6;
+
+/// The least distance between two of `tips` (from the slab's corner), leaving out those moved
+/// off the pillar's side (TD-164): those stand a ring's step from where they were planned.
+fn closest_inside(tips: &[[f64; 3]]) -> f64 {
+    let inside: Vec<[f64; 3]> = tips
+        .iter()
+        .copied()
+        .filter(|t| t[0] > BESIDE_PILLAR_MM)
+        .collect();
+    closest(&inside)
 }
 
 /// The least distance between two of `tips`.
@@ -203,14 +219,14 @@ fn density_and_wide_undersides_bring_the_tips_closer() {
         dense.len(),
         normal.len()
     );
-    assert!(closest(&dense) >= values.spacing_mm * 0.5f64.sqrt() - 1e-9);
+    assert!(closest_inside(&dense) >= values.spacing_mm * 0.5f64.sqrt() - 1e-9);
     assert!(
         (2.0..=3.6).contains(&ratio(&closer)),
         "{} {}",
         closer.len(),
         normal.len()
     );
-    assert!(closest(&closer) >= values.spacing_mm * 0.6 - 1e-9);
+    assert!(closest_inside(&closer) >= values.spacing_mm * 0.6 - 1e-9);
 }
 
 #[test]
@@ -239,14 +255,24 @@ fn an_overhang_is_covered_by_tips_no_closer_than_the_spacing() {
     assert!(all > 100, "{all} points");
     assert_eq!(covered, all);
     assert!(made.left.is_empty(), "{:?}", made.left);
-    // Under the slab beyond the pillar, each tip at least the spacing from the others.
+    // Under the slab beyond the pillar, each tip at least the spacing from the others; a tip
+    // the pillar crowds moves away from it along the slab, by less than the probe grid's step
+    // (TD-164).
     assert!((20..=120).contains(&tips.len()), "{} tips", tips.len());
+    let step = values.spacing_mm / 2.0;
     for (k, p) in tips.iter().enumerate() {
         assert!((p[2] - corner[2]).abs() < 0.01, "{p:?}");
-        assert!(p[0] > corner[0] + 4.0 - 1e-6, "{p:?}");
+        // Its join keeps the widest radius and the clearance from the pillar.
+        assert!(p[0] > corner[0] + 4.0 + 0.8, "{p:?}");
+        let moved = |t: &[f64; 3]| t[0] - corner[0] < BESIDE_PILLAR_MM;
         for q in &tips[k + 1..] {
             let d = (p[0] - q[0]).hypot(p[1] - q[1]).hypot(p[2] - q[2]);
-            assert!(d >= values.spacing_mm - 1e-9, "{p:?} {q:?}");
+            let least = if moved(p) || moved(q) {
+                values.spacing_mm - step
+            } else {
+                values.spacing_mm
+            };
+            assert!(d >= least - 1e-9, "{p:?} {q:?}");
         }
     }
     assert!(made
@@ -368,6 +394,79 @@ fn trees_grow_and_the_plan_is_the_same_every_time() {
     assert_eq!(tips(&a), tips(&b));
     assert_eq!(a.overhangs[0], a.overhangs[1]);
     let _ = std::fs::remove_dir_all(directory);
+}
+
+/// The point at height `z` on a support's `path` (its tip's join, its bends), straight down from
+/// its last point below that.
+fn at_height(path: &[[f64; 3]], z: f64) -> [f64; 3] {
+    for w in path.windows(2) {
+        let (hi, lo) = (w[0], w[1]);
+        if z <= hi[2] && z >= lo[2] && hi[2] > lo[2] {
+            let t = (hi[2] - z) / (hi[2] - lo[2]);
+            return std::array::from_fn(|k| hi[k] + (lo[k] - hi[k]) * t);
+        }
+    }
+    let last = path[path.len() - 1];
+    [last[0], last[1], z]
+}
+
+#[test]
+fn planned_tips_stay_along_the_normal_and_bend_within_45_degrees() {
+    // TD-164 (owner, 2026-11-20): every tip the plan places follows the surface's normal at its
+    // contact, a tilted underside's too; the support bends at the tip's join, and the part from
+    // there, to a knee, a branch's junction or straight down, leans no more than 45°.
+    let (workspace, surface, region, directory) = tile(30.0);
+    let values = AutoSupports {
+        braces: false,
+        ..AutoSupports::default()
+    };
+    let made = plan(
+        &input(
+            &workspace,
+            Arc::clone(&surface),
+            vec![region],
+            values,
+            Vec::new(),
+        ),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
+    let supports = &made.plan.supports;
+    assert!(supports.len() >= 10, "{}", supports.len());
+    assert!(made.plan.branches > 0);
+    let path = |k: usize| -> Vec<[f64; 3]> {
+        let s = &supports[k].routed.support;
+        let n = supports[k].routed.anchors[0].1;
+        let length = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+        let join =
+            std::array::from_fn(|c| s.tip_mm[c] + n[c] / length * s.parameters.tip_length_mm);
+        std::iter::once(join)
+            .chain(s.bends.iter().copied())
+            .collect()
+    };
+    let mut tilted = 0;
+    for (k, planned) in supports.iter().enumerate() {
+        let s = &planned.routed.support;
+        assert_eq!(s.tip_axis, AxisSpec::Normal, "{s:?}");
+        let n = planned.routed.anchors[0].1;
+        if n[2] > -0.95 {
+            tilted += 1;
+        }
+        let own = path(k);
+        let join = own[0];
+        let next = match (own.get(1), s.base, planned.joins) {
+            (Some(&bend), ..) => bend,
+            (None, BaseSpec::Support { .. }, Some((trunk, z))) => at_height(&path(trunk), z),
+            _ => [join[0], join[1], 0.0],
+        };
+        let across = (next[0] - join[0]).hypot(next[1] - join[1]);
+        let drop = join[2] - next[2];
+        assert!(drop > 0.0 && across <= drop + 1e-6, "{s:?} to {next:?}");
+    }
+    // Under the tilted tile, the tips lean with it.
+    assert!(tilted >= 10, "{tilted}");
+    let _ = std::fs::remove_dir_all(directory);
+    drop(workspace);
 }
 
 #[test]
@@ -604,6 +703,160 @@ fn where_the_surface_goes_on_there_is_no_edge() {
     );
     let _ = std::fs::remove_dir_all(directory);
     drop(workspace);
+}
+
+/// An L, 20 mm long along X and 10 mm deep along Y: a bar 3 mm thick whose bottom is its
+/// underside, and a leg 4 mm wide and 4 mm tall at its +X end, pointing down (`leg_down`) or up.
+/// One closed shell, lifted 8 mm and prepared with its surface; and the bar's underside as the
+/// analysis reports a region there, with its height.
+fn l_shape(
+    leg_down: bool,
+) -> (
+    Workspace,
+    Arc<RouteSurface>,
+    (RegionKind, Island),
+    std::path::PathBuf,
+) {
+    use std::fmt::Write as _;
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let call = CALLS.fetch_add(1, Ordering::Relaxed);
+    let directory =
+        std::env::temp_dir().join(format!("karasu-auto-l-{}-{call}", std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    // The profile in (x, z), counter-clockwise, and its triangles: a fan from a corner whose
+    // triangles all lie inside it.
+    let (profile, fan): ([[f64; 2]; 6], [[usize; 3]; 4]) = if leg_down {
+        (
+            [
+                [0.0, 4.0],
+                [16.0, 4.0],
+                [16.0, 0.0],
+                [20.0, 0.0],
+                [20.0, 7.0],
+                [0.0, 7.0],
+            ],
+            [[4, 5, 0], [4, 0, 1], [4, 1, 2], [4, 2, 3]],
+        )
+    } else {
+        (
+            [
+                [0.0, 0.0],
+                [20.0, 0.0],
+                [20.0, 7.0],
+                [16.0, 7.0],
+                [16.0, 3.0],
+                [0.0, 3.0],
+            ],
+            [[1, 2, 3], [1, 3, 4], [1, 4, 5], [1, 5, 0]],
+        )
+    };
+    let depth = 10.0;
+    let mut text = String::from("solid l\n");
+    let mut facet = |corners: [[f64; 3]; 3]| {
+        text.push_str("facet normal 0 0 0\nouter loop\n");
+        for [x, y, z] in corners {
+            writeln!(text, "vertex {x} {y} {z}").unwrap();
+        }
+        text.push_str("endloop\nendfacet\n");
+    };
+    let at = |k: usize, y: f64| [profile[k][0], y, profile[k][1]];
+    // Counter-clockwise in (x, z) faces -Y: the near cap as listed, the far one reversed.
+    for [a, b, c] in fan {
+        facet([at(a, 0.0), at(b, 0.0), at(c, 0.0)]);
+        facet([at(a, depth), at(c, depth), at(b, depth)]);
+    }
+    for k in 0..profile.len() {
+        let next = (k + 1) % profile.len();
+        facet([at(k, 0.0), at(next, depth), at(next, 0.0)]);
+        facet([at(k, 0.0), at(k, depth), at(next, depth)]);
+    }
+    text.push_str("endsolid l\n");
+    let path = directory.join("l.stl");
+    std::fs::write(&path, text).unwrap();
+    let (mut workspace, mut preparation) =
+        crate::hollowing_ui::tests::placed(path, None, Duration::from_secs(60));
+    workspace.edit(|plate| {
+        let pose = &mut plate.objects[0].pose;
+        pose.center = true;
+        pose.drop = true;
+        pose.lift_mm = Some(8.0);
+    });
+    crate::hollowing_ui::tests::prepared_within(
+        &workspace,
+        &mut preparation,
+        Duration::from_secs(60),
+    );
+    let surface = surface_of(&workspace, &preparation);
+    let placed = workspace.placement_of(0).unwrap();
+    let (min, max) = (placed.min.coordinates(), placed.max.coordinates());
+    let under = min[2] + if leg_down { 4.0 } else { 0.0 };
+    let end = if leg_down { min[0] + 16.0 } else { max[0] };
+    let region = Island {
+        point: [
+            f64::midpoint(min[0], end),
+            f64::midpoint(min[1], max[1]),
+            under,
+        ],
+        layers: [160, 161],
+        heights: [under - 0.05, under + 0.05],
+        area_mm2: (end - min[0]) * depth,
+        footprint: [[min[0], min[1]], [end, max[1]]],
+        inside: false,
+    };
+    (
+        workspace,
+        surface,
+        (RegionKind::Overhang, region),
+        directory,
+    )
+}
+
+#[test]
+fn a_concave_corner_takes_no_edge_tips_and_a_free_end_keeps_them() {
+    // TD-164 (owner, 2026-11-20): an L whose short leg points down meets the leg's wall at the
+    // end of its underside, a concave corner the wall holds: no edge tips there. With the leg
+    // pointing up, the underside goes on under it and ends freely: edge tips there.
+    for leg_down in [true, false] {
+        let (workspace, surface, region, directory) = l_shape(leg_down);
+        let mesh = surface.mesh().unwrap();
+        let [[x0, y0], [x1, y1]] = region.1.footprint;
+        let probed = candidates(&surface, mesh, &[region], &[], (&plain(), radius()), 45.0);
+        let outline: Vec<[f64; 3]> = probed
+            .candidates
+            .iter()
+            .filter(|c| c.rank != Rank::Inside)
+            .map(|c| c.tip.0)
+            .collect();
+        let inset = |p: &[f64; 3], edge: f64| ((p[0] - edge).abs() - EDGE_INSET_MM).abs() < 0.03;
+        let far_end = outline.iter().filter(|p| inset(p, x1)).count();
+        let near_end = outline.iter().filter(|p| inset(p, x0)).count();
+        // The free end at x0 has its row in both.
+        assert!(near_end >= 4, "{leg_down}: {outline:?}");
+        if leg_down {
+            assert_eq!(far_end, 0, "{outline:?}");
+            // No corner beside the wall either.
+            assert!(
+                probed
+                    .candidates
+                    .iter()
+                    .filter(|c| c.rank == Rank::Corner)
+                    .all(|c| c.tip.0[0] < f64::midpoint(x0, x1)),
+                "{outline:?}"
+            );
+        } else {
+            assert!(far_end >= 4, "{outline:?}");
+            for y in [y0 + EDGE_INSET_MM, y1 - EDGE_INSET_MM] {
+                assert!(
+                    probed.candidates.iter().any(|c| c.rank == Rank::Corner
+                        && inset(&c.tip.0, x1)
+                        && (c.tip.0[1] - y).abs() < 0.03),
+                    "{outline:?}"
+                );
+            }
+        }
+        let _ = std::fs::remove_dir_all(directory);
+        drop(workspace);
+    }
 }
 
 #[test]

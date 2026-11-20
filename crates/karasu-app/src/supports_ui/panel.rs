@@ -251,11 +251,13 @@ fn advanced_fields(
         &mut sphere,
         defaults.map(|d| d.contact_shape == ContactShape::Sphere),
     ) {
-        p.contact_shape = if sphere {
+        // Sunk as deep: a ball as wide as the cone's mark, or the cone as wide as the ball
+        // (TD-164).
+        *p = p.with_contact_shape(if sphere {
             ContactShape::Sphere
         } else {
             ContactShape::Cone
-        };
+        });
         changed = true;
     }
     if p.contact_shape == ContactShape::Sphere {
@@ -1344,13 +1346,13 @@ mod tests {
 
     #[test]
     fn fitting_the_contact_is_the_tools_choice_kept_across_presets() {
-        // Fitting on, down to 0.35 mm: Light's 0.3 mm contact caps it.
+        // Fitting on, down to 0.35 mm: Light's 0.22 mm contact caps it.
         let next = NextSupport::of(Weight::Heavy).fitting(Some(0.35));
         assert_eq!(next.parameters().contact_fit_min_mm, Some(0.35));
         let light = next.chosen(NextSupport::of(Weight::Light));
         assert_eq!(light.weight, Weight::Light);
         assert_eq!(light.contact_fit_min_mm, Some(0.35));
-        assert_eq!(light.parameters().contact_fit_min_mm, Some(0.3));
+        assert_eq!(light.parameters().contact_fit_min_mm, Some(0.22));
         light.parameters().validate(1, &mut Vec::new()).unwrap();
         // A support fitting its contact still matches its preset, and keeps fitting when
         // another is chosen for it.
@@ -1370,8 +1372,8 @@ mod tests {
             Some(PresetRef::Weight(Weight::Heavy))
         );
         let changed = with_preset(&support, &SupportValues::of(Weight::Light));
-        assert_eq!(changed.parameters.contact_diameter_mm, 0.3);
-        assert_eq!(changed.parameters.contact_fit_min_mm, Some(0.3));
+        assert_eq!(changed.parameters.contact_diameter_mm, 0.22);
+        assert_eq!(changed.parameters.contact_fit_min_mm, Some(0.22));
         // The Islands and Automatic tools fit theirs when asked, and refuse a smallest out of
         // range from the settings.
         let islands = crate::islands_ui::plan::IslandSupports {
@@ -1394,6 +1396,17 @@ mod tests {
         };
         let p = balls.next(&[]).parameters();
         assert_eq!(p.contact_shape, ContactShape::Sphere);
+        // TD-164: Light's ball, 0.25 mm, its cone as wide, sunk 0.1 mm as the cone was: it
+        // meets the surface 2·√(0.1 · 0.15) mm wide.
+        assert_eq!(
+            (
+                p.contact_sphere_diameter_mm,
+                p.contact_diameter_mm,
+                p.penetration_mm
+            ),
+            (0.25, 0.25, 0.1)
+        );
+        assert!((p.surface_width_mm() - 2.0 * 0.015f64.sqrt()).abs() < 1e-12);
         p.validate(1, &mut Vec::new()).unwrap();
         let automatic = crate::auto_ui::plan::AutoSupports {
             sphere_contact: true,

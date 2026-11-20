@@ -32,7 +32,7 @@ use super::{
 };
 use crate::{
     cancellation::{Cancellation, Checkpoint},
-    geometry::Point3,
+    geometry::{plan_length, Point3},
     mesh::TriangleMesh,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -327,7 +327,7 @@ fn neighbours(standing: &[Standing], distance: f64) -> Vec<(usize, usize)> {
     }
     let apart = |i: usize, j: usize| {
         let (p, q) = (standing[i].xy, standing[j].xy);
-        (p[0] - q[0]).hypot(p[1] - q[1])
+        plan_length(p[0] - q[0], p[1] - q[1])
     };
     // A third support nearer to both `i` and `j` than they are apart (`d`) stands between them;
     // nearer than `d` to `i`, it lies in `i`'s cell or a neighbouring one.

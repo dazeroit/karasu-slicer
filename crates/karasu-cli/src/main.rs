@@ -192,7 +192,8 @@ fn help_text() -> String {
          [--xy-compensation <px>] [--bottom-xy-compensation <px>]\n         \
          [--supports <file.json> [--accept-support-collisions]] [--drop --lift <mm>]\n         \
          [--auto-supports [--support-weight light|medium|heavy] [--auto-density <pct>]\n         \
-         \x20 [--auto-cover all|islands] [--auto-place everywhere|outside|cavity] [--auto-minis on|off]]\n         \
+         \x20 [--auto-cover all|islands] [--auto-place everywhere|outside|cavity] [--auto-minis on|off]\n         \
+         \x20 [--auto-clearance <mm>]]\n         \
          [--auto-settings <file.json>] [--auto-braces] [--write-supports <file.json>]\n         \
          [--layer-plan <file.json>] [--copies <n>] [--arrange] [--spacing <mm>]\n         \
          [--arrange-turn] [--arrange-footprint box|outline]\n         \
@@ -323,8 +324,10 @@ fn help_text() -> String {
          \x20   everywhere, mini supports and branches on, no braces, the model lifted 5 mm (--drop\n\
          \x20   is needed; --lift sets another height). --support-weight, --auto-density (50 to\n\
          \x20   200 percent of the spacing's tips), --auto-cover, --auto-place (a model that is not\n\
-         \x20   hollowed is planned everywhere), --auto-minis and --overhang-angle (45 degrees by\n\
-         \x20   default) change them. --auto-settings reads the whole set from a JSON file: the\n\
+         \x20   hollowed is planned everywhere), --auto-minis, --auto-clearance (0 to 5 mm, 0.3 by\n\
+         \x20   default, kept by every part, the contacts from the walls beside them too) and\n\
+         \x20   --overhang-angle (45 degrees by default) change them. --auto-settings reads the\n\
+         \x20   whole set from a JSON file: the\n\
          \x20   application's settings.json, read as the application reads it, or an object of the\n\
          \x20   Automatic tool's values (unknown keys and values out of range refused); options\n\
          \x20   given beside it win. Supports given with --supports are kept and automatic ones\n\

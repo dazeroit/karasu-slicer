@@ -9,7 +9,7 @@ use karasu_project::{
     pipeline::{Observer, PipelineCache},
     request::SliceRequest,
     support_plan::{
-        auto::{Cover, Place, DENSITY_PCT},
+        auto::{Cover, Place, CLEARANCE_MM, DENSITY_PCT},
         generate::{generate, given, Generated, Run},
         islands::Skip,
         settings::AutoSettings,
@@ -66,6 +66,8 @@ pub(super) struct AutoArgs {
     pub(super) place: Option<Place>,
     /// `--auto-minis`.
     pub(super) minis: Option<bool>,
+    /// `--auto-clearance`, in mm: the clearance the plan keeps, the contacts' too (TD-164).
+    pub(super) clearance_mm: Option<f64>,
     /// `--lift`: the model rests there instead of at the plan's lift.
     pub(super) lift_mm: Option<f64>,
     /// `--overhang-angle`: the critical angle, in degrees.
@@ -84,6 +86,7 @@ pub(super) struct SupportOptions {
     cover: Option<Cover>,
     place: Option<Place>,
     minis: Option<bool>,
+    clearance_mm: Option<f64>,
     settings: Option<PathBuf>,
     braces: bool,
     write: Option<PathBuf>,
@@ -187,6 +190,21 @@ impl SupportOptions {
                 };
                 set(&mut self.minis, name, minis)?;
             }
+            "--auto-clearance" => {
+                let value = text_value(name, arguments.next())?;
+                let clearance = value
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|v| CLEARANCE_MM.contains(v))
+                    .ok_or_else(|| {
+                        format!(
+                            "{name} takes a clearance from {} to {} mm, not {value:?}",
+                            CLEARANCE_MM.start(),
+                            CLEARANCE_MM.end()
+                        )
+                    })?;
+                set(&mut self.clearance_mm, name, clearance)?;
+            }
             "--auto-settings" => {
                 set(
                     &mut self.settings,
@@ -211,6 +229,7 @@ impl SupportOptions {
             ("--auto-cover", self.cover.is_some()),
             ("--auto-place", self.place.is_some()),
             ("--auto-minis", self.minis.is_some()),
+            ("--auto-clearance", self.clearance_mm.is_some()),
         ];
         if !self.automatic {
             if let Some((name, _)) = values.iter().find(|(_, given)| *given) {
@@ -267,6 +286,7 @@ impl SupportOptions {
                 cover: self.cover,
                 place: self.place,
                 minis: self.minis,
+                clearance_mm: self.clearance_mm,
                 ..AutoArgs::default()
             }),
             braces: self.braces,
@@ -329,6 +349,9 @@ pub(super) fn prepare(
         }
         if let Some(minis) = auto.minis {
             values.minis = minis;
+        }
+        if let Some(clearance) = auto.clearance_mm {
+            values.clearance_mm = clearance;
         }
         if let Some(lift) = auto.lift_mm {
             values.lift_mm = lift;
@@ -414,7 +437,7 @@ fn automatic_lines(generated: &Generated, settings: &AutoSettings) -> String {
     let _ = writeln!(
         text,
         "Automatic supports values: {preset}, density {}%, {}, {}, minis {}, branches {}, \
-         lift {} mm, critical angle {} degrees",
+         clearance {} mm, lift {} mm, critical angle {} degrees",
         values.density_pct,
         match values.cover {
             Cover::All => "islands and overhangs",
@@ -427,6 +450,7 @@ fn automatic_lines(generated: &Generated, settings: &AutoSettings) -> String {
         },
         on_off(values.minis),
         on_off(values.branches),
+        values.clearance_mm,
         generated.lift_mm,
         generated.angle_deg
     );
@@ -502,6 +526,9 @@ fn why(skip: Skip) -> &'static str {
         }
         Skip::Collides => "its support would come closer to the model than the clearance",
         Skip::Pierces => "its tip would reach through a thin part of the model",
+        Skip::Crowded => {
+            "its tip, along the surface, would come too close to the model beside it (a wall)"
+        }
     }
 }
 
@@ -605,6 +632,8 @@ mod tests {
                 "outside",
                 "--auto-minis",
                 "off",
+                "--auto-clearance",
+                "0.4",
                 "--auto-braces",
             ],
             &context(),
@@ -616,6 +645,7 @@ mod tests {
         assert_eq!(auto.cover, Some(Cover::IslandsOnly));
         assert_eq!(auto.place, Some(Place::Outside));
         assert_eq!(auto.minis, Some(false));
+        assert_eq!(auto.clearance_mm, Some(0.4));
         assert!(job.braces);
         assert_eq!(parsed(&[], &context()).unwrap(), SupportJob::default());
         let refused = |values: &[&str], context: &Context, says: &str| {
@@ -636,6 +666,16 @@ mod tests {
             &["--auto-supports", "--auto-density", "20"],
             &context(),
             "from 50 to 200",
+        );
+        refused(
+            &["--auto-supports", "--auto-clearance", "6"],
+            &context(),
+            "from 0 to 5 mm",
+        );
+        refused(
+            &["--auto-clearance", "0.3"],
+            &context(),
+            "only with --auto-supports",
         );
         refused(
             &["--auto-supports", "--support-weight", "x"],

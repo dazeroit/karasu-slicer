@@ -362,6 +362,45 @@ fn a_tip_crossing_the_surface_beside_its_contact_is_a_collision() {
 }
 
 #[test]
+fn a_contact_keeps_the_clearance_from_a_wall_beside_it_in_a_new_document() {
+    // TD-164: a slab's underside at Z 8 and a rib hanging 1 mm below it from X 6. A tip straight
+    // down at X 5.6 holds the underside; its cone passes 0.1 mm from the rib's side, its join and
+    // shaft well clear of it.
+    let mesh = boxes(&[
+        ([0.0, 0.0, 8.0], [20.0, 20.0, 13.0], false),
+        ([6.0, 0.0, 7.0], [10.0, 20.0, 8.0], false),
+    ]);
+    let contact_findings = |x: f64, rule: &str| {
+        let doc = document(&format!(
+            r#"{rule}"supports":[{{"id":1,"tip":{{"point":[{x},10,8]}},"base":{{"vertical":true}}}}]"#
+        ));
+        build(&doc, &mesh, None, &[])
+            .findings()
+            .iter()
+            .filter(|f| f.kind == FindingKind::Collision)
+            .map(|f| (f.part, f.severity))
+            .collect::<Vec<_>>()
+    };
+    let new_rule = r#""contact_clearance":true,"#;
+    assert_eq!(
+        contact_findings(5.6, new_rule),
+        [(SupportPart::Contact, Severity::Error)]
+    );
+    // Written before TD-164, the document keeps the earlier rule: the contact is exempt.
+    assert_eq!(contact_findings(5.6, ""), []);
+    // Farther from the rib, clear either way.
+    assert_eq!(contact_findings(5.0, new_rule), []);
+    // The surface the contact holds is never its wall: a tip in the open is clear.
+    assert_eq!(contact_findings(15.0, new_rule), []);
+    // A new document has the rule, and writes it; a document read without it has not.
+    assert!(SupportDocument::new(Preset::Medium).contact_clearance);
+    let written = String::from_utf8(SupportDocument::new(Preset::Medium).to_json()).unwrap();
+    assert!(written.contains(r#""contact_clearance":true"#), "{written}");
+    assert!(!document(r#""supports":[]"#).contact_clearance);
+    assert!(document(&format!(r#"{new_rule}"supports":[]"#)).contact_clearance);
+}
+
+#[test]
 fn a_tip_follows_the_mean_normal_of_the_surface_under_its_contact() {
     // TD-124: a tip on the ridge of two facets each 30° off vertical measures its axis from
     // their mean, not from the one facet it is anchored on: straight down is within a 5° limit
@@ -675,10 +714,10 @@ fn a_web_raft_is_a_disc_under_each_foot_and_bars_between_neighbours() {
 
 #[test]
 fn contacts_fitted_to_the_surface_narrow_only_where_their_footprint_needs_it() {
-    // Heavy contacts (0.6 mm) under the slab: one in the open, one 0.23 mm from its edge at
-    // X 20, one 0.05 mm from it, and one near the edge that may not narrow at all.
+    // 0.6 mm contacts under the slab: one in the open, one 0.23 mm from its edge at X 20, one
+    // 0.05 mm from it, and one near the edge that may not narrow at all.
     let doc = document(
-        r#""preset":"heavy","defaults":{"contact_fit_min_mm":0.2},
+        r#""preset":"heavy","defaults":{"contact_fit_min_mm":0.2,"contact_diameter_mm":0.6,"contact_sphere_diameter_mm":0.8},
         "supports":[{"id":1,"tip":{"point":[10,10,5]},"base":{"vertical":true}},
                     {"id":2,"tip":{"point":[19.77,10,5]},"base":{"vertical":true}},
                     {"id":3,"tip":{"point":[19.95,4,5]},"base":{"vertical":true}},
@@ -718,6 +757,56 @@ fn contacts_fitted_to_the_surface_narrow_only_where_their_footprint_needs_it() {
     }
     let doc = SupportDocument::from_json(wrap(r#"{"contact_fit_min_mm":0.1}"#).as_bytes()).unwrap();
     assert_eq!(doc.warnings.len(), 1, "below 0.2 mm is a soft range");
+}
+
+#[test]
+fn the_presets_contacts_and_the_shape_switch_keep_the_depth() {
+    use karasu_core::supports::ContactShape;
+    // TD-164 (owner, 2026-11-20): cones of 0.22, 0.32 and 0.43 mm sunk 0.1 mm leave marks of
+    // about 0.25, 0.35 and 0.45 mm; the balls are that wide, and sunk as deep they meet the
+    // surface on narrower circles, 2·√(0.1 · (D − 0.1)) wide.
+    for (preset, mark, ball, ball_mark) in [
+        (Preset::Light, 0.249, 0.25, 0.2449),
+        (Preset::Medium, 0.3472, 0.35, 0.3162),
+        (Preset::Heavy, 0.4528, 0.45, 0.3742),
+    ] {
+        let cone = preset.parameters();
+        assert_eq!(cone.contact_shape, ContactShape::Cone);
+        assert!((cone.surface_width_mm() - mark).abs() < 1e-9, "{preset:?}");
+        assert_eq!(cone.contact_sphere_diameter_mm, ball);
+        assert_eq!(cone.penetration_mm, 0.1);
+        // To a ball: as wide as the cone's mark, the cone from its centre as wide, as deep.
+        let sphere = cone.with_contact_shape(ContactShape::Sphere);
+        assert_eq!(sphere.contact_shape, ContactShape::Sphere);
+        assert!((sphere.contact_sphere_diameter_mm - mark).abs() < 1e-12);
+        assert_eq!(
+            sphere.contact_diameter_mm,
+            sphere.contact_sphere_diameter_mm
+        );
+        assert_eq!(sphere.penetration_mm, cone.penetration_mm);
+        let narrower = 2.0 * (0.1 * (mark - 0.1)).sqrt();
+        assert!((sphere.surface_width_mm() - narrower).abs() < 1e-12);
+        assert!(sphere.surface_width_mm() < cone.surface_width_mm());
+        sphere.validate(1, &mut Vec::new()).unwrap();
+        // And back: the same cone.
+        let back = sphere.with_contact_shape(ContactShape::Cone);
+        assert_eq!(back.penetration_mm, cone.penetration_mm);
+        assert!((back.surface_width_mm() - mark).abs() < 1e-12);
+        assert!((back.contact_diameter_mm - cone.contact_diameter_mm).abs() < 1e-12);
+        back.validate(1, &mut Vec::new()).unwrap();
+        // The same shape changes nothing; the tools' ball is the preset's, as deep.
+        assert_eq!(cone.with_contact_shape(ContactShape::Cone), cone);
+        let tools = cone.as_ball();
+        assert_eq!(
+            (tools.contact_diameter_mm, tools.penetration_mm),
+            (ball, 0.1)
+        );
+        assert!(
+            (tools.surface_width_mm() - ball_mark).abs() < 1e-4,
+            "{preset:?}"
+        );
+        tools.validate(1, &mut Vec::new()).unwrap();
+    }
 }
 
 #[test]
@@ -1035,6 +1124,7 @@ fn routes_go_straight_aside_or_onto_the_model_below() {
         margin_mm: 0.1,
         allowance_mm: 0.2,
         sides: 16,
+        ball_mm: None,
     };
     let query = |x: f64| RouteQuery {
         tip_mm: [x, 10.0, 10.0],
@@ -1046,6 +1136,8 @@ fn routes_go_straight_aside_or_onto_the_model_below() {
         foot_radius_mm: 0.2,
         max_axis_deviation_deg: 60.0,
         towards_shaft: false,
+        keep_normal: false,
+        contact_clearance_mm: None,
     };
     // Clear below: straight down.
     assert_eq!(find_route(&model, &grid, &query(20.0)), Route::Straight);
@@ -1113,6 +1205,113 @@ fn routes_go_straight_aside_or_onto_the_model_below() {
 }
 
 #[test]
+fn a_tip_kept_along_the_normal_bends_at_its_join_or_is_crowded() {
+    use karasu_core::supports::{find_route, Route, RouteQuery, SurfaceGrid};
+    // TD-164: the planners keep every tip along the normal. A slab from Z 14 to 16, a block from
+    // Z 4 to 6 under its first 8 mm along X.
+    let model = boxes(&[
+        ([0.0, 0.0, 14.0], [30.0, 20.0, 16.0], false),
+        ([0.0, 0.0, 4.0], [8.0, 20.0, 6.0], false),
+    ]);
+    let grid = SurfaceGrid::build(&model, &mut Cancellation::never()).unwrap();
+    let cone = TipCone {
+        from_mm: -0.2,
+        radii_mm: [0.2, 0.5],
+        length_mm: 2.5,
+        footprint_mm: 0.2,
+        margin_mm: 0.1,
+        allowance_mm: 0.2,
+        sides: 16,
+        ball_mm: None,
+    };
+    let query = |tip_mm: [f64; 3]| RouteQuery {
+        tip_mm,
+        normal: [0.0, 0.0, -1.0],
+        tip: cone,
+        radius_mm: 0.8,
+        floor_mm: 0.0,
+        foot_length_mm: 2.0,
+        foot_radius_mm: 0.2,
+        max_axis_deviation_deg: 60.0,
+        towards_shaft: false,
+        keep_normal: true,
+        contact_clearance_mm: None,
+    };
+    // Clear below: straight down, as before.
+    assert_eq!(
+        find_route(&model, &grid, &query([20.0, 10.0, 14.0])),
+        Route::Straight
+    );
+    // Over the block, near its edge: the tip stays along the normal and the support bends at
+    // its join, to a column clear of the block, the part between at most 45° from vertical.
+    for x in [7.0, 6.0] {
+        let Route::Bent(knee) = find_route(&model, &grid, &query([x, 10.0, 14.0])) else {
+            panic!("no bend at the join");
+        };
+        let join = [x, 10.0, 11.5];
+        assert!(knee[0] >= 8.0 + 0.8, "{knee:?}");
+        let across = (knee[0] - join[0]).hypot(knee[1] - join[1]);
+        assert!(across <= (join[2] - knee[2]) + 1e-9, "{knee:?}");
+        assert!(knee[2] >= 2.0 - 1e-9, "{knee:?}");
+        // Deterministic.
+        assert_eq!(
+            find_route(&model, &grid, &query([x, 10.0, 14.0])),
+            Route::Bent(knee)
+        );
+    }
+    // Lower over the block, no column within 45° clears it, and the tip is never tilted instead:
+    // no way.
+    let low = boxes(&[
+        ([0.0, 0.0, 10.0], [30.0, 20.0, 12.0], false),
+        ([0.0, 0.0, 4.0], [8.0, 20.0, 6.0], false),
+    ]);
+    let low_grid = SurfaceGrid::build(&low, &mut Cancellation::never()).unwrap();
+    assert_eq!(
+        find_route(&low, &low_grid, &query([7.0, 10.0, 10.0])),
+        Route::None
+    );
+    // Over a wide block's middle, the foot on its top, as before.
+    let wide = boxes(&[
+        ([0.0, 0.0, 10.0], [30.0, 20.0, 12.0], false),
+        ([0.0, 0.0, 3.0], [30.0, 20.0, 4.0], false),
+    ]);
+    let wide_grid = SurfaceGrid::build(&wide, &mut Cancellation::never()).unwrap();
+    assert!(matches!(
+        find_route(&wide, &wide_grid, &query([15.0, 10.0, 10.0])),
+        Route::OnModel { .. }
+    ));
+    // A wall hanging under the slab: a tip whose join is closer to it than the radius, or whose
+    // cone along the normal meets it, is crowded, and no way is looked for.
+    let walled = boxes(&[
+        ([0.0, 0.0, 10.0], [30.0, 20.0, 12.0], false),
+        ([10.0, 0.0, 5.0], [12.0, 20.0, 10.0], false),
+    ]);
+    let walled_grid = SurfaceGrid::build(&walled, &mut Cancellation::never()).unwrap();
+    for x in [9.5, 9.3, 12.5] {
+        assert_eq!(
+            find_route(&walled, &walled_grid, &query([x, 10.0, 10.0])),
+            Route::Crowded,
+            "{x}"
+        );
+    }
+    // Farther than the radius from it, straight down.
+    assert_eq!(
+        find_route(&walled, &walled_grid, &query([8.5, 10.0, 10.0])),
+        Route::Straight
+    );
+    // Placed by hand, the same tip turns instead, as it always has.
+    let by_hand = RouteQuery {
+        keep_normal: false,
+        contact_clearance_mm: None,
+        ..query([9.5, 10.0, 10.0])
+    };
+    assert!(matches!(
+        find_route(&walled, &walled_grid, &by_hand),
+        Route::Tilted(_) | Route::Aside(_)
+    ));
+}
+
+#[test]
 fn a_tip_towards_its_shaft_is_routed_as_it_is_built() {
     use karasu_core::supports::{find_route, Route, RouteQuery, SurfaceGrid};
     // TD-129: a tip pointing towards its shaft is built straight down when the shaft goes
@@ -1125,6 +1324,7 @@ fn a_tip_towards_its_shaft_is_routed_as_it_is_built() {
         margin_mm: 0.1,
         allowance_mm: 0.2,
         sides: 16,
+        ball_mm: None,
     };
     let query = |tip_mm: [f64; 3], normal: [f64; 3], towards_shaft: bool| RouteQuery {
         tip_mm,
@@ -1136,6 +1336,8 @@ fn a_tip_towards_its_shaft_is_routed_as_it_is_built() {
         foot_radius_mm: 0.2,
         max_axis_deviation_deg: 60.0,
         towards_shaft,
+        keep_normal: false,
+        contact_clearance_mm: None,
     };
     let model = slab();
     let grid = SurfaceGrid::build(&model, &mut Cancellation::never()).unwrap();
@@ -1584,11 +1786,11 @@ fn a_model_foot_points_up_towards_its_shaft_within_the_axis_limit() {
 
 #[test]
 fn a_contact_s_width_at_the_surface_follows_its_cone_or_its_ball() {
-    // TD-136: the presets' contacts, sunk 0.1 mm, at the surface.
+    // TD-136, TD-164: the presets' contacts, sunk 0.1 mm, at the surface.
     for (preset, width) in [
-        (Preset::Light, 0.3 + 0.5 * 0.1 / 2.0),
-        (Preset::Medium, 0.5 + 0.5 * 0.1 / 2.5),
-        (Preset::Heavy, 0.6 + 0.4 * 0.1 / 2.5),
+        (Preset::Light, 0.22 + 0.58 * 0.1 / 2.0),
+        (Preset::Medium, 0.32 + 0.68 * 0.1 / 2.5),
+        (Preset::Heavy, 0.43 + 0.57 * 0.1 / 2.5),
     ] {
         let p = preset.parameters();
         assert!((p.surface_width_mm() - width).abs() < 1e-12, "{preset:?}");

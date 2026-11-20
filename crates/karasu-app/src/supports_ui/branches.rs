@@ -187,6 +187,7 @@ impl SupportsUi {
             kind: self.next_kind(),
             document,
             surface: self.current_route(workspace, index),
+            keep_normal: false,
         })
     }
 

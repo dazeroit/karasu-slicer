@@ -60,8 +60,8 @@ use super::{
     islands::{
         self, add_planned,
         check::{self, check_built, distance, held, Kept},
-        groups, grow, hold_every_start, Growing, Island, IslandSupports, Outcome, Skip, Starts,
-        Tip, PROBE_MM,
+        groups, grow, hold_every_start, Growing, Island, IslandSupports, Nudge, Outcome, Skip,
+        Starts, Tip, PROBE_MM,
     },
     route::RouteSurface,
     values::{NextSupport, SupportPreset, Weight},
@@ -70,6 +70,7 @@ use crate::placement::Affine;
 use edges::Rank;
 use karasu_core::{
     analysis::unsupported::RegionKind,
+    geometry::acos_degrees,
     mesh::TriangleMesh,
     supports::{Brace, BuildVolume, DrainCylinder, SupportDocument, SupportOrigin},
 };
@@ -94,6 +95,8 @@ pub const WIDE_FROM_MM2: std::ops::RangeInclusive<f64> = 1.0..=1000.0;
 pub const WIDE_CLOSEST_PCT: std::ops::RangeInclusive<f64> = 20.0..=100.0;
 /// The closing check's passes the panel accepts.
 pub const PASSES: std::ops::RangeInclusive<f64> = 0.0..=10.0;
+/// The clearances the panel accepts, in mm: a document's.
+pub const CLEARANCE_MM: std::ops::RangeInclusive<f64> = 0.0..=5.0;
 /// The finest grid an overhang is probed on, in mm.
 const FINEST_PROBE_MM: f64 = 0.25;
 /// How far in from an underside's edge its edge and corner tips stand, in mm (TD-136): the test
@@ -214,6 +217,10 @@ pub struct AutoSupports {
     pub contact_fit_min_mm: Option<f64>,
     /// The contacts end in a ball, not a cone, whatever the preset (owner, 2026-11-02).
     pub sphere_contact: bool,
+    /// The least distance every part of the planned supports keeps from the model, their
+    /// contacts from the walls beside them included (TD-164), in mm. Apply writes it to the
+    /// model's supports, with that rule.
+    pub clearance_mm: f64,
     /// A hollowed model's cavity takes its own preset and density (owner, 2026-11-06,
     /// TD-137): the cavity is not seen and is lighter to hold. Off, it takes the outside's.
     pub cavity_own: bool,
@@ -255,6 +262,7 @@ pub const DEFAULT_AUTO_SUPPORTS: AutoSupports = AutoSupports {
     passes: 3,
     contact_fit_min_mm: None,
     sphere_contact: false,
+    clearance_mm: 0.3,
     cavity_own: false,
     cavity_weight: Weight::Medium,
     cavity_mine: None,
@@ -282,6 +290,7 @@ impl AutoSupports {
             && WIDE_FROM_MM2.contains(&self.wide_from_mm2)
             && WIDE_CLOSEST_PCT.contains(&self.wide_closest_pct)
             && PASSES.contains(&f64::from(self.passes))
+            && CLEARANCE_MM.contains(&self.clearance_mm)
         {
             self
         } else {
@@ -399,6 +408,10 @@ pub struct AutoOutcome {
     /// Braces between the supports, numbered as [`add_planned`] numbers the supports after the
     /// document's own.
     pub braces: Vec<Brace>,
+    /// The clearance the plan kept, its contacts from the walls beside them too (TD-164): Apply
+    /// writes it to the document with that rule ([`with_planned`]). `None`: the document's own
+    /// checks (the Grid mode's tips).
+    pub clearance_mm: Option<f64>,
 }
 
 /// Everything a plan is made from.
@@ -471,12 +484,17 @@ impl edges::Probe for Underside<'_> {
     fn holds(&self, seen: &edges::Seen) -> bool {
         self.place.holds(seen.cavity)
     }
+
+    fn meets(&self, from: [f64; 3], to: [f64; 3]) -> bool {
+        self.surface.grid().first_hit(self.mesh, from, to).is_some()
+    }
 }
 
-/// How far a surface of outward `normal` faces away from straight down, in radians.
+/// How far a surface of outward `normal` faces away from straight down, in radians: the same on
+/// every platform (issue #21).
 #[must_use]
 pub fn tilt(normal: [f64; 3]) -> f64 {
-    (-normal[2]).clamp(-1.0, 1.0).acos()
+    acos_degrees(-normal[2]).to_radians()
 }
 
 /// What `regions` want held: their candidates and the side tips beside their leading edges.
@@ -644,6 +662,13 @@ impl Near {
 /// the outside with the outside's values, then the cavity with its own, joined, with braces
 /// over both. Each surface is probed by both, each keeping its own place.
 pub fn plan(input: &Input, stage: &dyn Fn(u32), stop: &AtomicBool) -> AutoOutcome {
+    let mut out = plan_places(input, stage, stop);
+    out.clearance_mm = Some(input.values.clearance_mm);
+    out
+}
+
+/// [`plan()`]'s supports, place by place.
+fn plan_places(input: &Input, stage: &dyn Fn(u32), stop: &AtomicBool) -> AutoOutcome {
     let values = input.values;
     let (Some(next), Some(cavity)) = (input.cavity_next.as_ref(), values.cavity()) else {
         return plan_with(input, (&values, &input.next), stage, stop);
@@ -725,6 +750,7 @@ pub fn plan_tips(
         values: &growing_values,
         volume: input.volume,
         origin,
+        nudge: None,
     };
     let tasks: Vec<(usize, Tip)> = tips.iter().copied().enumerate().collect();
     let mut why_at: Vec<([f64; 3], Skip)> = Vec::new();
@@ -785,6 +811,23 @@ fn plan_with(
         values: &growing_values,
         volume: input.volume,
         origin: SupportOrigin::Automatic,
+        nudge: None,
+    };
+    // Where drain holes cut the surface away: no tip there (TD-131).
+    let cuts = input
+        .model
+        .as_ref()
+        .and_then(|m| m.preparation.objects.get(m.index))
+        .and_then(|p| p.as_ref().ok())
+        .map_or_default(crate::pipeline::ObjectPreparation::drain_cylinders);
+    // An overhang's tip crowded by a wall moves along the surface within a level probe grid's
+    // step; an island's does not move (TD-164).
+    let overhangs = Growing {
+        nudge: Some(Nudge {
+            reach_mm: (values.spacing_mm * values.density_scale() / 2.0).max(FINEST_PROBE_MM),
+            cuts: &cuts,
+        }),
+        ..growing
     };
     stage(0);
     // The islands wanted, grouped as Support the islands groups them, each held where it starts
@@ -822,12 +865,6 @@ fn plan_with(
     );
     // The overhangs' candidates, thinned against every tip so far.
     let probed = if values.cover == Cover::All {
-        let cuts = input
-            .model
-            .as_ref()
-            .and_then(|m| m.preparation.objects.get(m.index))
-            .and_then(|p| p.as_ref().ok())
-            .map_or_default(crate::pipeline::ObjectPreparation::drain_cylinders);
         candidates(
             surface,
             mesh,
@@ -887,7 +924,7 @@ fn plan_with(
         return out;
     }
     stage(1);
-    let grove = grow(&tasks, tasks.len(), &growing, stop);
+    let grove = grow(&tasks, tasks.len(), &overhangs, stop);
     for (g, (kept, why)) in grove.kept.iter().zip(&grove.why).enumerate() {
         if *kept == 0 {
             why_at.push((tasks[g].1 .0, *why));
@@ -927,7 +964,7 @@ fn plan_with(
         for (k, task) in more.iter_mut().enumerate() {
             task.0 = k;
         }
-        let grove = grow(&more, more.len(), &growing, stop);
+        let grove = grow(&more, more.len(), &overhangs, stop);
         for (g, (count, why)) in grove.kept.iter().zip(&grove.why).enumerate() {
             if *count == 0 {
                 why_at.push((more[g].1 .0, *why));
@@ -960,7 +997,7 @@ fn plan_with(
             document: input.document.as_ref(),
             to_model: &input.to_model,
         };
-        check_built(&kept, model, &mut out.plan, &growing, &mut why_at, stop);
+        check_built(&kept, model, &mut out.plan, &overhangs, &mut why_at, stop);
     }
     // What is left: islands no tip holds, and uncovered candidates joined into places, each
     // with why the failed tip nearest it found no support.
@@ -1106,7 +1143,14 @@ pub fn input_for(
     // The supports kept: placed by hand or by the Islands tool, and the automatic ones of the
     // place the plan leaves as it is.
     let replaced = document.map_or_default(|d| replaced(d, &surface, to_world, values.place));
-    let document = document.map(|d| without(d, &replaced));
+    // The plan keeps the tool's clearance, the contacts' too (TD-164), as Apply will write it.
+    let mut document = document.map_or_else(
+        || SupportDocument::new(karasu_core::supports::Preset::Medium),
+        |d| without(d, &replaced),
+    );
+    document.clearance_mm = values.clearance_mm;
+    document.contact_clearance = true;
+    let document = Some(document);
     let kept_tips = document.as_ref().map_or_default(|d| {
         d.supports
             .iter()
@@ -1173,7 +1217,7 @@ pub fn without(document: &SupportDocument, ids: &[u64]) -> SupportDocument {
 }
 
 /// The document `document` (the kept supports) with `outcome`'s supports and braces added, as
-/// Apply adds them.
+/// Apply adds them, and the clearance the plan kept, with the contacts' rule (TD-164).
 #[must_use]
 pub fn with_planned(
     document: Option<&SupportDocument>,
@@ -1185,6 +1229,10 @@ pub fn with_planned(
         .unwrap_or_else(|| SupportDocument::new(karasu_core::supports::Preset::Medium));
     add_planned(&mut document, to_model, &outcome.plan);
     document.braces.extend(outcome.braces.iter().copied());
+    if let Some(clearance) = outcome.clearance_mm {
+        document.clearance_mm = clearance;
+        document.contact_clearance = true;
+    }
     document
 }
 

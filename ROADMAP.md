@@ -1450,10 +1450,14 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        being refused, and the notification says so; the status bar warns when footprints
        overlap. The command line still refuses copies that do not fit.
      - **Support contacts along the normal, and a safety distance (owner, 2026-11-19, TD-164,
-       proposed):** from the support marks research (E-SUP-06 to E-SUP-09). Automatic tips
-       follow the surface's normal and bend at their joint; a setting keeps the contact part
-       a safety distance from other model surfaces; concave corners take no edge tips. It waits
-       for the owner's approval, the gap test and a test print.
+       accepted and implemented 2026-11-20, issue #44, with bug #21):** from the support marks
+       research (E-SUP-06 to E-SUP-10). The Islands and Automatic tools' tips follow the
+       surface's normal and bend at their join, never tilted; the clearance keeps the contact
+       part from the walls beside it in new documents, and the Automatic panel shows it;
+       concave corners take no edge tips; the presets' contacts are 0.25, 0.35 and 0.45 mm wide
+       at the surface, a ball as wide and as deep, so smaller there; the planners use fixed
+       operations, so Linux and Windows plan the same supports. The gap test and a test print
+       are still to come.
      - **Arrange by outline (owner, 2026-11-20, TD-165, implemented the same day, issue #51):**
        a choice in the Arrange dialog, "Footprint: Box / Outline". Box packs rectangles as
        before. Outline packs each model's convex outline with no-fit polygons, from the middle

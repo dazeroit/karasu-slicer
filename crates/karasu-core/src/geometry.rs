@@ -1,12 +1,13 @@
 //! Point/vector values and checked rotations/object/affine transforms. Geometry containers and
 //! transform operations validate finite inputs; no printer or UI policy is embedded here.
 
+mod fixed;
 mod rotation;
 pub mod section;
 mod transform;
 mod transform_error;
 
-pub(crate) use rotation::sin_cos_degrees;
+pub use fixed::{acos_degrees, plan_length, sin_cos_degrees, tan_degrees};
 pub use rotation::Rotation3;
 pub use transform::{Affine3, ObjectTransform};
 pub use transform_error::TransformError;

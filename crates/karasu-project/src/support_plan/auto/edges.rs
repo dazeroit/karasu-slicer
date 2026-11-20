@@ -13,6 +13,13 @@
 //! [`EDGE_STEP_MM`] higher or lower, or it turns by more than [`EDGE_TURN_DEG`]. Where a smooth
 //! surface only grows steeper than the critical angle there is no edge, and no tip for it.
 //!
+//! **A concave corner is no edge (TD-164).** Where a wall stands beyond the outline on the
+//! supports' side — the model met within [`WALL_REACH_MM`] beyond it, [`WALL_BELOW_MM`] below
+//! the underside — the wall prints before the underside and holds it there. Such an outline takes
+//! no edge tips: they would stand beside the wall, closer than the clearance (E-SUP-06). An L
+//! whose short leg points down takes none along the leg; with the leg pointing up, its underside
+//! ends freely and keeps them (owner, 2026-11-20).
+//!
 //! **Edge tips** stand [`super::EDGE_INSET_MM`] in from an edge along the grid's X or Y, from
 //! each grid point next to it, and as far from an edge across that is nearer (so nearer an edge
 //! the grid crosses aslant: 0.4 mm along X is 0.28 mm from an edge at 45°);
@@ -32,6 +39,7 @@
 //!
 //! Everything here follows the grid's fixed order: it is deterministic.
 use super::EDGE_INSET_MM;
+use karasu_core::geometry::sin_cos_degrees;
 
 /// Bisections that find an edge between two grid points: a step's 1/64.
 const EDGE_BISECTIONS: u32 = 6;
@@ -41,6 +49,13 @@ pub const EDGE_STEP_MM: f64 = 0.5;
 pub const EDGE_TURN_DEG: f64 = 30.0;
 /// An edge the underside rises away from by more than this is a leading edge, in degrees.
 pub const LEADING_DEG: f64 = 10.0;
+/// How far beyond an outline a wall makes it a concave corner, in mm, horizontally from the last
+/// point that wants a tip. It covers the bisection's last step and a wall as gentle as the
+/// critical angle allows, met [`WALL_BELOW_MM`] below the underside.
+pub const WALL_REACH_MM: f64 = 0.5;
+/// How far below the underside the wall is looked for, in mm: the model's own rounding stays
+/// above it, and a wall the supports would meet does not.
+pub const WALL_BELOW_MM: f64 = 0.05;
 /// The face beside a leading edge is probed every this many mm outward...
 pub const SIDE_STEP_MM: f64 = 0.05;
 /// ... up to this far beyond the edge, in mm...
@@ -74,6 +89,8 @@ pub trait Probe {
     fn wanted(&self, seen: &Seen) -> bool;
     /// Whether the side of the cavity's surface at `seen` is one the plan covers.
     fn holds(&self, seen: &Seen) -> bool;
+    /// Whether the segment from `from` to `to` meets the model.
+    fn meets(&self, from: [f64; 3], to: [f64; 3]) -> bool;
 }
 
 /// How a tip's place was found: corners and edges are taken before the inside.
@@ -121,11 +138,9 @@ pub struct Outline {
     pub sides: Vec<Seen>,
 }
 
-/// The angle between two unit vectors, in radians.
-fn between_normals(a: [f64; 3], b: [f64; 3]) -> f64 {
-    (a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
-        .clamp(-1.0, 1.0)
-        .acos()
+/// Whether the unit vectors `a` and `b` are more than `degrees` apart.
+fn apart_more(a: [f64; 3], b: [f64; 3], degrees: f64) -> bool {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2] < sin_cos_degrees(degrees).1
 }
 
 /// Whether the surface ends between `inner`, which wants a tip, and `outer` beyond it.
@@ -133,7 +148,7 @@ fn ends(inner: &Seen, outer: Option<&Seen>) -> bool {
     outer.is_none_or(|o| {
         o.cut
             || (o.point[2] - inner.point[2]).abs() > EDGE_STEP_MM
-            || between_normals(o.normal, inner.normal) > EDGE_TURN_DEG.to_radians()
+            || apart_more(o.normal, inner.normal, EDGE_TURN_DEG)
     })
 }
 
@@ -165,13 +180,24 @@ fn edge_along(
             outer = seen;
         }
     }
-    ends(&inner, outer.as_ref()).then_some(Edge { along: lo, inner })
+    (ends(&inner, outer.as_ref()) && !walled(probe, &inner, d)).then_some(Edge { along: lo, inner })
+}
+
+/// Whether a wall stands beyond the outline at `inner` along `d`, on the supports' side: a
+/// concave corner, no edge (see the module).
+fn walled(probe: &dyn Probe, inner: &Seen, d: [f64; 2]) -> bool {
+    let [x, y, z] = inner.point;
+    let z = z - WALL_BELOW_MM;
+    probe.meets(
+        [x, y, z],
+        [x + WALL_REACH_MM * d[0], y + WALL_REACH_MM * d[1], z],
+    )
 }
 
 /// The side tip beside a leading edge seen at `edge`, outward along `d`, `radius` up its face,
 /// if the face holds a contact `radius` wide at the surface.
 fn side_tip(probe: &dyn Probe, edge: &Seen, d: [f64; 2], radius: f64) -> Option<Seen> {
-    let steepest = SIDE_STEEPEST_DEG.to_radians().cos();
+    let steepest = sin_cos_degrees(SIDE_STEEPEST_DEG).1;
     let [edge_x, edge_y, edge_z] = edge.point;
     let mut run: Vec<Seen> = Vec::new();
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // Forty samples.
@@ -212,7 +238,7 @@ fn side_tip(probe: &dyn Probe, edge: &Seen, d: [f64; 2], radius: f64) -> Option<
 pub fn outline(probe: &dyn Probe, grid: &Grid, radius: f64) -> Outline {
     let mut out = Outline::default();
     let index = |i: usize, j: usize| j * grid.nx + i;
-    let leading = LEADING_DEG.to_radians().sin();
+    let leading = sin_cos_degrees(LEADING_DEG).0;
     for j in 0..grid.ny {
         for i in 0..grid.nx {
             let k = index(i, j);

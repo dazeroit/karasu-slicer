@@ -14,7 +14,10 @@
 //! final check), TD-127 (density and wide undersides), TD-136 (edges, corners and leading
 //! edges), TD-137 (the cavity's own preset and density) and TD-138 (the Grid mode's supports,
 //! grown by [`auto::plan_tips`]).
-use karasu_core::{geometry::Point3, mesh::TriangleMesh};
+use karasu_core::{
+    geometry::{sin_cos_degrees, Point3},
+    mesh::TriangleMesh,
+};
 
 pub mod auto;
 pub mod braces;
@@ -55,7 +58,7 @@ pub fn tangent_triangle(point: [f64; 3], normal: [f64; 3], radius: f64) -> Optio
     let u = u.map(|v| v / u_length);
     let v = cross(n, u);
     let corner = |angle_deg: f64| {
-        let (sin, cos) = angle_deg.to_radians().sin_cos();
+        let (sin, cos) = sin_cos_degrees(angle_deg);
         Point3::new(
             point[0] + radius * (cos * u[0] + sin * v[0]),
             point[1] + radius * (cos * u[1] + sin * v[1]),
