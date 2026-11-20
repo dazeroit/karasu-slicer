@@ -1473,11 +1473,13 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        many more mini supports. Standard supports are tried everywhere first, and mini supports
        come last. The Automatic tool gets a mini density (25 to 100 %, 100 % by default). A mini
        support may stand on another (0 to 4 branches, 2 by default, one level). A mini support
-       the tools place is at most 10 mm long (1 to 50 mm) and rises at least 2 mm (0 to 10 mm,
-       owner after the first build). On HillGiant: 60 mini supports instead of 221, none longer
-       than 10 mm nor lower than 2 mm; the crevices only a lower one fits are left and listed
-       (59 places, 8 of 307 islands). Native Windows validation and a test print are still to
-       come.
+       the tools place is at most 10 mm long (1 to 50 mm) and rises at least 0.5 mm (0 to 10 mm,
+       owner after the first builds). An island is held only by a tip where it starts, not by a
+       neighbour's beside or above it (owner, 2026-11-20). On HillGiant, with the 0.5 mm
+       minimum: 196 mini supports instead of TD-164's 258, none longer than 10 mm nor lower than
+       0.5 mm, 263 of 307 islands held where they start (282 with TD-164, which has no length
+       limit; 277 with no minimum); the crevice islands only a lower mini support fits are left
+       and listed (issue #57). Native Windows validation and a test print are still to come.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

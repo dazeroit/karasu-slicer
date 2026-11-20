@@ -329,7 +329,7 @@ fn help_text() -> String {
          \x20   default, kept by every part, the contacts from the walls beside them too),\n\
          \x20   --auto-mini-density (25 to 100 percent, 100 by default), --auto-mini-branches (0\n\
          \x20   to 4 mini supports on one, 2 by default), --auto-mini-max-length (1 to 50 mm, 10\n\
-         \x20   by default), --auto-mini-min-height (0 to 10 mm, 2 by default, at most the\n\
+         \x20   by default), --auto-mini-min-height (0 to 10 mm, 0.5 by default, at most the\n\
          \x20   maximum length) and --overhang-angle (45 degrees by default) change them.\n\
          \x20   --auto-settings reads the whole set from a JSON file: the\n\
          \x20   application's settings.json, read as the application reads it, or an object of the\n\

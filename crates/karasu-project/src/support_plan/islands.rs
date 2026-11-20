@@ -64,9 +64,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub mod check;
 pub(crate) mod minis;
 
-/// How far beyond an island's footprint a support's tip still holds it, in mm: a contact's
-/// radius and a pixel's rounding.
-pub const HOLD_REACH_MM: f64 = 0.6;
 /// How far under an island's first layer a ray starts to find the surface there, in mm.
 pub const PROBE_MM: f64 = 1.0;
 
@@ -90,7 +87,8 @@ pub struct Island {
     pub inside: bool,
 }
 
-/// How far above where an island starts its tips go, in mm: its first layers' underside.
+/// How far above where an island starts its tips go, in mm: its first layers' underside, where
+/// the start places are probed.
 pub const START_MM: f64 = 1.0;
 /// The rings around an island's centroid looked over for more places its support may stand:
 /// every this many mm...
@@ -193,7 +191,7 @@ pub const DEFAULT_ISLAND_SUPPORTS: IslandSupports = IslandSupports {
     minis: true,
     mini_branches: 2,
     mini_max_length_mm: 10.0,
-    mini_min_height_mm: 2.0,
+    mini_min_height_mm: 0.5,
     branch_mm: 5.0,
     per_trunk: 4,
     merge_mm: 10.0,
@@ -462,7 +460,8 @@ struct Tree<'a> {
 /// Automatic tool's overhang tips hold an area rather than a point: they move within their probe
 /// grid's step, and at least the support's widest radius and the clearance and a ring more, so
 /// that a tip beside a vertical wall always finds room. An island's tip holds where the island
-/// starts, so it does not move: a crowded one is tried at the island's other places.
+/// starts, so it does not move: a crowded one is tried at the island's other places, which
+/// [`check::holds`] keeps at its start (TD-167).
 #[derive(Clone, Copy)]
 pub(crate) struct Nudge<'a> {
     /// The farthest a tip moves, in mm, unless the support's room asks for more.
@@ -1255,5 +1254,31 @@ mod tests {
         assert_eq!(found, [vec![1, 0, 2], vec![3]]);
         // No joining: every island its own.
         assert_eq!(groups(&islands, 0.0).len(), 4);
+    }
+
+    #[test]
+    fn a_tip_holds_an_island_only_where_it_starts() {
+        // TD-167 (owner, 2026-11-20): a 1 × 1 mm island whose first layer is at Z 5.05, over the
+        // layer at Z 5.
+        let island = Island {
+            point: [0.5, 0.5, 5.05],
+            layers: [100, 120],
+            heights: [5.0, 6.0],
+            area_mm2: 1.0,
+            footprint: [[0.0, 0.0], [1.0, 1.0]],
+            inside: false,
+        };
+        let holds = |tip: [f64; 3], join: f64| check::holds(&island, tip, join);
+        // On its first layer's underside.
+        assert!(holds([0.5, 0.5, 5.03], 0.0));
+        assert!(holds([0.9, 0.1, 5.0], 0.0));
+        // Beside it, at the same height, or above where it starts: not held.
+        assert!(!holds([1.3, 0.5, 5.03], 0.0));
+        assert!(!holds([0.5, 0.5, 5.5], 0.0));
+        assert!(!holds([0.5, 0.5, 4.9], 0.0));
+        // Islands sharing a support within a join distance: beside and above by as much.
+        assert!(holds([1.3, 0.5, 5.03], 0.5));
+        assert!(holds([0.5, 0.5, 5.5], 0.5));
+        assert!(!holds([1.6, 0.5, 5.03], 0.5));
     }
 }

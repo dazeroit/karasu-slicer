@@ -2492,7 +2492,8 @@ the same day. Weight by load is a later phase, after M6.4j.
       not reach gets its own.
     - **Held only where it starts:** a tip on its first layer's footprint, widened by 0.6 mm and
       the join distance, within 1 mm above it. A support beside it no longer turns its marker
-      green.
+      green. **Revised by TD-167 (2026-11-20):** within a layer of its first layer's underside,
+      on the footprint widened by the join distance only.
     - **Measured** on `HillGiant_32mm.stl` (lifted 5 mm): 568 islands. "Islands only" holds 546
       of them with 285 supports in 1.7 s; "Islands and overhangs" holds 557 with 410 supports in
       3.4 s. Every island left has no way down clear of the model, and the supports build
@@ -7373,7 +7374,8 @@ below).
 ## TD-167 — Mini supports: standard supports first, a density, branches and a maximum length
 
 **Status:** Accepted on 2026-11-20 (owner, after the analysis below) and implemented the same
-day, on top of TD-164 (issue #44). Native Windows validation and a test print are still to come.
+day, on top of TD-164 (issue #44); issue #57. Native Windows validation and a test print are
+still to come.
 
 **Context:**
 - **More mini supports since TD-164.**
@@ -7382,7 +7384,8 @@ day, on top of TD-164 (issue #44). Native Windows validation and a test print ar
     (TD-113, decision 7).
   - On the owner's `HillGiant_32mm.stl` (500,510 triangles, turned 80° about X, Anycubic Photon
     P1, Medium, lifted 5 mm, Linux release), the Automatic tool's defaults plan 221 mini
-    supports on TD-164's implementation, against 84 on main.
+    supports on TD-164's implementation as first committed, against 84 on main (258 once island
+    tips stopped moving, TD-164).
 - **How mini supports are planned** (TD-113, TD-126):
   - **A fallback, at once:**
     - A tip's standard support may be refused for any reason: crowded, no way down, out of
@@ -7476,8 +7479,9 @@ day, on top of TD-164 (issue #44). Native Windows validation and a test print ar
      would be longer than the maximum length".
    - **Placed by hand,** a mini support has no maximum, as before. The user decides, as with
      TD-126.
-   - **A minimum height** (owner, 2026-11-20, after the first build): 0 to 10 mm, 2 mm by
-     default, 0 for none, and never more than the maximum length.
+   - **A minimum height** (owner, 2026-11-20, after the first build): 0 to 10 mm, 0.5 mm by
+     default (2 mm at first, then 1 mm, lowered with the strict hold rule below), 0 for none, and
+     never more than the maximum length.
      - **Measured** as the height the rod rises, from the lower centre (its foot's ball, or its
        junction) to its ball's.
      - **Why:** between surfaces closer than that, a mini support is a drop of resin. On
@@ -7504,7 +7508,9 @@ day, on top of TD-164 (issue #44). Native Windows validation and a test print ar
 6. **TD-113, decision 7, revised:** "A mini support is never a trunk" becomes "a mini support
    may carry mini branches (point 3)". "Never merged" and "never braced" are kept.
 
-**Estimated** on HillGiant:
+**Estimated** on HillGiant (**superseded**, owner 2026-11-21: the estimate counted islands by
+the loose hold rule, which credited them to their neighbours' supports; the revision below gives
+the islands held where they start, and the measured plans):
 - **How:**
   - a scratch analysis of the plans above, not the implementation;
   - point 1 is taken from the plan with mini supports off;
@@ -7583,11 +7589,12 @@ day, on top of TD-164 (issue #44). Native Windows validation and a test print ar
 - **The new reason** `Skip::MiniTooLong`: "No support fits, and a mini support would be longer
   than the maximum length".
 
-**Measured** on HillGiant, as in the context (Linux release, 16 threads):
+**Measured** on HillGiant, as in the context (Linux release, 16 threads), the islands counted by
+the loose hold rule, which the revision below replaces:
 
 | Plan | Supports | Mini (branches) | Islands held | Overhang points | Places left | Mini rods on the model | 8 mm or more | Longest |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Before (TD-164) | 488 | 221 (0) | 306 of 307 | 99.0 % | 17 | 824 mm | 35 | 26.4 mm |
+| Before (TD-164 as first committed) | 488 | 221 (0) | 306 of 307 | 99.0 % | 17 | 824 mm | 35 | 26.4 mm |
 | Defaults: 100 %, 2 branches, 10 mm | 472 | 117 (2) | 307 of 307 | 98.7 % | 7 | 182 mm | 7 | 9.8 mm |
 | Mini density 50 % | 422 | 67 (0) | 307 of 307 | 99.4 % | 7 | 119 mm | 4 | 9.8 mm |
 | Mini density 25 % | 403 | 48 (0) | 307 of 307 | 99.9 % | 3 | 109 mm | 5 | 9.8 mm |
@@ -7601,7 +7608,7 @@ These rows have no minimum height. With one (the defaults otherwise):
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | None | 472 | 117 (2) | 307 of 307 | 98.7 % | 7 | 0.15 mm | 182 mm |
 | 1 mm | 428 | 73 (7) | 304 of 307 | 95.3 % | 43 | 1.10 mm | 219 mm |
-| 2 mm (default) | 415 | 60 (8) | 299 of 307 | 94.5 % | 59 | 2.15 mm | 249 mm |
+| 2 mm | 415 | 60 (8) | 299 of 307 | 94.5 % | 59 | 2.15 mm | 249 mm |
 
 - **What 2 mm costs:** 8 islands and about 4 % of the overhang points, crevices where only a
   lower mini support fits, are left and listed; of the 20 places the command line lists, 16 say
@@ -7610,7 +7617,7 @@ These rows have no minimum height. With one (the defaults otherwise):
   balls' centres.
 
 - **Mini supports off:** the document and the print file are identical, byte for byte, to
-  TD-164's.
+  those of TD-164 as first committed.
 - **Places left** with the defaults: all 7 are tips crowded by a wall (TD-164); none is left as
   too long, since every mini support past 10 mm found a shorter, slanted foot.
 - **Against the estimate:** 117 mini supports for about 121. Only 2 branches for 4 or 5: the
@@ -7620,9 +7627,63 @@ These rows have no minimum height. With one (the defaults otherwise):
   candidates 260 ms, the final check 110 ms); the rest is the standard supports trying every
   place of an island, as with mini supports off. Peak memory 450 to 520 MB, as before.
 
+**Revised after the first builds (owner, 2026-11-20): an island is held only where it starts.**
+- **What the owner saw:** some islands of HillGiant were said to be held by a support that stood
+  beside them, higher, not under them.
+- **Why** (measured with a trace, then removed):
+  - An island counted as held by any tip on its first layer's bounding box widened by 0.6 mm,
+    from 1 mm below where it starts to 1.6 mm above (`check::holds`, TD-113).
+  - With mini supports on, each island used to get its own support at its first place, so the
+    rule seldom decided. With standard supports first, an island whose first place is refused
+    waits for the next attempt, and then the mini pass; both ask whether it is held already, and
+    a neighbour's tip up to 1.5 mm higher and half a millimetre aside answered yes.
+  - On HillGiant, 159 of the islands the mini pass found held were held only by a tip beside
+    their first layer, 150 of them a neighbouring island's; 47 of those tips stood more than
+    0.25 mm above where the island starts, 13 more than 1 mm.
+- **Decision (the owner's option 1):** one rule, for placing, for the plan's report and for the
+  Islands tool's list: a tip holds an island when it lies on its first layer's footprint,
+  widened by the join distance only, from a layer below the layer under it to a layer above its
+  first (`join_mm` higher with a join). A tip beside it or above where it starts does not.
+- **The island's own tip does not move** (TD-164): a tip moved off the first layer would no
+  longer hold it. A crowded island tip is tried at the island's other places, 0.5 mm apart.
+  TD-164 as first committed moved it up to 0.6 mm; that was removed from TD-164 before its
+  merge (owner, 2026-11-21).
+- **What the earlier measurements meant:** the loose rule had also counted, in TD-164's plans
+  and in this TD's first measurements above, islands held by their neighbours. Counted where
+  they start:
+
+  | Plan | Supports | Mini (branches) | Islands held where they start | Overhang points | Places left |
+  | --- | --- | --- | --- | --- | --- |
+  | TD-164 as first committed, island tips moving | 488 | 221 (0) | 252 of 307 | 99.0 % | 17 |
+  | TD-164 | 478 | 258 (0) | 282 of 307 | 99.0 % | 18 |
+  | First TD-167 build, minimum height 2 mm | 415 | 60 (8) | 149 of 307 | 94.5 % | 59 |
+  | Strict, mini supports off | 258 | 0 | 126 of 307 | 80.2 % | 256 |
+  | Strict, minimum height 0 | 482 | 223 (29) | 277 of 307 | 98.8 % | 37 |
+  | Strict, minimum height 0.5 mm (default) | 455 | 196 (33) | 263 of 307 | 98.1 % | 66 |
+  | Strict, minimum height 1 mm | 408 | 149 (36) | 239 of 307 | 95.2 % | 109 |
+  | Strict, minimum height 2 mm | 380 | 121 (37) | 214 of 307 | 93.9 % | 142 |
+  | Strict, defaults, mini density 50 % | 411 | 153 (31) | 263 of 307 | 99.1 % | 56 |
+  | Strict, defaults, mini density 25 % | 400 | 142 (31) | 263 of 307 | 99.8 % | 49 |
+
+  - **Standard supports hold no more islands than before:** about 125 where they start, in
+    TD-164's plans as in these. The islands they cannot hold need mini supports, as many as
+    before.
+  - **With no minimum height** the plan holds 277 islands where they start, against 282 in
+    TD-164's plans, which have no maximum length. Of the 30 left, 20 find no foot for a mini
+    support and 4 only one too long.
+  - **The minimum height decides** how many crevice islands are left: 93 with 2 mm, 68 with
+    1 mm. Each is listed with why.
+  - **The default lowered** (owner, 2026-11-20, among keeping 2 mm, applying it to overhangs
+    only, or lowering it for all): first to 1 mm, then, after a build, to 0.5 mm. It leaves out
+    the lowest drops of resin, under about 10 layers: on HillGiant the lowest mini support then
+    rises 0.55 mm, and 263 islands are held where they start, 49 more than with 2 mm and 14
+    fewer than with none.
+  - **Mini supports off** no longer gives the same plan as before: islands are counted, and
+    their tips placed, by the strict rule whatever the switch.
+
 **Validation:**
-1. **Mini supports off** gives byte-identical plans: HillGiant above; the existing tests of
-   both tools and of the command line pass unchanged.
+1. **Mini supports off** gave byte-identical plans before the strict hold rule: HillGiant
+   above; the existing tests of both tools and of the command line pass unchanged.
 2. **Tests:**
    - `an_island_takes_a_standard_support_at_another_place_before_a_mini_one` (it gives a mini
      support when the standard supports are grown with mini supports on);
@@ -7632,6 +7693,8 @@ These rows have no minimum height. With one (the defaults otherwise):
    - `the_mini_density_thins_the_mini_supports_and_counts_the_rest_held`;
    - the core's foot search within a maximum length, a slanted foot found where the one
      straight down is too far, and above a minimum height;
+   - `a_tip_holds_an_island_only_where_it_starts`: beside it, above it or below it, not held;
+     with a join distance, as far as it;
    - the command line's options, refusals and summary, and the strict settings' ranges.
 3. **Not tested on its own:** a trunk the final check removes, whose branches are then grown
    again (the existing mechanism of TD-113).

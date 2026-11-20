@@ -3988,7 +3988,7 @@ fn automatic_supports_hold_a_lifted_model_and_are_reported() {
     assert_eq!(
         field(&report, "Automatic supports values"),
         "medium, density 100%, islands and overhangs, everywhere, minis on (density 100%, 2 \
-         branches, at least 2 mm high, at most 10 mm long), branches on, clearance 0.3 mm, lift 5 \
+         branches, at least 0.5 mm high, at most 10 mm long), branches on, clearance 0.3 mm, lift 5 \
          mm, critical angle 45 degrees"
     );
     assert!(
@@ -4230,7 +4230,7 @@ fn auto_settings_take_the_application_s_settings_file() {
     assert_eq!(
         field(&report, "Automatic supports values"),
         "light, density 80%, islands and overhangs, everywhere, minis on (density 100%, 2 \
-         branches, at least 2 mm high, at most 10 mm long), branches off, clearance 0.3 mm, lift 6 \
+         branches, at least 0.5 mm high, at most 10 mm long), branches off, clearance 0.3 mm, lift 6 \
          mm, critical angle 35 degrees"
     );
     // Options given beside it override it.

@@ -269,7 +269,7 @@ pub const DEFAULT_AUTO_SUPPORTS: AutoSupports = AutoSupports {
     mini_density_pct: 100.0,
     mini_branches: 2,
     mini_max_length_mm: 10.0,
-    mini_min_height_mm: 2.0,
+    mini_min_height_mm: 0.5,
     branches: true,
     branch_mm: 5.0,
     per_trunk: 4,

@@ -10,10 +10,7 @@
 //! build with an error. A support entering a drain hole is only warned about (TD-131): it
 //! stays, as holding the island comes first; but a tip where a hole cuts the material away
 //! holds nothing there, so it goes as one with an error does.
-use super::{
-    add_planned, grow, Growing, Island, IslandSupports, Outcome, Planned, Skip, Tip, HOLD_REACH_MM,
-    PROBE_MM,
-};
+use super::{add_planned, grow, Growing, Island, IslandSupports, Outcome, Planned, Skip, Tip};
 use crate::{
     pipeline::{ObjectPreparation, Preparation},
     placement::Affine,
@@ -64,17 +61,24 @@ pub struct Kept<'a> {
 }
 
 /// Whether a tip at `tip` holds `island` where it starts (owner, 2026-10-30: there the resin
-/// cures in mid-air): on its first layer's footprint, widened by
-/// [`HOLD_REACH_MM`] and by `join_mm` (islands that close share a support),
-/// within [`super::START_MM`] above where it starts.
+/// cures in mid-air): on its first layer's footprint, widened by `join_mm` (islands that close
+/// share a support), and at its first layer's underside, within a layer of it: from a layer
+/// below the layer under it to a layer above its first, `join_mm` higher with a join.
+///
+/// **Strict (TD-167, owner 2026-11-20):** a tip beside the island or above where it starts does
+/// not hold it, though it may lie within a fraction of a millimetre: the island's first layers
+/// cure in mid-air all the same. Before, a tip up to 0.6 mm beyond the footprint and 1.6 mm above
+/// the start counted; with standard supports grown first, islands were then left to tips of
+/// their neighbours'.
 #[must_use]
 pub fn holds(island: &Island, [x, y, z]: [f64; 3], join_mm: f64) -> bool {
-    let under = island.heights[0];
-    let reach = HOLD_REACH_MM + join_mm.max(0.0);
+    let join = join_mm.max(0.0);
+    let [under, first] = [island.heights[0], island.point[2]];
+    let layer = (first - under).max(0.0);
     let [[x0, y0], [x1, y1]] = island.footprint;
-    (under - PROBE_MM..=under + super::START_MM + reach).contains(&z)
-        && (x0 - reach..=x1 + reach).contains(&x)
-        && (y0 - reach..=y1 + reach).contains(&y)
+    (under - layer..=first + layer + join).contains(&z)
+        && (x0 - join..=x1 + join).contains(&x)
+        && (y0 - join..=y1 + join).contains(&y)
 }
 
 /// Whether one of `tips` holds `island` where it starts, islands closer than `join_mm` sharing

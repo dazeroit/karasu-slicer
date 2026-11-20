@@ -310,7 +310,7 @@ model import → optional topology gate → explicit placement → uniform layer
     their tips per area against the spacing's; islands keep theirs), `--auto-mini-branches <n>`
     (0 to 4, 2 by default: the mini supports one may carry), `--auto-mini-max-length <mm>`
     (1 to 50, 10 by default: the longest a mini support may be) and `--auto-mini-min-height
-    <mm>` (0 to 10, 2 by default, at most the maximum length: the least height a mini support
+    <mm>` (0 to 10, 0.5 by default, at most the maximum length: the least height a mini support
     may rise; a pair out of order is refused).
     `--overhang-angle <deg>` is the critical angle, as for `--unsupported`.
   - `--auto-settings <file.json>` reads the whole value set, with `--auto-supports` or
