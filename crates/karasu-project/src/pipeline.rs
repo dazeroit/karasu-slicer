@@ -1312,7 +1312,13 @@ fn run(args: &SliceRequest, ctx: &mut Context<'_>) -> Result<SliceOutcome, Failu
     // Plates and arranged models are united in world coordinates; a single placed model keeps
     // its exact placement transform.
     let layout = (args.model().is_none() || args.arrange)
-        .then(|| plate::Layout::new(&prepared, names, &printer, spacing_mm))
+        .then(|| {
+            let arrangement = plate::Arrangement {
+                turn: args.arrange_turn,
+                footprint: args.arrange_footprint,
+            };
+            plate::Layout::new(&prepared, names, &printer, spacing_mm, arrangement)
+        })
         .transpose()?;
     let united;
     let plate_cut;

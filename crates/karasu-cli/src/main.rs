@@ -195,6 +195,7 @@ fn help_text() -> String {
          \x20 [--auto-cover all|islands] [--auto-place everywhere|outside|cavity] [--auto-minis on|off]]\n         \
          [--auto-settings <file.json>] [--auto-braces] [--write-supports <file.json>]\n         \
          [--layer-plan <file.json>] [--copies <n>] [--arrange] [--spacing <mm>]\n         \
+         [--arrange-turn] [--arrange-footprint box|outline]\n         \
          [--allow-topology-defects] \
          [--progress | --no-progress]\n         \
          [--hollow <wall mm> [--hollow-cell <mm>]] [--drain-hole <x> <y> <z> <axis> <length> <diameter>]...\n         \
@@ -338,8 +339,12 @@ fn help_text() -> String {
          \x20   the document's height-to-exposure table, never a guess. Bottom and transition\n\
          \x20   layers keep the calibrated height; SL1 and SL1S store one height and refuse it.\n\
          \x20   --copies N prints N instances of the model and --arrange places them (or one)\n\
-         \x20   automatically: footprints with supports and drain holes, packed in shelves at\n\
-         \x20   --spacing mm (default 2), centred, never rotated; instances that do not fit fail.\n\
+         \x20   automatically: footprints with supports and raft, packed from the plate's middle at\n\
+         \x20   --spacing mm (default 2); instances that do not fit fail. --arrange-turn lets them\n\
+         \x20   turn about Z: each model by the turn that makes its footprint smallest or fit, each\n\
+         \x20   instance a quarter turn more. --arrange-footprint outline packs their convex outlines\n\
+         \x20   seen from above instead of rectangles (box, the default), so round and pointed\n\
+         \x20   models nest closer. Both also apply to a plate's arranged objects.\n\
          \x20   --plate reads a karasu-plate JSON document instead of one model: objects with\n\
          \x20   their own model, placement, hollowing, drain holes, supports and copies, fixed or\n\
          \x20   arranged around fixed ones. Overlapping objects print as their union.\n\

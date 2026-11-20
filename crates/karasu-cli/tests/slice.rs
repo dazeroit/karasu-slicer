@@ -3271,6 +3271,181 @@ fn footprints_overlap_by_their_outlines() {
     );
 }
 
+/// The number a summary gives for `label`.
+fn number(report: &str, label: &str) -> f64 {
+    field(report, label).parse().unwrap()
+}
+
+#[test]
+fn arranged_copies_turn_about_z_when_asked() {
+    // Issue #48: a 60 x 8 mm bar turned 30 degrees is turned back; a 40 x 80 mm slab, too deep
+    // for the 100 x 60 mm plate, fits only turned a quarter.
+    let setup = Setup::new();
+    let bar = setup
+        .temp
+        .write("bar.stl", box_stl([0., 0., 0.], [60., 8., 3.], false));
+    let report = success(&setup.slice(
+        &bar,
+        "reference",
+        &setup.temp.path("bar"),
+        &[
+            "--rotate",
+            "0",
+            "0",
+            "30",
+            "--copies",
+            "2",
+            "--arrange-turn",
+        ],
+    ));
+    for copy in [1, 2] {
+        let turn = number(&report, &format!("Instance {copy} turn about Z (deg)"));
+        assert!(
+            ((turn + 30.0).abs() < 1e-9) || ((turn - 60.0).abs() < 1e-9),
+            "{turn}"
+        );
+    }
+    assert_eq!(field(&report, "Overlapping footprints"), "none");
+    // Without the option, nothing turns.
+    let kept = success(&setup.slice(
+        &bar,
+        "reference",
+        &setup.temp.path("kept"),
+        &["--rotate", "0", "0", "30", "--arrange"],
+    ));
+    assert!(!kept.contains("turn about Z"));
+    let slab = setup
+        .temp
+        .write("slab.stl", box_stl([0., 0., 0.], [40., 80., 2.], false));
+    let error = failure(
+        &setup.slice(&slab, "reference", &setup.temp.path("deep"), &["--arrange"]),
+        1,
+    );
+    assert!(error.contains("do not fit"), "{error}");
+    let turned = success(&setup.slice(
+        &slab,
+        "reference",
+        &setup.temp.path("turned"),
+        &["--arrange", "--arrange-turn"],
+    ));
+    assert_eq!(number(&turned, "Instance 1 turn about Z (deg)"), 90.0);
+    // The same slab turned by --rotate slices the same.
+    let rotated = success(&setup.slice(
+        &slab,
+        "reference",
+        &setup.temp.path("rotated"),
+        &["--rotate", "0", "0", "90", "--arrange"],
+    ));
+    let volume = |report: &str| number(report, "Sampled mask volume (mm^3)");
+    assert!(
+        (volume(&turned) - volume(&rotated)).abs() < 1e-6,
+        "{turned}\n{rotated}"
+    );
+    assert!((volume(&turned) - 6400.0).abs() < 1.0);
+}
+
+#[test]
+fn drain_holes_turn_with_their_copy() {
+    // Issue #48: a 40 x 80 mm slab drilled through, turned a quarter to fit: the hole still cuts
+    // it, as much as unturned on a plate where it fits.
+    let setup = Setup::new();
+    let slab = setup
+        .temp
+        .write("slab.stl", box_stl([0., 0., 0.], [40., 80., 2.], false));
+    let hole = ["--drain-hole", "20", "40", "-1", "+z", "4", "4"];
+    let turned = success(&setup.slice(
+        &slab,
+        "reference",
+        &setup.temp.path("turned"),
+        &[&hole[..], &["--arrange", "--arrange-turn"]].concat(),
+    ));
+    let whole = success(&setup.slice(
+        &slab,
+        "reference",
+        &setup.temp.path("whole"),
+        &["--arrange", "--arrange-turn"],
+    ));
+    let volume = |report: &str| number(report, "Sampled mask volume (mm^3)");
+    let removed = volume(&whole) - volume(&turned);
+    // A 4 mm hole through 2 mm: about 25 mm³, as sampled.
+    assert!(
+        (removed - 8.0 * std::f64::consts::PI).abs() < 3.0,
+        "{removed}"
+    );
+}
+
+#[test]
+fn arranged_copies_pack_by_outline_when_asked() {
+    // TD-165 on the command line: right triangles 30 mm on their sides. As rectangles three fit
+    // the 100 x 60 mm plate; as outlines, turned, pairs share their squares.
+    let setup = Setup::new();
+    let triangle = setup.temp.write(
+        "triangle.stl",
+        prism_stl(&[[0.0, 0.0], [30.0, 0.0], [0.0, 30.0]], 2.0),
+    );
+    let error = failure(
+        &setup.slice(
+            &triangle,
+            "reference",
+            &setup.temp.path("boxes"),
+            &["--copies", "5", "--arrange-turn"],
+        ),
+        1,
+    );
+    assert!(error.contains("do not fit"), "{error}");
+    let report = success(&setup.slice(
+        &triangle,
+        "reference",
+        &setup.temp.path("outlines"),
+        &[
+            "--copies",
+            "5",
+            "--arrange-turn",
+            "--arrange-footprint",
+            "outline",
+        ],
+    ));
+    assert_eq!(field(&report, "Overlapping footprints"), "none");
+    assert!(
+        report.contains("turn about Z (deg): 180") || report.contains("turn about Z (deg): -180"),
+        "{report}"
+    );
+    // Five whole triangles' volume, as one alone samples it: within 3 %, the panel's coarse
+    // pixels sampling each edge as it falls.
+    let one = success(&setup.slice(
+        &triangle,
+        "reference",
+        &setup.temp.path("one"),
+        &["--arrange"],
+    ));
+    let volume = |report: &str| number(report, "Sampled mask volume (mm^3)");
+    assert!(
+        (volume(&report) - 5.0 * volume(&one)).abs() < 0.03 * volume(&report),
+        "{report}\n{one}"
+    );
+    // The options need arranging, and a footprint they know.
+    for (extra, message) in [
+        (
+            &["--arrange-turn"][..],
+            "--arrange-turn applies to arranged models",
+        ),
+        (
+            &["--arrange-footprint", "outline"][..],
+            "--arrange-footprint applies to arranged models",
+        ),
+        (
+            &["--arrange", "--arrange-footprint", "round"][..],
+            "must be box or outline",
+        ),
+    ] {
+        let error = failure(
+            &setup.slice(&triangle, "reference", &setup.temp.path("refused"), extra),
+            2,
+        );
+        assert!(error.contains(message), "{error}");
+    }
+}
+
 #[test]
 fn plates_unite_fixed_and_arranged_objects() {
     let setup = Setup::new();

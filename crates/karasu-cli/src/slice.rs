@@ -382,6 +382,8 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Sli
         copies: plate.copies.unwrap_or(1),
         arrange: arranged,
         spacing_mm: plate.spacing.unwrap_or(DEFAULT_SPACING_MM),
+        arrange_turn: plate.turn,
+        arrange_footprint: plate.footprint,
         memory_budget_bytes: None,
         verify_walls: verify_walls.unwrap_or(false),
         find_unsupported: unsupported.map(|_| overhang_angle.unwrap_or(DEFAULT_OVERHANG_ANGLE_DEG)),
@@ -801,6 +803,11 @@ struct PlateOptions {
     copies: Option<u32>,
     arrange: bool,
     spacing: Option<f64>,
+    /// `--arrange-turn` (issue #48).
+    turn: bool,
+    /// `--arrange-footprint` (TD-165), given or not.
+    footprint: karasu_core::plate::Footprint,
+    footprint_given: bool,
 }
 
 impl PlateOptions {
@@ -819,6 +826,17 @@ impl PlateOptions {
             return Err(
                 "--spacing applies to arranged models; add --copies <n> or --arrange".to_owned(),
             );
+        }
+        // A plate document may arrange its objects; a single model needs arranging.
+        for (given, name) in [
+            (self.turn, "--arrange-turn"),
+            (self.footprint_given, "--arrange-footprint"),
+        ] {
+            if given && !arranged && self.plate.is_none() {
+                return Err(format!(
+                    "{name} applies to arranged models; add --copies <n>, --arrange or --plate"
+                ));
+            }
         }
         if arranged && center {
             return Err(
@@ -851,7 +869,19 @@ impl PlateOptions {
                 set(&mut self.copies, name, copies)?;
             }
             "--arrange" if !self.arrange => self.arrange = true,
-            "--arrange" => return Err(format!("{name} may be given only once")),
+            "--arrange-turn" if !self.turn => self.turn = true,
+            "--arrange-footprint" if !self.footprint_given => {
+                let text = text_value(name, arguments.next())?;
+                self.footprint = match text.as_str() {
+                    "box" => karasu_core::plate::Footprint::Box,
+                    "outline" => karasu_core::plate::Footprint::Outline,
+                    _ => return Err(format!("{name} must be box or outline, not {text:?}")),
+                };
+                self.footprint_given = true;
+            }
+            "--arrange" | "--arrange-turn" | "--arrange-footprint" => {
+                return Err(format!("{name} may be given only once"))
+            }
             "--spacing" => {
                 let text = text_value(name, arguments.next())?;
                 let spacing = text
@@ -1927,6 +1957,8 @@ mod tests {
                     copies: 1,
                     arrange: false,
                     spacing_mm: 2.0,
+                    arrange_turn: false,
+                    arrange_footprint: karasu_core::plate::Footprint::Box,
                     memory_budget_bytes: None,
                     verify_walls: false,
                     find_unsupported: None,

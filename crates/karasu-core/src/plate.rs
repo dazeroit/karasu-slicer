@@ -632,6 +632,21 @@ impl Rect {
     }
 }
 
+/// The room arranging gives each model on the plate (TD-165; owner, 2026-11-20): the rectangle
+/// round it ([`arrange`]) or its convex outline ([`outline::arrange_outlines`]). The application
+/// keeps it across restarts and the command line takes it as `--arrange-footprint`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Footprint {
+    /// The rectangle round the model, its supports and raft (TD-135): tidy rows, room between
+    /// them for the tools that take models off the plate, and the fastest.
+    #[default]
+    Box,
+    /// The model's convex outline seen from above, its supports and raft included (TD-165):
+    /// round and pointed models nest closer.
+    Outline,
+}
+
 /// Footprints that do not fit on the plate.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Unplaced {
@@ -906,6 +921,27 @@ pub fn turned_size(hull: &[[f64; 2]], turn_deg: f64) -> [f64; 2] {
         return [0.; 2];
     }
     [high[0] - low[0], high[1] - low[1]]
+}
+
+/// The least share of its room a turn about Z must save for arranging to make it (owner,
+/// 2026-11-19, TD-162): below it, the model keeps the orientation the user chose.
+pub const TURN_MARGIN: f64 = 0.01;
+
+/// The turns about Z, in degrees, offered to the outline of a model already turned `turn_deg`
+/// by [`footprint_turn`] (TD-165): with turns, its four quarter turns and those of the turn back
+/// to none, the least total turn first (ties in that order); without, none.
+#[must_use]
+pub fn turns_offered(turn: bool, turn_deg: f64) -> Vec<f64> {
+    if !turn {
+        return vec![0.0];
+    }
+    let wrapped = |t: f64| ((t + 180.0).rem_euclid(360.0) - 180.0).abs();
+    let mut turns: Vec<f64> = vec![0.0, 90.0, 180.0, 270.0];
+    if turn_deg != 0.0 {
+        turns.extend([0.0, 90.0, 180.0, 270.0].map(|q| q - turn_deg));
+    }
+    turns.sort_by(|a, b| wrapped(turn_deg + a).total_cmp(&wrapped(turn_deg + b)));
+    turns
 }
 
 /// The turns [`footprint_turn`] tries when a footprint fits the plate at no turn of its edges:

@@ -106,7 +106,14 @@ Each **instance** is the prepared geometry moved rigidly in XY by an offset:
 **Footprint** of an object: the XY rectangle of everything it prints at its design placement.
 - **Contents:** the sliced surface (model or hollow shell, plus supports and raft). Drain-hole
   cylinders are not part of it, as each cuts only its own model (TD-166, below).
-- **Shape:** footprints are axis-aligned and never rotated.
+- **Shape:** footprints are axis-aligned rectangles; with `--arrange-footprint outline`, convex
+  outlines (TD-165, below).
+- **Turns (issue #48):** with `--arrange-turn`, an arranged instance may turn about Z about its
+  object's pivot, the middle of its design footprint: the object by the turn that makes its
+  outline's rectangle smallest by 1 % or more, or that makes it fit the plate (TD-162), and each
+  instance a quarter turn more as the packer chooses. Its vertices, drain rings, footprint,
+  outline and drain cutters' boxes turn with it, then move; quarter turns are exact. Without
+  turns nothing changes: an instance only moves, bit for bit as before.
 
 **Packer (`plate::arrange`):** deterministic, from the plate's middle outwards (owner,
 2026-11-10; next-fit shelves from the front-left corner before).
@@ -128,8 +135,18 @@ Each **instance** is the prepared geometry moved rigidly in XY by an offset:
 - **Arithmetic:** plain `f64` in a fixed order, so results are bitwise identical on every
   platform.
 
+**By outline (TD-165, `--arrange-footprint outline`):** each arranged instance packs its convex
+outline seen from above with `plate::outline::arrange_outlines`, clear of the fixed objects'
+outlines, from the middle, then from the front left corner when not all fit, never fewer than
+rectangles. With `--arrange-turn` each instance is offered its turns' quarter turns, so pointed
+models turn half round to nest.
+
 **Instances that do not fit** fail the command with a count and the first ten instances; nothing
 is placed off the plate.
+
+**The summary** gives, per instance, `Instance k translation (mm)` (its object's design
+translation, turned and moved with it) and, for a turned instance only, `Instance k turn about Z
+(deg)`.
 
 ## Uniting and slicing
 

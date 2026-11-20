@@ -6513,6 +6513,46 @@ issue #48. The design follows the owner's proposals of 2026-11-19. The owner dec
   - slicing would turn each arranged copy's vertices and its drain rings;
   - `export-models` would turn the copies it writes, whose vertices lie on the export grid
     (TD-140) and would need placing on it again.
+
+**The command line's turns, as implemented (2026-11-20, issue #48; owner: "procedi con #48 così
+chiudiamo Arrange"):**
+- **Options of `slice`:**
+  - `--arrange-turn` lets arranged instances turn about Z;
+  - `--arrange-footprint box|outline` gives the command line TD-165's choice.
+
+  Both apply to a single model's copies and to a plate document's arranged objects, and need an
+  arrangement.
+- **Shared with the application:** `karasu_core::plate::{Footprint, TURN_MARGIN, turns_offered}`.
+- **The plate (`pipeline::plate::Layout`):**
+  - **Turns:** each instance has a turn about its object's pivot, the middle of its design
+    footprint. The object takes `footprint_turn` of its outline with the 1 % margin; with
+    rectangles, `arrange_turning` may add a quarter turn; with outlines, each orientation of
+    `turns_offered` is packed.
+  - **What turns with the instance:** its vertices (`concatenate_at`), its drain rings
+    (`PlateCut`), its footprint, its outline and its cutters' boxes (TD-166) turn, then move.
+    Quarter turns use exact cosines and sines.
+  - **No turn, no change:** an instance with no turn only moves, through the same arithmetic as
+    before. Without the options, outputs and summaries stayed byte-identical to `main` on three
+    plates (measured).
+  - **The summary** gives each instance's translation turned and moved, and
+    `Instance k turn about Z (deg)` for turned ones only.
+- **`export-models` is unchanged:**
+  - it lays plates out with `Arrangement::default()`, so no copy is turned and the export grid
+    holds;
+  - the plates it exports come from projects, whose objects the application places itself.
+- **Measured** (release, Photon Mono 4, 16 threads):
+  - 80 copies of a 12 mm disc: rectangles fit 66, outlines 70;
+  - a plate with a fixed box, six drilled boxes turned 25° and eight 204,160-triangle spheres,
+    turned: 0.73 s to slice, by rectangles or by outlines.
+- **Tests:**
+  - **Command line:**
+    - a bar turned 30° is turned back;
+    - a 40 x 80 mm slab is refused without turns and placed a quarter turned with them;
+    - it slices to the same volume as the slab turned by `--rotate`;
+    - a drain hole still cuts a turned copy;
+    - five triangles by outline turn half round and are not united, where rectangles fit three;
+    - the options' errors.
+  - **Plate:** a turned instance turns its footprint and its cutter's box about its pivot.
 - **Tests:**
   - core:
     - nothing turnable packs as `arrange` does;
@@ -6924,7 +6964,8 @@ stand, and implemented the same day (see "As implemented" below).
 
 **Not in this proposal:**
 - **The command line's choice:** a plate document's `arrange` packs rectangles. A choice there
-  goes with the command line's turns (issue #48).
+  goes with the command line's turns (issue #48); `--arrange-footprint` came with them on
+  2026-11-20 (see TD-162).
 - **The true, non-convex outline:** the model's exact shadow with its hollows, packed with
   non-convex no-fit polygons, for L shapes, crosses and rings. It is a later step, a third
   choice in the same row, only if Outline is not enough.

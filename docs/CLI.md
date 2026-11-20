@@ -373,11 +373,20 @@ model import → optional topology gate → explicit placement → uniform layer
   - `--plate <plate.json>` reads a `karasu-plate` document instead of `--model`. Each object has
     its own model, units, rotation, scale, mirroring, placement, hollowing, drain holes, supports
     and copies, and is either fixed (`"arrange": false`) or arranged (the default).
-  - Footprints include supports, raft and drain holes. They are packed in deterministic shelves,
-    never rotated, centred when no object is fixed, and packed around fixed objects otherwise.
-    Instances that do not fit fail the command.
-  - Each object is prepared once; its copies are rigid moves of it. Overlapping objects print as
-    their union and are listed. Drain holes must not reach other objects.
+  - Footprints include supports and raft. They are packed deterministically from the plate's
+    middle, around fixed objects ([specification](PLATE-SPEC.md), "Packer"). Instances that do
+    not fit fail the command.
+  - `--arrange-turn` (issue #48, TD-162) lets arranged instances turn about Z: each object by the
+    turn that makes its footprint's rectangle smallest by 1 % or more, or that makes it fit the
+    plate; each instance may then lie a quarter turn more. The summary gives each turned
+    instance's `Instance k turn about Z (deg)`.
+  - `--arrange-footprint box|outline` (TD-165): `box`, the default, packs rectangles; `outline`
+    packs each object's convex outline seen from above, so round and pointed models nest closer
+    (with `--arrange-turn`, each instance is also offered half a turn).
+  - Both apply to a single model's copies and to a plate's arranged objects.
+  - Each object is prepared once; its copies are rigid moves of it, turned about the middle of
+    the object's footprint when they turn. Overlapping objects print as their union and are
+    listed. A drain hole cuts only its own object (TD-166).
   - Version 2 documents (TD-089) also take drain holes at the object level, without hollowing,
     and surface holes from the cavity or with a fixed depth; version 1 is still read.
   - Layer heights, exposure and the other print settings stay plate-wide.
