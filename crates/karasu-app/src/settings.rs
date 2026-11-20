@@ -139,6 +139,9 @@ pub struct PlateSettings {
     pub arrange_plates: crate::workspace::PlateChoice,
     /// "Arrange every plate" removes the plates it leaves empty (TD-162, phase 3).
     pub arrange_remove_empty: bool,
+    /// The room Arrange gives each model: its rectangle or its outline (TD-165; rectangles by
+    /// default, owner). Moves, copies and clones to a plate land the same way.
+    pub arrange_footprint: crate::workspace::Footprint,
     /// The folder Export every plate wrote to last.
     pub export_folder: Option<PathBuf>,
     /// The file names' pattern: `{project}`, `{number}` and `{plate}` are replaced.
@@ -155,6 +158,7 @@ impl Default for PlateSettings {
             arrange_turn: false,
             arrange_plates: crate::workspace::PlateChoice::SamePrinter,
             arrange_remove_empty: false,
+            arrange_footprint: crate::workspace::Footprint::Box,
             export_folder: None,
             export_pattern: DEFAULT_EXPORT_PATTERN.to_owned(),
             export_slice_first: true,

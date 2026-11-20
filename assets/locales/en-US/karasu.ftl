@@ -137,6 +137,10 @@ arrange-every-removed = { $count ->
     [one] Removed { $count } plate left empty: { $plates }.
    *[other] Removed { $count } plates left empty: { $plates }.
 }
+arrange-footprint = Footprint
+arrange-footprint-box = Box
+arrange-footprint-outline = Outline
+arrange-footprint-hint = Box: each model takes the rectangle round it, with its supports and raft; models stand in tidy rows, with room between them for tools, and Arrange is quickest. Outline: each model takes the shape a band stretched round it would have, seen from above; round and pointed models stand closer, and a full plate holds more
 arrange-spacing = Spacing between models
 arrange-models = Models
 arrange-models-all = All on the plate ({ $count })

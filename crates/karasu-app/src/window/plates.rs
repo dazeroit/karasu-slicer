@@ -409,7 +409,9 @@ impl MainWindow {
         let plate = to
             .and_then(|id| self.workspace.project().plate(id))
             .map_or_else(|| name.clone(), |p| p.content().name.clone());
-        let message = match self.workspace.transfer(index, to, copy, name) {
+        // It lands by Arrange's footprints (TD-165).
+        let footprint = self.plates.choices.arrange_footprint;
+        let message = match self.workspace.transfer(index, to, copy, name, footprint) {
             Ok(landing) => {
                 if !copy {
                     self.forget_object(index);

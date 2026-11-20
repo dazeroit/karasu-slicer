@@ -512,6 +512,11 @@ plate", 2026-11-07):
     then turn about the plate's vertical, by any angle, to take less room or to fit the plate.
     Its help says that a turn changes the orientation chosen for the model, and the
     notification counts the models turned.
+  - **Footprint: Box / Outline** (TD-165): a two-way choice above the spacing, Box to start
+    with and kept across restarts. Box gives each model the rectangle round it, with its
+    supports and raft; Outline gives it its convex outline seen from above, so round and pointed
+    models nest closer and, with "Turn about Z", turn half round to share their room. Its
+    tooltip says both, in words. Moves, copies and clones to a plate land by the same choice.
   - **While it works** (owner, 2026-11-19), on a thread of its own: the dialog stays, its
     controls disabled. After 150 ms it shows a progress bar with "Measuring the models: 3 of
     12", then "Placing the models on the plates". The footer holds only Cancel, and Escape

@@ -26,8 +26,8 @@ use crate::{
     widgets::{choice, value_row, Unit, UnitField},
     window::MainWindow,
     workspace::{
-        ArrangeJob, ArrangeOptions, ArrangeScope, ArrangeStage, Arranged, LeftOut, Overflow,
-        Planned, PlateChoice, Unarranged,
+        ArrangeJob, ArrangeOptions, ArrangeScope, ArrangeStage, Arranged, Footprint, LeftOut,
+        Overflow, Planned, PlateChoice, Unarranged,
     },
 };
 use eframe::egui;
@@ -78,6 +78,7 @@ impl MainWindow {
         let mut turn = self.plates.choices.arrange_turn;
         let mut which = self.plates.choices.arrange_plates;
         let mut remove_empty = self.plates.choices.arrange_remove_empty;
+        let mut footprint = self.plates.choices.arrange_footprint;
         let (models, summary) = self.arrange_summary(scope, which);
         let title = tr!("arrange-title", plate = &self.workspace.plate().name);
         let mut done = None;
@@ -96,6 +97,7 @@ impl MainWindow {
                         overflow: &mut overflow,
                         by_height: &mut by_height,
                         turn: &mut turn,
+                        footprint: &mut footprint,
                     };
                     arrange_body(ui, &mut choices, (models, summary.as_deref()), working);
                 }
@@ -126,6 +128,7 @@ impl MainWindow {
         choices.arrange_turn = turn;
         choices.arrange_plates = which;
         choices.arrange_remove_empty = remove_empty;
+        choices.arrange_footprint = footprint;
         match done {
             Some(true) => {
                 let options = ArrangeOptions {
@@ -136,6 +139,7 @@ impl MainWindow {
                     scope,
                     plates: which,
                     remove_empty,
+                    footprint,
                 };
                 if self.start_arrange(options) {
                     self.plates.arranging = Some((spacing, scope));
@@ -243,6 +247,7 @@ struct Choices<'a> {
     overflow: &'a mut Overflow,
     by_height: &'a mut bool,
     turn: &'a mut bool,
+    footprint: &'a mut Footprint,
 }
 
 /// The dialog's body: its choices for the plate's `models`, disabled while it works, with its
@@ -261,6 +266,7 @@ fn arrange_body(
         overflow,
         by_height,
         turn,
+        footprint,
     } = choices;
     ui.add_enabled_ui(working.is_none(), |ui| {
         // This plate, or every plate (TD-162, phase 3).
@@ -276,6 +282,24 @@ fn arrange_body(
         }
         if **scope == ArrangeScope::EveryPlate {
             every_rows(ui, which, remove_empty, summary);
+        }
+        ui.add_space(4.0);
+        // The room each model takes (TD-165): its rectangle, or its outline.
+        ui.label(tr!("arrange-footprint"));
+        let mut chosen = usize::from(**footprint == Footprint::Outline);
+        let labels = [
+            tr!("arrange-footprint-box"),
+            tr!("arrange-footprint-outline"),
+        ];
+        if choice(ui, &mut chosen, &labels)
+            .on_hover_text(tr!("arrange-footprint-hint"))
+            .changed()
+        {
+            **footprint = if chosen == 0 {
+                Footprint::Box
+            } else {
+                Footprint::Outline
+            };
         }
         ui.add_space(4.0);
         value_row(ui, tr!("arrange-spacing"), |ui| {
@@ -512,6 +536,7 @@ mod tests {
             scope: crate::workspace::ArrangeScope::ThisPlate,
             plates: crate::workspace::PlateChoice::SamePrinter,
             remove_empty: false,
+            footprint: crate::workspace::Footprint::Box,
         };
         let frame = |window: &mut MainWindow| {
             let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
@@ -625,6 +650,7 @@ mod tests {
             scope: crate::workspace::ArrangeScope::ThisPlate,
             plates: crate::workspace::PlateChoice::SamePrinter,
             remove_empty: false,
+            footprint: crate::workspace::Footprint::Box,
         });
         let latest = window.messages.latest().unwrap();
         assert_eq!(

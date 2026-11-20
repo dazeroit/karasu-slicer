@@ -140,7 +140,9 @@ is placed off the plate.
 - **Top:** the schedule runs to the highest point of any object.
 
 **Overlap:** XY footprint overlap is a diagnostic: `Overlapping footprints` lists the pairs, which
-are united.
+are united. Rectangles are compared first; where two overlap, the convex outlines of the objects'
+sliced surfaces decide (TD-165), so copies clear of each other whose rectangles overlap, as
+Arrange by outline places them, are not listed.
 
 **Drain cutters:**
 - They move with their instance and are removed from every layer analytically, from the models'
