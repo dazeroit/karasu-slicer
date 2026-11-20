@@ -1477,11 +1477,13 @@ packer `arrange` (from the plate's middle outwards, shelves as a fallback) and
 caller.
 - **Preparation:** the CLI prepares every object once at its design placement (`prepare_object`,
   the single-model pipeline).
-- **Placement:** the CLI computes footprints with supports and drain cutters, then arranges the
-  instances.
+- **Placement:** the CLI computes footprints with supports, then arranges the instances.
 - **Slicing:** all instances are concatenated into one world mesh, sliced with the existing
   positive-winding union. Drained instances contribute translated cut rings through a `LayerCut`
-  wrapper; their footprints must not overlap, so the rings stay disjoint.
+  wrapper. Each cuts only its own model (TD-166): an instance whose cutters reach another is put
+  in a cut group apart from it (`LayerCut::groups`, `slicing::winding::FaceGroup`), and the
+  raster samples each group's material minus its own rings, the groups united per sample
+  (`raster::rasterize_grouped_winding_layer_with_cancellation`).
 - **Single model:** it keeps its placement transform path unchanged.
 
 ### Variable and adaptive layer heights (TD-064)

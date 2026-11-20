@@ -8,6 +8,7 @@
 //! first error in layer order is the one reported, as sequentially.
 
 use super::{
+    rasterize_grouped_winding_layer_with_cancellation,
     rasterize_layer_minus_rings_with_cancellation, rasterize_layer_with_cancellation,
     rasterize_winding_layer_with_cancellation, render, stream::RasterStreamError, LayerCut,
     LcdProfile, RasterConfig, RasterError, RasterImage, RasterLimits,
@@ -73,7 +74,9 @@ pub struct ParallelRaster<'a> {
     pub bottom: Option<BottomRaster>,
     /// Raster limits, per layer.
     pub limits: RasterLimits,
-    /// Analytic regions removed from every layer (drainage cutters), or `None`.
+    /// Analytic regions removed from every layer (drainage cutters), or `None`. A cut of several
+    /// groups (TD-166, [`LayerCut::groups`]) removes each group's rings from that group's faces
+    /// alone, and needs winding layers.
     pub cut: Option<&'a (dyn LayerCut + Sync)>,
     /// Faces of `mesh` whose material `cut` leaves (the supports, TD-123), as face index ranges
     /// in any order; empty to cut everything. Winding layers only.
@@ -193,6 +196,14 @@ pub fn with_parallel_raster<R>(
     .and_then(|kernel| match spec.fill {
         LayerFill::Strict if !spec.kept_faces.is_empty() => Err(LayerFailure::KeptFacesNeedWinding),
         _ => Ok(kernel.with_kept_faces(spec.kept_faces)),
+    })
+    .and_then(|kernel| {
+        // A cut of several groups (TD-166): each group's rings cut its own faces only.
+        let groups = spec.cut.map_or(&[][..], |cut| cut.groups());
+        match spec.fill {
+            LayerFill::Strict if !groups.is_empty() => Err(LayerFailure::FaceGroupsNeedWinding),
+            _ => kernel.with_face_groups(groups),
+        }
     });
     let kernel = match kernel {
         Ok(kernel) => kernel,
@@ -406,12 +417,23 @@ fn compute(
             .winding_layer(plane, previous, cursor, &mut cancel)
             .map_err(source)?;
         // Cut sections at the Z the body was actually sectioned at.
-        let rings = spec.cut.map_or_else(Vec::new, |cut| {
-            cut.rings(LayerPlane {
-                z_mm: layer.sampled_z_mm(),
-                ..layer.plane()
-            })
-        });
+        let at = LayerPlane {
+            z_mm: layer.sampled_z_mm(),
+            ..layer.plane()
+        };
+        if let (Some(cut), false) = (spec.cut, layer.groups().is_empty()) {
+            return rasterize_grouped_winding_layer_with_cancellation(
+                &layer,
+                rule,
+                &cut.group_rings(at),
+                spec.profile,
+                raster,
+                spec.limits,
+                &mut cancel,
+            )
+            .map_err(RasterStreamError::Raster);
+        }
+        let rings = spec.cut.map_or_else(Vec::new, |cut| cut.rings(at));
         return rasterize_winding_layer_with_cancellation(
             &layer,
             rule,

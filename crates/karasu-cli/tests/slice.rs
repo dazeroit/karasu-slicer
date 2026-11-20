@@ -3144,6 +3144,71 @@ fn copies_are_arranged_centred_and_refused_when_they_do_not_fit() {
 }
 
 #[test]
+fn drain_holes_cut_only_their_own_model_on_a_plate() {
+    // TD-166: box A (10 to 30 mm in X) and box B beside it (31.5 to 51.5 mm), each 2 mm tall.
+    // A's hole runs along X from 33 mm into A, so its cylinder reaches B; it must cut A alone.
+    // (Mutual reaches and their groups: `plate::tests` and the raster tests.)
+    let setup = Setup::new();
+    setup.cube();
+    let a = r#"{"name":"A","model":"box.stl","units":"mm","arrange":false,"drain_holes":[
+        {"entry_mm":[33,25,1],"direction":[-1,0,0],"length_mm":5,"diameter_mm":2}]}"#;
+    let b =
+        r#"{"name":"B","model":"box.stl","units":"mm","arrange":false,"translate_mm":[21.5,0,0]}"#;
+    let plate = |name: &str, objects: &[&str]| {
+        setup.temp.write(
+            name,
+            format!(
+                r#"{{"format":"karasu-plate","version":2,"objects":[{}]}}"#,
+                objects.join(",")
+            ),
+        )
+    };
+    let volume = |plate: &Path, name: &str| -> (String, f64) {
+        let report = success(&setup.slice_plate(plate, "reference", &setup.temp.path(name)));
+        let volume = field(&report, "Sampled mask volume (mm^3)")
+            .parse()
+            .unwrap();
+        (report, volume)
+    };
+    let (_, a_alone) = volume(&plate("a.json", &[a]), "a");
+    let (_, b_alone) = volume(&plate("b.json", &[b]), "b");
+    assert!(a_alone < b_alone);
+
+    // Once refused, now sliced, with B whole.
+    let both = plate("both.json", &[a, b]);
+    let (report, united) = volume(&both, "both");
+    assert!((united - (a_alone + b_alone)).abs() < 1e-6, "{report}");
+    assert_eq!(field(&report, "Overlapping footprints"), "none");
+    assert_eq!(
+        field(&report, "Drain holes reaching other models"),
+        r#"1, each cutting only its own model: hole 1 of object 1 ("A") copy 1 reaches object 2 ("B") copy 1"#
+    );
+
+    // Strict layers cannot keep a hole to its own model: refused, naming the hole.
+    let error = failure(
+        &Command::new(env!("CARGO_BIN_EXE_karasu-cli"))
+            .arg("slice")
+            .arg("--plate")
+            .arg(&both)
+            .arg("--printer")
+            .arg(&setup.printer)
+            .arg("--resin")
+            .arg(&setup.resin)
+            .args(["--format", "reference", "--fill", "strict", "--output"])
+            .arg(setup.temp.path("strict"))
+            .output()
+            .unwrap(),
+        1,
+    );
+    assert!(
+        error.contains(
+            r#"drain hole 1 of object 1 ("A") copy 1 reaches object 2 ("B") copy 1, and strict layers cannot keep a drain hole to its own model"#
+        ),
+        "{error}"
+    );
+}
+
+#[test]
 fn plates_unite_fixed_and_arranged_objects() {
     let setup = Setup::new();
     setup.cube();

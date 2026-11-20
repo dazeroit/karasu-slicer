@@ -104,8 +104,8 @@ Each **instance** is the prepared geometry moved rigidly in XY by an offset:
 ## Footprints and arrangement
 
 **Footprint** of an object: the XY rectangle of everything it prints at its design placement.
-- **Contents:** the sliced surface (model or hollow shell, plus supports and raft) and every
-  drain-hole cylinder (axis ends ± radius).
+- **Contents:** the sliced surface (model or hollow shell, plus supports and raft). Drain-hole
+  cylinders are not part of it, as each cuts only its own model (TD-166, below).
 - **Shape:** footprints are axis-aligned and never rotated.
 
 **Packer (`plate::arrange`):** deterministic, from the plate's middle outwards (owner,
@@ -145,8 +145,20 @@ are united.
 **Drain cutters:**
 - They move with their instance and are removed from every layer analytically, from the models'
   material only: every instance's supports keep theirs (TD-123).
-- Their rings must be disjoint, so an overlap that involves a footprint with drain holes is an
-  error.
+- **Each cuts only its own model (TD-166):**
+  - **Reach:** a cutter reaches another instance when its XY box meets that instance's
+    footprint, touching included. The box of a cylinder with axis from `p` to `q`, unit
+    direction `a` and radius `r` spans `min(p_k, q_k) − r·√(1 − a_k²)` to
+    `max(p_k, q_k) + r·√(1 − a_k²)` along each axis `k`, grown by the cutters' 1 µm building
+    tolerance.
+  - **Cut groups:** group 0 holds every instance but those whose cutters reach another. Each of
+    those takes, in instance order, the lowest group from 1 that holds no instance it reaches or
+    that reaches it.
+  - **Sampling:** each group's cutters remove material from that group's models alone; the
+    groups are united per sample, before gray levels, so the plate is still sampled as one body.
+    A plate with no reach is one group and slices exactly as before.
+  - **Strict layers** (`--fill strict`) cannot keep groups apart: a reach is refused, naming the
+    hole and the instance it reaches.
 
 **Previews:** previews show the united plate.
 
@@ -169,7 +181,9 @@ placement transform; its outputs are unchanged.
     - `Instances: n (arranged|fixed), footprint w x d mm`;
     - one `Instance k translation (mm)` per copy;
     - the transform, diagnosis, supports and hollowing;
-  - finally `Overlapping footprints`.
+  - then `Overlapping footprints`;
+  - and, only when a cutter reaches another instance, `Drain holes reaching other models: n,
+    each cutting only its own model:` with the first ten.
 
 ## Not in this version
 

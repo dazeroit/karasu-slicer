@@ -39,7 +39,9 @@ use super::{
     section_mesh_z_indexed_with_cancellation, section_mesh_z_with_cancellation,
     validity::{ValidityError, ValidityLimits},
     vertex_heights,
-    winding::{self, SectionClosure, UnbalancedCrossing, WindingLayer},
+    winding::{
+        self, FaceGroup, FaceGroups, FaceSets, SectionClosure, UnbalancedCrossing, WindingLayer,
+    },
     FaceZCursor, FaceZIndex, FaceZSweep, SectionError, SectionLimits, SectionTransform,
 };
 use crate::{
@@ -199,6 +201,11 @@ pub enum LayerFailure {
     /// Faces whose material a cut leaves (TD-123) were given for strict layers, which cannot
     /// tell them apart: only winding layers can.
     KeptFacesNeedWinding,
+    /// A cut of several groups (TD-166) was given for strict layers, which cannot tell the
+    /// groups' material apart: only winding layers can.
+    FaceGroupsNeedWinding,
+    /// Cut groups (TD-166) with a group 0, or whose face or vertex ranges overlap.
+    InvalidFaceGroups,
     /// With vertex-avoiding planes, no plane below the scheduled one both avoids every vertex
     /// height and stays above the previous layer's plane.
     PlaneSeparation {
@@ -268,6 +275,13 @@ impl fmt::Display for LayerFailure {
             Self::WorkerPanicked => f.write_str("a parallel layer worker panicked"),
             Self::KeptFacesNeedWinding => {
                 f.write_str("material kept from the cut needs winding layers, not strict ones")
+            }
+            Self::FaceGroupsNeedWinding => f.write_str(
+                "a cut that removes each model's holes from that model alone needs winding \
+                 layers, not strict ones",
+            ),
+            Self::InvalidFaceGroups => {
+                f.write_str("cut groups must be 1 or more, with disjoint face and vertex ranges")
             }
             Self::PlaneSeparation { scheduled_z_mm } => write!(
                 f,
@@ -711,6 +725,8 @@ pub(crate) struct LayerKernel<'a> {
     pub(crate) closure: Option<(SectionClosure, RimTable)>,
     /// Faces whose material a cut leaves (TD-123): sorted, disjoint ranges.
     pub(crate) kept: Vec<Range<usize>>,
+    /// The cut groups (TD-166); none by default.
+    pub(crate) groups: FaceGroups,
 }
 
 impl<'a> LayerKernel<'a> {
@@ -744,6 +760,7 @@ impl<'a> LayerKernel<'a> {
             heights,
             closure: None,
             kept: Vec::new(),
+            groups: FaceGroups::default(),
         })
     }
 
@@ -764,6 +781,16 @@ impl<'a> LayerKernel<'a> {
         }
         self.kept = merged;
         self
+    }
+
+    /// Tell the cut groups apart in winding layers (TD-166): each group's cut removes the
+    /// material of its own faces only. Without groups, one cut removes all.
+    ///
+    /// # Errors
+    /// [`LayerFailure::InvalidFaceGroups`] for a group 0 or overlapping ranges.
+    pub(crate) fn with_face_groups(mut self, groups: &[FaceGroup]) -> Result<Self, LayerFailure> {
+        self.groups = FaceGroups::new(groups)?;
+        Ok(self)
     }
 
     /// Close open sections at holes in winding layers (TD-054), extracting the mesh's boundary
@@ -894,7 +921,10 @@ impl<'a> LayerKernel<'a> {
             self.transform,
             self.config.max_output_payload_bytes,
             closure,
-            &self.kept,
+            FaceSets {
+                kept: &self.kept,
+                groups: &self.groups,
+            },
             cancel,
         )?;
         cancel.check(Checkpoint::LayerComplete)?;

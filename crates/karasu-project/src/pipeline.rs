@@ -1328,10 +1328,14 @@ fn run(args: &SliceRequest, ctx: &mut Context<'_>) -> Result<SliceOutcome, Failu
                 (mesh, transform, cut, object.top_z)
             }
             Some(layout) => {
-                let (mesh, kept) = layout.united(&prepared)?;
+                // Strict layers cannot keep a drain hole to its own model (TD-166).
+                if args.fill == Fill::Strict {
+                    layout.refuse_reaches()?;
+                }
+                let (mesh, kept, groups) = layout.united(&prepared)?;
                 united = mesh;
                 kept_faces = kept;
-                plate_cut = layout.cut(&prepared);
+                plate_cut = layout.cut(&prepared, groups);
                 let cut = plate_cut.as_ref().map(|c| c as &(dyn LayerCut + Sync));
                 (&united, SectionTransform::Identity, cut, layout.top_z)
             }

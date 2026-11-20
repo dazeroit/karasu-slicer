@@ -442,3 +442,277 @@ fn a_cut_leaves_the_material_of_kept_faces() {
     strict.kept_faces = &kept;
     assert!(parallel(&strict, &never)[0].is_err());
 }
+
+/// A cut of cut groups (TD-166): the strip removes the material of group `strip_group` alone, the
+/// other groups having no rings.
+struct GroupedStrip {
+    groups: Vec<karasu_core::slicing::winding::FaceGroup>,
+    strip_group: usize,
+    count: usize,
+}
+impl karasu_core::raster::LayerCut for GroupedStrip {
+    fn rings(&self, plane: karasu_core::slicing::schedule::LayerPlane) -> Vec<Vec<[f64; 2]>> {
+        Strip.rings(plane)
+    }
+    fn groups(&self) -> &[karasu_core::slicing::winding::FaceGroup] {
+        &self.groups
+    }
+    fn group_rings(
+        &self,
+        plane: karasu_core::slicing::schedule::LayerPlane,
+    ) -> Vec<Vec<Vec<[f64; 2]>>> {
+        (0..self.count)
+            .map(|g| {
+                if g == self.strip_group {
+                    Strip.rings(plane)
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
+    }
+}
+
+/// Group `group` over the box pushed `index`-th (each box has 12 faces and 8 vertices).
+fn box_group(group: usize, index: usize) -> karasu_core::slicing::winding::FaceGroup {
+    karasu_core::slicing::winding::FaceGroup {
+        group,
+        faces: 12 * index..12 * (index + 1),
+        vertices: 8 * index..8 * (index + 1),
+    }
+}
+
+/// The images of `mesh` in winding layers with `cut` and `kept` faces, on `threads` threads.
+fn winding_images(
+    mesh: &TriangleMesh,
+    plan: &LayerSchedule,
+    cut: Option<&(dyn karasu_core::raster::LayerCut + Sync)>,
+    kept: &[std::ops::Range<usize>],
+    config: RasterConfig,
+    threads: usize,
+) -> Vec<ParallelItem> {
+    let mut spec = spec(mesh, plan, threads, RasterLimits::default());
+    spec.fill = LayerFill::Winding(karasu_core::slicing::winding::WindingRule::Positive);
+    spec.cut = cut;
+    spec.kept_faces = kept;
+    spec.raster = config;
+    parallel(&spec, &never)
+}
+
+#[test]
+fn a_grouped_cut_removes_only_its_own_groups_material() {
+    // TD-166: model A (group 1) and model B (group 0) beside it; the strip, A's cut, crosses
+    // both.
+    let (mut points, mut triangles) = (Vec::new(), Vec::new());
+    push_box(
+        [2.0, 2.0, 0.0],
+        [10.0, 18.0, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    push_box(
+        [11.0, 8.0, 0.0],
+        [16.0, 12.0, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+    let plan = schedule();
+    let grouped = GroupedStrip {
+        groups: vec![box_group(1, 0)],
+        strip_group: 1,
+        count: 2,
+    };
+    let at = |pixels: &[u8], x: usize, y: usize| pixels[y * 200 + x];
+    let layer = |cut: &(dyn karasu_core::raster::LayerCut + Sync), threads| {
+        winding_images(&mesh, &plan, Some(cut), &[], raster(), threads)
+            .into_iter()
+            .nth(10)
+            .unwrap()
+            .unwrap()
+            .to_pixels()
+            .unwrap()
+    };
+    let one_cut = layer(&Strip, 1);
+    for threads in [1, 4] {
+        let own = layer(&grouped, threads);
+        // A in the strip: cut either way.
+        assert_eq!(at(&one_cut, 95, 100), 0);
+        assert_eq!(at(&own, 95, 100), 0);
+        // B in the strip: cut by one cut, whole when the strip is A's alone.
+        assert_eq!(at(&one_cut, 130, 100), 0);
+        assert_eq!(at(&own, 130, 100), 255);
+        // Outside the strip nothing changes, and between the boxes stays empty.
+        assert_eq!(at(&own, 50, 50), 255);
+        assert_eq!(at(&own, 130, 85), 255);
+        assert_eq!(at(&own, 105, 100), 0);
+    }
+}
+
+#[test]
+fn grouped_cuts_that_reach_no_other_group_slice_as_one_cut() {
+    // TD-166: model A and a support overlapping it in group 1 with the strip, model B in group
+    // 0 clear of the strip. Every layer equals one cut's, anti-aliased or with binary supports.
+    let (mut points, mut triangles) = (Vec::new(), Vec::new());
+    push_box(
+        [2.03, 2.07, 0.0],
+        [10.05, 18.01, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    push_box(
+        [12.02, 2.04, 0.0],
+        [16.06, 6.09, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    push_box(
+        [6.01, 8.03, 0.0],
+        [9.57, 12.02, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+    let plan = schedule();
+    let kept: Vec<std::ops::Range<usize>> = std::iter::once(24..36).collect();
+    let grouped = GroupedStrip {
+        groups: vec![box_group(1, 0), box_group(1, 2)],
+        strip_group: 1,
+        count: 2,
+    };
+    for kept_sampling in [
+        karasu_core::raster::KeptSampling::Antialiased,
+        karasu_core::raster::KeptSampling::Binary,
+    ] {
+        let config = RasterConfig {
+            samples_per_axis: 4,
+            kept: kept_sampling,
+            ..raster()
+        };
+        let reference = winding_images(&mesh, &plan, Some(&Strip), &kept, config, 1);
+        let images = winding_images(&mesh, &plan, Some(&grouped), &kept, config, 3);
+        assert_eq!(images.len(), reference.len());
+        for (k, (image, expected)) in images.iter().zip(&reference).enumerate() {
+            let (image, expected) = (image.as_ref().unwrap(), expected.as_ref().unwrap());
+            assert_eq!(image.mask(), expected.mask(), "{kept_sampling:?} layer {k}");
+            assert_eq!(
+                image.stats(),
+                expected.stats(),
+                "{kept_sampling:?} layer {k}"
+            );
+        }
+    }
+}
+
+#[test]
+fn overlapping_groups_are_united_per_sample() {
+    // TD-166: two overlapping models in different groups, no rings: the same gray levels as
+    // their union in one group, where their edges cross pixels.
+    let (mut points, mut triangles) = (Vec::new(), Vec::new());
+    push_box(
+        [2.03, 2.07, 0.0],
+        [10.05, 18.01, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    push_box(
+        [8.02, 4.04, 0.0],
+        [14.06, 12.09, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+    let plan = schedule();
+    let grouped = GroupedStrip {
+        groups: vec![box_group(2, 1)],
+        strip_group: 5,
+        count: 3,
+    };
+    let config = RasterConfig {
+        samples_per_axis: 4,
+        ..raster()
+    };
+    let reference = winding_images(&mesh, &plan, None, &[], config, 1);
+    let images = winding_images(&mesh, &plan, Some(&grouped), &[], config, 2);
+    for (image, expected) in images.iter().zip(&reference) {
+        let (image, expected) = (image.as_ref().unwrap(), expected.as_ref().unwrap());
+        assert_eq!(image.mask(), expected.mask());
+    }
+    // Some pixel is gray, so the union was sampled, not its levels.
+    let pixels = reference[10].as_ref().unwrap().to_pixels().unwrap();
+    assert!(pixels.iter().any(|&p| p != 0 && p != 255));
+}
+
+#[test]
+fn closure_chords_follow_their_bodys_group() {
+    // TD-166 with TD-054: model A, open on its +X side, in group 1 with the strip; model B in
+    // group 0. Each closure chord must close A's sections in A's group, or its winding breaks.
+    let (mut points, mut triangles) = (Vec::new(), Vec::new());
+    push_box(
+        [2.0, 2.0, 0.0],
+        [10.0, 18.0, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    // The +X face of the first box (corners 1, 3, 7, 5) is its last two triangles.
+    triangles.truncate(10);
+    push_box(
+        [11.0, 8.0, 0.0],
+        [16.0, 12.0, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+    let plan = schedule();
+    let grouped = GroupedStrip {
+        groups: vec![karasu_core::slicing::winding::FaceGroup {
+            group: 1,
+            faces: 0..10,
+            vertices: 0..8,
+        }],
+        strip_group: 1,
+        count: 2,
+    };
+    let mut spec = spec(&mesh, &plan, 2, RasterLimits::default());
+    spec.fill = LayerFill::Winding(karasu_core::slicing::winding::WindingRule::Positive);
+    spec.closure = Some(karasu_core::slicing::winding::SectionClosure { max_gap_mm: 20.0 });
+    spec.cut = Some(&grouped);
+    let image = parallel(&spec, &never)
+        .into_iter()
+        .nth(10)
+        .unwrap()
+        .unwrap();
+    assert_eq!(image.closure().unwrap().chords, 1);
+    let pixels = image.to_pixels().unwrap();
+    let at = |x: usize, y: usize| pixels[y * 200 + x];
+    // A is closed and cut in the strip; B keeps its material there.
+    assert_eq!(at(50, 50), 255);
+    assert_eq!(at(95, 100), 0);
+    assert_eq!(at(130, 100), 255);
+}
+
+#[test]
+fn strict_layers_refuse_a_grouped_cut() {
+    let (mut points, mut triangles) = (Vec::new(), Vec::new());
+    push_box(
+        [2.0, 2.0, 0.0],
+        [10.0, 18.0, 8.0],
+        &mut points,
+        &mut triangles,
+    );
+    let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+    let plan = schedule();
+    let grouped = GroupedStrip {
+        groups: vec![box_group(1, 0)],
+        strip_group: 1,
+        count: 2,
+    };
+    let mut strict = spec(&mesh, &plan, 1, RasterLimits::default());
+    strict.cut = Some(&grouped);
+    let images = parallel(&strict, &never);
+    assert!(matches!(
+        &images[0],
+        Err(RasterStreamError::Source(e))
+            if e.cause == karasu_core::slicing::engine::LayerFailure::FaceGroupsNeedWinding
+    ));
+}
