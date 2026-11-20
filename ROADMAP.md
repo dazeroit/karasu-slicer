@@ -1468,6 +1468,16 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        the same day, issue #52):** a plate is sliced in cut groups, so a drain hole never cuts
        another model, as the viewport shows. The slice no longer refuses a plate whose cutters
        reach another model; strict layers still do.
+     - **Mini supports: standard supports first, a density, branches and a maximum length
+       (owner, 2026-11-20, TD-167, implemented the same day):** after TD-164, the tools planned
+       many more mini supports. Standard supports are tried everywhere first, and mini supports
+       come last. The Automatic tool gets a mini density (25 to 100 %, 100 % by default). A mini
+       support may stand on another (0 to 4 branches, 2 by default, one level). A mini support
+       the tools place is at most 10 mm long (1 to 50 mm) and rises at least 2 mm (0 to 10 mm,
+       owner after the first build). On HillGiant: 60 mini supports instead of 221, none longer
+       than 10 mm nor lower than 2 mm; the crevices only a lower one fits are left and listed
+       (59 places, 8 of 307 islands). Native Windows validation and a test print are still to
+       come.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

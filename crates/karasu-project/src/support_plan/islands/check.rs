@@ -235,8 +235,8 @@ pub(crate) fn check_built(
                     &parameters,
                     growing.document,
                     growing.volume,
-                    tip,
-                    normal,
+                    (tip, normal),
+                    Some(growing.values.mini_limits()),
                 )?;
                 routed.support.origin = growing.origin;
                 Some(Planned {

@@ -172,8 +172,8 @@ impl MainWindow {
         );
         (current.islands.weight, current.islands.mine) = preset;
         follow!(current.islands, old.islands, new.islands;
-            join_mm, skip_under_mm2, foot_on_model, minis, branch_mm, per_trunk, merge_mm,
-            per_group, levels, contact_fit_min_mm, sphere_contact);
+            join_mm, skip_under_mm2, foot_on_model, minis, mini_branches, mini_max_length_mm,
+            mini_min_height_mm, branch_mm, per_trunk, merge_mm, per_group, levels, contact_fit_min_mm, sphere_contact);
         let mut preset = (current.automatic.weight, current.automatic.mine);
         follow_preset(
             &mut preset,
@@ -195,8 +195,10 @@ impl MainWindow {
             axes, limited, limit_deg, keep_away_mm, priority, weights);
         follow!(current.automatic, old.automatic, new.automatic;
             cover, place, skip_under_mm2, spacing_mm, steep_spacing_mm, join_mm, feet_on_model,
-            minis, branches, branch_mm, per_trunk, merge_mm, per_group, levels, braces, passes,
-            contact_fit_min_mm, sphere_contact, clearance_mm);
+            minis, mini_density_pct, mini_branches, mini_max_length_mm, mini_min_height_mm,
+            branches, branch_mm,
+            per_trunk, merge_mm, per_group, levels, braces, passes, contact_fit_min_mm,
+            sphere_contact, clearance_mm);
         self.set_tool_values(&current);
     }
 

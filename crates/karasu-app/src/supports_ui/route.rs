@@ -175,14 +175,14 @@ impl SupportsUi {
         let parameters = self.next.parameters();
         if self.mini {
             let surface = self.current_route(workspace, index)?;
-            // By hand: the user places it, touching allowed (owner, 2026-11-04).
+            // By hand: the user places it, touching allowed (owner, 2026-11-04), and with no
+            // maximum length (TD-167).
             return mini_routed(
                 surface,
                 &parameters,
                 workspace.supports(index),
-                tip,
-                normal,
-                false,
+                (tip, normal),
+                (false, None),
             );
         }
         // In the cavity a support always finds its way: straight down it would go through the

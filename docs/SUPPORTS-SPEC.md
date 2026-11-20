@@ -355,7 +355,9 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
 - **Mini supports and the model** (owner, 2026-10-30: a mini support rests among the model's
   parts, as in other slicers): no part of a mini support keeps the clearance, and touching or
   entering the model is no error, since the resin there is one. The Islands and Automatic tools place
-  none that touches the model away from its balls (TD-126); placed by hand, it may. Where its axis crosses a surface
+  none that touches the model away from its balls (TD-126), nor one longer than their maximum
+  length or lower than their minimum height (TD-167), and may stand one on another's rod;
+  placed by hand, it may touch, at any length and height. Where its axis crosses a surface
   triangle (checked from `2τ` past each end's ball centre on the model), a **warning** says so,
   once per support.
 - **Piercing:** the penetration segment, from depth `2τ` to `p + τ` below the anchor along the

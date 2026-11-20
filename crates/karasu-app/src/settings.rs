@@ -476,6 +476,13 @@ pub struct ToolSettings {
     /// Islands: where a support finds no room or no way down, a mini support stands on the
     /// model below its tip (a default, owner 2026-10-30).
     pub island_minis: bool,
+    /// Islands: the branches a mini support carries at most, other mini supports (a default,
+    /// TD-167).
+    pub island_mini_branches: u32,
+    /// Islands: the longest a mini support may be, in mm (a default, TD-167).
+    pub island_mini_max_length_mm: f64,
+    /// Islands: the least height a mini support may rise, in mm (a default, TD-167).
+    pub island_mini_min_height_mm: f64,
     /// Islands: tips closer than this share a trunk, in mm; zero, no branches (a default).
     pub island_branch_mm: f64,
     /// Islands: the branches a trunk takes at most (a default).
@@ -621,6 +628,9 @@ impl ToolSettings {
                 skip_under_mm2: self.island_skip_under_mm2,
                 foot_on_model: self.island_foot_on_model,
                 minis: self.island_minis,
+                mini_branches: self.island_mini_branches,
+                mini_max_length_mm: self.island_mini_max_length_mm,
+                mini_min_height_mm: self.island_mini_min_height_mm,
                 branch_mm: self.island_branch_mm,
                 per_trunk: self.island_per_trunk,
                 merge_mm: self.island_merge_mm,
@@ -683,6 +693,9 @@ impl ToolSettings {
         self.island_skip_under_mm2 = defaults.island_supports.skip_under_mm2;
         self.island_foot_on_model = defaults.island_supports.foot_on_model;
         self.island_minis = defaults.island_supports.minis;
+        self.island_mini_branches = defaults.island_supports.mini_branches;
+        self.island_mini_max_length_mm = defaults.island_supports.mini_max_length_mm;
+        self.island_mini_min_height_mm = defaults.island_supports.mini_min_height_mm;
         self.island_branch_mm = defaults.island_supports.branch_mm;
         self.island_per_trunk = defaults.island_supports.per_trunk;
         self.island_merge_mm = defaults.island_supports.merge_mm;
@@ -779,6 +792,11 @@ impl Default for ToolSettings {
             island_skip_under_mm2: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.skip_under_mm2,
             island_foot_on_model: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.foot_on_model,
             island_minis: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.minis,
+            island_mini_branches: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.mini_branches,
+            island_mini_max_length_mm: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS
+                .mini_max_length_mm,
+            island_mini_min_height_mm: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS
+                .mini_min_height_mm,
             island_branch_mm: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.branch_mm,
             island_per_trunk: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.per_trunk,
             island_merge_mm: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.merge_mm,

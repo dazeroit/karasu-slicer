@@ -60,8 +60,9 @@ use super::{
     islands::{
         self, add_planned,
         check::{self, check_built, distance, held, Kept},
-        groups, grow, hold_every_start, Growing, Island, IslandSupports, Nudge, Outcome, Skip,
-        Starts, Tip, PROBE_MM,
+        groups, grow, hold_every_start,
+        minis::{self, Minis},
+        Growing, Island, IslandSupports, Nudge, Outcome, Skip, Starts, Tip, PROBE_MM,
     },
     route::RouteSurface,
     values::{NextSupport, SupportPreset, Weight},
@@ -89,6 +90,9 @@ pub const SPACING_MM: std::ops::RangeInclusive<f64> = 0.5..=20.0;
 pub const LIFT_MM: std::ops::RangeInclusive<f64> = 0.0..=50.0;
 /// The densities the panel accepts, in percent of the tips the spacing gives (TD-127).
 pub const DENSITY_PCT: std::ops::RangeInclusive<f64> = 50.0..=200.0;
+/// The mini supports' densities the panel accepts, in percent of the tips the spacing gives
+/// (TD-167).
+pub const MINI_DENSITY_PCT: std::ops::RangeInclusive<f64> = 25.0..=100.0;
 /// The underside areas from which tips stand closer that the panel accepts, in mm².
 pub const WIDE_FROM_MM2: std::ops::RangeInclusive<f64> = 1.0..=1000.0;
 /// The closest share of the spacing under a wide underside the panel accepts, in percent.
@@ -197,6 +201,16 @@ pub struct AutoSupports {
     /// Where a support finds no room or no way down, a mini support stands on the model below
     /// its tip (owner, 2026-10-30).
     pub minis: bool,
+    /// The mini supports' tips per area, in percent of what the spacings give (TD-167): their
+    /// reach scales by `sqrt(100 / mini_density_pct)`. Islands keep theirs whatever it is.
+    pub mini_density_pct: f64,
+    /// The branches a mini support carries at most, other mini supports (TD-167); zero, none.
+    pub mini_branches: u32,
+    /// The longest a mini support may be, between its balls' centres, in mm (TD-167).
+    pub mini_max_length_mm: f64,
+    /// The least height a mini support may rise, between its balls' centres, in mm (TD-167,
+    /// owner 2026-11-20); zero, no minimum.
+    pub mini_min_height_mm: f64,
     /// Tips close together share trunks, and trunks merge.
     pub branches: bool,
     /// Tips closer than this in plan share a trunk, in mm.
@@ -252,6 +266,10 @@ pub const DEFAULT_AUTO_SUPPORTS: AutoSupports = AutoSupports {
     join_mm: 0.0,
     feet_on_model: true,
     minis: true,
+    mini_density_pct: 100.0,
+    mini_branches: 2,
+    mini_max_length_mm: 10.0,
+    mini_min_height_mm: 2.0,
     branches: true,
     branch_mm: 5.0,
     per_trunk: 4,
@@ -287,6 +305,7 @@ impl AutoSupports {
             && LIFT_MM.contains(&self.lift_mm)
             && DENSITY_PCT.contains(&self.density_pct)
             && DENSITY_PCT.contains(&self.cavity_density_pct)
+            && MINI_DENSITY_PCT.contains(&self.mini_density_pct)
             && WIDE_FROM_MM2.contains(&self.wide_from_mm2)
             && WIDE_CLOSEST_PCT.contains(&self.wide_closest_pct)
             && PASSES.contains(&f64::from(self.passes))
@@ -303,6 +322,17 @@ impl AutoSupports {
     #[must_use]
     pub fn density_scale(&self) -> f64 {
         (100.0 / self.density_pct).sqrt()
+    }
+
+    /// How much farther than a standard tip's a mini support's tip reaches (TD-167): 1 at
+    /// 100 %, and with mini supports off.
+    #[must_use]
+    pub fn mini_scale(&self) -> f64 {
+        if self.minis {
+            (100.0 / self.mini_density_pct).sqrt()
+        } else {
+            1.0
+        }
     }
 
     /// How much closer the tips stand under an underside of `area_mm2` (TD-127): 1 when wide
@@ -354,6 +384,9 @@ impl AutoSupports {
             skip_under_mm2: self.skip_under_mm2,
             foot_on_model: self.feet_on_model,
             minis: self.minis,
+            mini_branches: self.mini_branches,
+            mini_max_length_mm: self.mini_max_length_mm,
+            mini_min_height_mm: self.mini_min_height_mm,
             branch_mm: if self.branches { self.branch_mm } else { 0.0 },
             per_trunk: self.per_trunk,
             merge_mm: if self.branches { self.merge_mm } else { 0.0 },
@@ -743,11 +776,16 @@ pub fn plan_tips(
         merge_mm: 0.0,
         ..values.growing()
     };
+    // Standard supports first; mini supports last, at the tips left (TD-167).
+    let standard_values = IslandSupports {
+        minis: false,
+        ..growing_values
+    };
     let growing = Growing {
         surface,
         next,
         document: input.document.as_ref(),
-        values: &growing_values,
+        values: &standard_values,
         volume: input.volume,
         origin,
         nudge: None,
@@ -769,12 +807,40 @@ pub fn plan_tips(
         };
         check_built(&kept, model, &mut out.plan, &growing, &mut why_at, stop);
     }
-    let made: Vec<[f64; 3]> = out
-        .plan
-        .supports
-        .iter()
-        .map(|p| p.routed.support.tip_mm)
-        .collect();
+    let made = |plan: &Outcome| -> Vec<[f64; 3]> {
+        plan.supports
+            .iter()
+            .map(|p| p.routed.support.tip_mm)
+            .collect()
+    };
+    if growing_values.minis && !stop.load(Ordering::Relaxed) {
+        let with_minis = Growing {
+            values: &growing_values,
+            ..growing
+        };
+        let mut minis = Minis::new(&with_minis);
+        let standing = made(&out.plan);
+        for &tip in tips {
+            if standing
+                .iter()
+                .any(|&made| distance(made, tip.0) <= SIDE_HELD_MM)
+            {
+                continue;
+            }
+            if let Err(Some(why)) = minis.place(&mut out.plan, tip) {
+                minis::refused(&mut why_at, tip.0, why);
+            }
+        }
+        minis.branch(&mut out.plan);
+        if let Some(model) = &input.model {
+            let kept = Kept {
+                document: input.document.as_ref(),
+                to_model: &input.to_model,
+            };
+            check_built(&kept, model, &mut out.plan, &with_minis, &mut why_at, stop);
+        }
+    }
+    let made = made(&out.plan);
     for &(point, ..) in tips {
         if !made.iter().any(|&tip| distance(tip, point) <= SIDE_HELD_MM) {
             out.left.push(Left {
@@ -804,11 +870,17 @@ fn plan_with(
         return out;
     };
     let growing_values = values.growing();
+    // Standard supports first, every place of an island tried; mini supports last, in the mini
+    // pass (TD-167).
+    let standard_values = IslandSupports {
+        minis: false,
+        ..growing_values
+    };
     let growing = Growing {
         surface,
         next,
         document: input.document.as_ref(),
-        values: &growing_values,
+        values: &standard_values,
         volume: input.volume,
         origin: SupportOrigin::Automatic,
         nudge: None,
@@ -909,16 +981,16 @@ fn plan_with(
     for (_, tip) in &tasks {
         taken_now.add(tip.0);
     }
-    let mut sides: Vec<Tip> = Vec::new();
+    let mut sides: Vec<&Candidate> = Vec::new();
     let mut taken = Near::new(values.widest_reach());
     for c in &probed.sides {
         if !taken_now.within(c.tip.0, c.reach / 2.0) && !taken.within(c.tip.0, c.reach) {
             taken.add(c.tip.0);
-            sides.push(c.tip);
+            sides.push(c);
         }
     }
-    for &tip in &sides {
-        tasks.push((tasks.len(), tip));
+    for c in &sides {
+        tasks.push((tasks.len(), c.tip));
     }
     if stop.load(Ordering::Relaxed) {
         return out;
@@ -939,8 +1011,9 @@ fn plan_with(
             p
         }));
     // The closing check: candidates still uncovered get the next tips, pass after pass.
+    // As wide as the mini supports' reach, which covers too (TD-167).
     let tips_now = |supports: &[islands::Planned]| {
-        let mut kept = Near::new(values.widest_reach());
+        let mut kept = Near::new(values.widest_reach() * values.mini_scale());
         for s in supports {
             kept.add(s.routed.support.tip_mm);
         }
@@ -999,6 +1072,51 @@ fn plan_with(
         };
         check_built(&kept, model, &mut out.plan, &overhangs, &mut why_at, stop);
     }
+    // The mini pass (TD-167): mini supports at the islands and candidates the standard supports
+    // left, the candidates as far apart as the mini density asks; then they stand on one
+    // another, and are checked.
+    let mut thinned: Vec<[f64; 3]> = Vec::new();
+    if values.minis && !stop.load(Ordering::Relaxed) {
+        let with_minis = Growing {
+            values: &growing_values,
+            ..overhangs
+        };
+        let mut minis = Minis::new(&with_minis);
+        minis.at_islands(&islands, mesh, &mut out.plan, &mut why_at, stop);
+        let scale = values.mini_scale();
+        let mut near = tips_now(&out.plan.supports);
+        // The candidates in the order the plan takes them, then the side tips, half their reach
+        // apart as they were placed.
+        let wanted = all
+            .iter()
+            .map(|c| (c, c.reach * scale, false))
+            .chain(sides.iter().map(|&c| (c, c.reach / 2.0 * scale, true)));
+        for (c, reach, side) in wanted {
+            if stop.load(Ordering::Relaxed) {
+                break;
+            }
+            if near.within(c.tip.0, reach) {
+                // A side tip thinned away counts as held, as a candidate within reach does.
+                if side {
+                    thinned.push(c.tip.0);
+                }
+                continue;
+            }
+            match minis.place(&mut out.plan, c.tip) {
+                Ok(()) => near.add(c.tip.0),
+                Err(Some(why)) => minis::refused(&mut why_at, c.tip.0, why),
+                Err(None) => {}
+            }
+        }
+        minis.branch(&mut out.plan);
+        if let Some(model) = &input.model {
+            let kept = Kept {
+                document: input.document.as_ref(),
+                to_model: &input.to_model,
+            };
+            check_built(&kept, model, &mut out.plan, &with_minis, &mut why_at, stop);
+        }
+    }
     // What is left: islands no tip holds, and uncovered candidates joined into places, each
     // with why the failed tip nearest it found no support.
     let nearest_why = |point: [f64; 3]| check::nearest_why(&why_at, point);
@@ -1024,11 +1142,10 @@ fn plan_with(
         }
     }
     out.islands = [held_now, islands.len()];
-    for &(point, ..) in &sides {
-        if !final_tips
-            .iter()
-            .any(|&tip| distance(tip, point) <= SIDE_HELD_MM)
-        {
+    for point in sides.iter().map(|c| c.tip.0) {
+        let held_here =
+            |tips: &[[f64; 3]]| tips.iter().any(|&tip| distance(tip, point) <= SIDE_HELD_MM);
+        if !held_here(&final_tips) && !held_here(&thinned) {
             out.left.push(Left {
                 point,
                 bounds: [point, point],
@@ -1040,7 +1157,7 @@ fn plan_with(
     let kept = tips_now(&out.plan.supports);
     let uncovered: Vec<&Candidate> = all
         .iter()
-        .filter(|c| !kept.within(c.tip.0, c.reach))
+        .filter(|c| !kept.within(c.tip.0, c.reach * values.mini_scale()))
         .collect();
     out.overhangs = [all.len() - uncovered.len(), all.len()];
     let mut places: Vec<Vec<&Candidate>> = Vec::new();
@@ -1241,6 +1358,118 @@ pub mod edges;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::support_plan::route::SurfaceMesh;
+    use karasu_core::{
+        cancellation::Cancellation,
+        geometry::Point3,
+        supports::{SupportKind, SurfaceGrid},
+    };
+
+    /// A 20 × 20 mm slab whose underside is at Z 6, over a floor reaching Z 3.2 under all of it:
+    /// no standard support fits under it, and a mini support's rod is 2.6 mm long. Its overhang
+    /// as the analysis reports it, and the plan's input with `values`.
+    fn over_a_floor(values: AutoSupports) -> Input {
+        let (mut points, mut triangles) = (Vec::new(), Vec::new());
+        for (min, max) in [
+            ([0.0, 0.0, 6.0], [20.0, 20.0, 8.0]),
+            ([-5.0, -5.0, 0.0], [25.0, 25.0, 3.2]),
+        ] {
+            let base = u32::try_from(points.len()).unwrap();
+            for i in 0..8 {
+                points.push(Point3::new(
+                    if i & 1 == 0 { min[0] } else { max[0] },
+                    if i & 2 == 0 { min[1] } else { max[1] },
+                    if i & 4 == 0 { min[2] } else { max[2] },
+                ));
+            }
+            for q in [
+                [0, 2, 3, 1],
+                [4, 5, 7, 6],
+                [0, 1, 5, 4],
+                [2, 6, 7, 3],
+                [0, 4, 6, 2],
+                [1, 3, 7, 5],
+            ] {
+                for t in [[q[0], q[1], q[2]], [q[0], q[2], q[3]]] {
+                    triangles.push(t.map(|v| v + base));
+                }
+            }
+        }
+        let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+        let grid = SurfaceGrid::build(&mesh, &mut Cancellation::never()).unwrap();
+        let surface = Arc::new(RouteSurface::new(SurfaceMesh::Placed(mesh), grid));
+        let overhang = Island {
+            point: [10.0, 10.0, 6.0],
+            layers: [120, 121],
+            heights: [5.95, 6.05],
+            area_mm2: 400.0,
+            footprint: [[0.0, 0.0], [20.0, 20.0]],
+            inside: false,
+        };
+        Input {
+            regions: vec![(RegionKind::Overhang, overhang)],
+            islands: Vec::new(),
+            document: None,
+            kept_tips: Vec::new(),
+            surface,
+            next: values.next(&[]),
+            cavity_next: None,
+            values,
+            angle_deg: 45.0,
+            volume: BuildVolume {
+                origin_xy_mm: [-50.0, -50.0],
+                size_mm: [150.0, 150.0, 100.0],
+            },
+            to_model: Affine {
+                linear: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                translation: [0.0; 3],
+            },
+            model: None,
+        }
+    }
+
+    #[test]
+    fn the_mini_density_thins_the_mini_supports_and_counts_the_rest_held() {
+        let planned =
+            |values: AutoSupports| plan(&over_a_floor(values), &|_| {}, &AtomicBool::new(false));
+        let full = planned(AutoSupports {
+            branches: false,
+            ..AutoSupports::default()
+        });
+        let minis = |made: &AutoOutcome| {
+            let kinds: Vec<SupportKind> = made
+                .plan
+                .supports
+                .iter()
+                .map(|p| p.routed.support.kind)
+                .collect();
+            assert!(kinds.iter().all(|&k| k == SupportKind::Mini), "{kinds:?}");
+            kinds.len()
+        };
+        let all = minis(&full);
+        assert!(all > 20, "{all}");
+        let [covered, points] = full.overhangs;
+        assert_eq!(covered, points);
+        // A quarter of the tips per area: mini supports twice as far apart, the overhang still
+        // counted as held.
+        let quarter = planned(AutoSupports {
+            branches: false,
+            mini_density_pct: 25.0,
+            ..AutoSupports::default()
+        });
+        let few = minis(&quarter);
+        assert!(few > 0 && 2 * few <= all, "{few} of {all}");
+        let [covered, points] = quarter.overhangs;
+        assert_eq!(covered, points);
+        assert!(quarter.left.is_empty(), "{:?}", quarter.left);
+        // Mini supports off: nothing fits, and the overhang is left.
+        let none = planned(AutoSupports {
+            minis: false,
+            ..AutoSupports::default()
+        });
+        assert!(none.plan.supports.is_empty());
+        assert_ne!(none.left.len(), 0);
+    }
 
     #[test]
     fn settings_that_knew_only_inside_read_as_a_place() {

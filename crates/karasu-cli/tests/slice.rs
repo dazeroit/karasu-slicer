@@ -3987,8 +3987,9 @@ fn automatic_supports_hold_a_lifted_model_and_are_reported() {
     assert!(planned >= 4, "{report}");
     assert_eq!(
         field(&report, "Automatic supports values"),
-        "medium, density 100%, islands and overhangs, everywhere, minis on, branches on, \
-         clearance 0.3 mm, lift 5 mm, critical angle 45 degrees"
+        "medium, density 100%, islands and overhangs, everywhere, minis on (density 100%, 2 \
+         branches, at least 2 mm high, at most 10 mm long), branches on, clearance 0.3 mm, lift 5 \
+         mm, critical angle 45 degrees"
     );
     assert!(
         field(&report, "Automatic supports held").starts_with("islands 2 of 2"),
@@ -4042,6 +4043,65 @@ fn automatic_supports_hold_a_lifted_model_and_are_reported() {
     assert!(
         field(&report, "Automatic supports held").contains("overhangs not covered"),
         "{report}"
+    );
+}
+
+#[test]
+fn the_mini_supports_values_are_said_and_checked() {
+    // TD-167: said with mini supports on.
+    let setup = Setup::new();
+    let model = two_islands(&setup);
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("minis.goo"),
+        &[
+            "--center",
+            "--drop",
+            "--auto-supports",
+            "--auto-cover",
+            "islands",
+            "--auto-mini-density",
+            "50",
+            "--auto-mini-branches",
+            "0",
+            "--auto-mini-max-length",
+            "12.5",
+            "--auto-mini-min-height",
+            "1.5",
+        ],
+    ));
+    assert!(
+        field(&report, "Automatic supports values").contains(
+            "minis on (density 50%, 0 branches, at least 1.5 mm high, at most 12.5 mm long)"
+        ),
+        "{report}"
+    );
+    assert!(
+        field(&report, "Automatic supports").contains("mini branches 0"),
+        "{report}"
+    );
+    // A minimum height above the maximum length is refused, before any work.
+    let error = failure(
+        &setup.slice(
+            &model,
+            "goo-v3",
+            &setup.temp.path("refused.goo"),
+            &[
+                "--center",
+                "--drop",
+                "--auto-supports",
+                "--auto-mini-min-height",
+                "8",
+                "--auto-mini-max-length",
+                "5",
+            ],
+        ),
+        1,
+    );
+    assert!(
+        error.contains("must be at most their maximum length"),
+        "{error}"
     );
 }
 
@@ -4169,8 +4229,9 @@ fn auto_settings_take_the_application_s_settings_file() {
     // The preset named is not among the presets: the weight is taken, as the application does.
     assert_eq!(
         field(&report, "Automatic supports values"),
-        "light, density 80%, islands and overhangs, everywhere, minis on, branches off, \
-         clearance 0.3 mm, lift 6 mm, critical angle 35 degrees"
+        "light, density 80%, islands and overhangs, everywhere, minis on (density 100%, 2 \
+         branches, at least 2 mm high, at most 10 mm long), branches off, clearance 0.3 mm, lift 6 \
+         mm, critical angle 35 degrees"
     );
     // Options given beside it override it.
     let report = success(&with(&["--support-weight", "medium"], "medium.goo"));

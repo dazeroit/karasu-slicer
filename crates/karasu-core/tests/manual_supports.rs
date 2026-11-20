@@ -1626,6 +1626,8 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
         penetration_mm: 0.1,
         floor_mm: 0.0,
         clear: false,
+        max_length_mm: None,
+        min_height_mm: None,
     };
     // Under a slab's middle, the lower slab's top.
     let slabs = boxes(&[
@@ -1673,6 +1675,38 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
         find_mini_foot(&slabs, &grid, &clear(10.0)),
         find_mini_foot(&slabs, &grid, &query(10.0))
     );
+    // TD-167: within a maximum length. Straight down, the rod from the ball at 9.9 to the one
+    // at 4.1 is 5.8 mm long: a limit of 6 mm keeps it, 5 mm finds none there.
+    let within = |x: f64, longest: f64| MiniQuery {
+        max_length_mm: Some(longest),
+        ..clear(x)
+    };
+    assert_eq!(
+        find_mini_foot(&slabs, &grid, &within(10.0, 6.0)),
+        find_mini_foot(&slabs, &grid, &query(10.0))
+    );
+    assert_eq!(find_mini_foot(&slabs, &grid, &within(10.0, 5.0)), None);
+    // Beside the block, a slanted rod reaches its top (Z 8) within 3 mm, where the floor below
+    // lies too far.
+    let (short, normal) = find_mini_foot(&slabs, &grid, &within(15.0, 3.0)).unwrap();
+    assert!(
+        (short[2] - 8.0).abs() < 1e-9 && normal[2] > 0.99,
+        "{short:?}"
+    );
+    let ball = [short[0], short[1], short[2] + 0.1];
+    let rod =
+        ((ball[0] - 15.0).powi(2) + (ball[1] - 10.0).powi(2) + (ball[2] - 9.9).powi(2)).sqrt();
+    assert!(rod <= 3.0, "{rod}");
+    // And rising at least a minimum height (owner, 2026-11-20): straight down, 5.8 mm.
+    let rising = |x: f64, lowest: f64| MiniQuery {
+        min_height_mm: Some(lowest),
+        ..clear(x)
+    };
+    assert_eq!(
+        find_mini_foot(&slabs, &grid, &rising(10.0, 5.8)),
+        find_mini_foot(&slabs, &grid, &query(10.0))
+    );
+    assert_eq!(find_mini_foot(&slabs, &grid, &rising(10.0, 6.0)), None);
 }
 
 #[test]

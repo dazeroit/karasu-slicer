@@ -2589,6 +2589,10 @@ same day.
 
    The Automatic panel says how many mini supports a plan holds.
 
+   **Revised by TD-167 (2026-11-20):** the tools grow every standard support first and place
+   mini supports last, within a maximum length, and a mini support may carry mini branches;
+   never merged and never braced are kept.
+
 **Consequences:**
 - The CLI reads `kind` and its summary adds "mini N" when there are any.
 - **Measured** on `HillGiant_32mm.stl` (500,510 triangles, lifted 5 mm, Linux release, 16 threads,
@@ -7365,6 +7369,274 @@ below).
     - the strict refusal's words.
   - **The command line:** a drilled box beside a plain one, both whole but for the hole, with
     the summary line, and the strict refusal.
+
+## TD-167 — Mini supports: standard supports first, a density, branches and a maximum length
+
+**Status:** Accepted on 2026-11-20 (owner, after the analysis below) and implemented the same
+day, on top of TD-164 (issue #44). Native Windows validation and a test print are still to come.
+
+**Context:**
+- **More mini supports since TD-164.**
+  - The Islands and Automatic tools keep a tip along the surface's normal. A tip crowded by a
+    wall is refused where it used to tilt (TD-164), and a refused tip takes a mini support
+    (TD-113, decision 7).
+  - On the owner's `HillGiant_32mm.stl` (500,510 triangles, turned 80° about X, Anycubic Photon
+    P1, Medium, lifted 5 mm, Linux release), the Automatic tool's defaults plan 221 mini
+    supports on TD-164's implementation, against 84 on main.
+- **How mini supports are planned** (TD-113, TD-126):
+  - **A fallback, at once:**
+    - A tip's standard support may be refused for any reason: crowded, no way down, out of
+      reach, too low or unbuildable.
+    - A mini support is then tried at that tip straight away.
+    - Its rod runs from the tip's ball down to the model, in a fan of directions up to 45° from
+      vertical, clear of the model.
+  - **Islands:** up to six places of an island are tried in turn. With mini supports on, the
+    first refusal already gives a mini support at the first place. The other places, where a
+    standard support may fit, are never tried.
+  - **Overhangs:**
+    - Each candidate taken becomes a standard support or a mini support at once.
+    - The closing passes see only the candidates still uncovered. A mini support therefore keeps
+      them from looking for a standard support nearby.
+  - **No density of their own:** mini supports are not thinned against one another.
+  - **Never a trunk, never merged, never braced** (TD-113, decision 7). The support document,
+    the build and placing by hand all accept a mini support standing on another (TD-113,
+    decision 6); only the tools leave it out.
+- **Measured** on HillGiant, as above (Automatic tool, defaults unless said):
+
+  | Plan | Supports | Mini supports | Islands held | Overhang points held | Places left |
+  | --- | --- | --- | --- | --- | --- |
+  | Mini supports on (default) | 488 | 221 | 306 of 307 | 99.0 % | 17 |
+  | Mini supports off | 355 | 0 | 262 of 307 | 84.9 % | 113 |
+  | Islands only, on | 304 | 128 | 306 of 307 | — | 1 |
+  | Islands only, off | 252 | 0 | 262 of 307 | — | 45 |
+  | Density 50 % | 395 | 165 | 306 of 307 | 99.5 % | 18 |
+
+  - **Their rods** measure 794 mm in all, with a median of about 1 mm.
+    - 120 are shorter than 1 mm, between facing surfaces.
+    - 35 are 8 mm or longer, up to 26.4 mm, at 0.4 mm across (5 on main).
+  - **Crowded together:** 59 have another tip within 1 mm. 128 stand under islands, often
+    several close together.
+  - **Time:** 3.6 to 4.7 s with mini supports on, and 6.2 s off, when the islands' other places
+    and the passes are tried.
+  - **Islands are small where they start.**
+    - 259 of the 307 start with a first layer under 0.1 mm².
+    - Leaving out islands under 1 mm² ("Skip islands under") leaves only one.
+    - The area of the first layer does not tell a small island from the tip of a large one.
+
+**Decision** (owner, 2026-11-20):
+1. **Standard supports first, mini supports last.**
+   - **Islands:** every place of an island is tried with a standard support, as with mini
+     supports off. Only an island still not held takes a mini support, at the first of its
+     places where one fits.
+   - **Overhangs:** the candidates are grown, and the closing passes run, with standard
+     supports only. Then one **mini pass** goes over the candidates still uncovered, in the
+     order the plan takes them (corners, edges, then the inside, each lowest first), then the
+     side tips (TD-136).
+   - **The final check** (TD-113, TD-126) still builds every support against the model. The
+     places of the standard supports it removes go to the mini pass.
+   - **With mini supports off,** a plan is the same as before, byte for byte.
+   - **Both tools:** the Islands tool and the Automatic tool.
+2. **A mini density** in the Automatic tool: 25 to 100 %, 100 % by default.
+   - **The rule:** in the mini pass, a candidate takes a mini support only when no tip, standard
+     or mini, lies within its reach scaled by `sqrt(100 / density)`. This is how TD-127 scales
+     the standard reach.
+   - **A candidate within that reach counts as held,** as it does with the standard density.
+   - **Islands are exempt:** an island needs its own support where it starts, so its mini
+     support does not depend on the density. The Islands tool has no mini density.
+   - **At 100 %,** the mini supports hold everything they hold today once point 1 applies.
+3. **Mini branches: a mini support may stand on another mini support.**
+   - **Turned on by the mini supports' switch,** independently of the Branches switch of
+     standard supports.
+   - **Branches per mini support:** 0 to 4, 2 by default; 0 means none.
+   - **One level:** a branch carries no branch, and a mini support never carries a standard
+     support.
+   - **The junction:**
+     - As for a mini branch placed by hand (TD-113): the highest point of the trunk's rod,
+       1.5 diameters from its ends, where the branch's rod is within 45° of vertical.
+     - As the tools place mini supports: the branch's ball along the surface's mean normal
+       (TD-164), and its rod clear of the model (TD-126).
+     - The branch takes the same values as the trunk, so it is no thicker.
+     - There is no distance of its own: the 45° rule and the maximum length (point 4) bound it.
+   - **When:**
+     - a tip whose own mini support finds no foot joins a mini support's rod where it can;
+     - then, in order of rod length (longest first, ties in plan order), a mini support that
+       carries no branch becomes a branch when its rod from its ball to the junction is shorter
+       than its own.
+   - **The final check:** a trunk it removes takes its branches with it, as deleting does. The
+     branches are then grown again as mini supports of their own.
+   - **Mini supports are still never merged and never braced.**
+4. **A maximum length of a mini support:** 1 to 50 mm, 10 mm by default.
+   - **Measured** along the rod, between the centres of its balls, or of its ball and its
+     junction.
+   - **Where it applies:**
+     - In the foot search, a foot farther away is no foot in that direction, and the fan goes
+       on to the next direction.
+     - It also applies to a branch's rod and to a trunk.
+   - **A place with no mini support within it** is left and reported with why: "its mini support
+     would be longer than the maximum length".
+   - **Placed by hand,** a mini support has no maximum, as before. The user decides, as with
+     TD-126.
+   - **A minimum height** (owner, 2026-11-20, after the first build): 0 to 10 mm, 2 mm by
+     default, 0 for none, and never more than the maximum length.
+     - **Measured** as the height the rod rises, from the lower centre (its foot's ball, or its
+       junction) to its ball's.
+     - **Why:** between surfaces closer than that, a mini support is a drop of resin. On
+       HillGiant, the lowest mini support rose 0.15 mm (3 layers of 0.05 mm), and 80 of the 115
+       standing on the model rose less than 1 mm.
+     - **Where it applies:** as the maximum length does, in the foot search, to a branch's rod
+       and to a trunk; the tools only, never by hand.
+     - **A place with no mini support high enough** is left and reported: "its mini support would
+       be lower than the minimum height". The mini pass's refusal replaces the standard
+       support's at the same place, as the last thing tried.
+5. **Where the values live:** with the tools' other values: in the panel, and in Settings ›
+   Supports as defaults, kept across restarts. Settings without them read the defaults.
+   - **Automatic panel, group Mini supports:** Mini density, Branches per mini support, Minimum
+     height and Maximum length, under the switch and shown only when it is on.
+   - **Islands panel:** Branches per mini support, Minimum height and Maximum length.
+   - **Command line:**
+     - options `--auto-mini-density <percent>`, `--auto-mini-branches <n>`,
+       `--auto-mini-max-length <mm>` and `--auto-mini-min-height <mm>`;
+     - `--auto-settings` keys `mini_density_pct`, `mini_branches`, `mini_max_length_mm` and
+       `mini_min_height_mm`;
+     - the summary gives the mini branches beside the mini supports.
+   - **The support document does not change:** a mini support standing on another is already a
+     base on a support ([SUPPORTS-SPEC](SUPPORTS-SPEC.md)).
+6. **TD-113, decision 7, revised:** "A mini support is never a trunk" becomes "a mini support
+   may carry mini branches (point 3)". "Never merged" and "never braced" are kept.
+
+**Estimated** on HillGiant:
+- **How:**
+  - a scratch analysis of the plans above, not the implementation;
+  - point 1 is taken from the plan with mini supports off;
+  - the reach is fixed at 2.5 mm, Medium's level spacing (the planner's ranges from 1.5 to 5 mm);
+  - a rod's clearance is tested along its axis and along four lines at its radius;
+  - trunks are looked for within 4 mm in plan;
+  - 2 branches per trunk.
+
+  | Plan | Mini supports (tips) | Branches | Feet on the model | Marks of mini supports | Rods | Rods of 8 mm or more |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Today | 221 | 0 | 221 | 442 | 794 mm | 35 |
+  | Point 3 alone | 221 | 26 | 195 | 416 | 572 mm | 22 |
+  | Point 1 | 121 | 0 | 121 | 242 | 283 mm | 13 |
+  | Points 1 and 3 | 121 | 5 | 116 | 237 | 253 mm | 11 |
+  | Points 1 to 3, density 50 % | 108 | 4 | 104 | 212 | 229 mm | 10 |
+  | Points 1 to 3, density 25 % | 72 | 4 | 68 | 140 | 138 mm | 5 |
+
+  A mini support marks the model twice, at its ball and at its foot. A branch marks it once.
+- **What each point does:**
+  - **Point 1** cuts the mini supports by about 45 %, and most of their long rods.
+  - **The density** is the user's control. At 50 % it changes little, since the mini supports
+    left under overhangs mostly stand more than 3.5 mm apart. The 44 under islands stay at any
+    density.
+  - **Branches add little once point 1 applies.**
+    - 18 of the 22 branches that today's plan could make, at one per trunk, join mini supports
+      under islands, and point 1 gives those islands standard supports.
+    - Branches still hold places with no foot: 7 of the 17 places left could join a mini
+      support.
+    - They also help in clusters where standard supports never fit: hair, chains, cavities.
+- **Standard supports** rise from 267 to about 355, nearly all on the plate, so they mark the
+  model only at their contacts. All supports together mark the model about 710 times today,
+  about 593 times with points 1 and 3, and about 496 times with the density at 25 %.
+- **Maximum length of 10 mm:**
+  - 28 mini supports reach past it today (10.3 to 26.2 mm), and 10 do after point 1.
+  - Applied in the foot search, all 10 find a shorter foot in another direction of the fan.
+  - On today's plan with branches, 16 of the 20 left over do, and 4 places would be left.
+- **Time:** point 1 costs what turning mini supports off costs, about 6 s on HillGiant instead of
+  4 s. The density and the branches cost little.
+- **A trunk with two branches** carries three tips on a 0.4 mm rod below its lowest junction.
+  Physical prints must show whether it holds.
+
+**Alternatives considered:**
+- **Leaving out small islands** ("Skip islands under"): the first layer's area misleads, with
+  259 of 307 islands under 0.1 mm², and islands left out are not reported.
+- **Islands joined by distance** (an existing value, 0 by default):
+  - 1 mm gives 185 mini supports and 2 mm gives 176, with every island counted as held;
+  - but a joined island is held only by being near another island's support, so the default
+    stays until a print shows it holds.
+- **The density counting feet,** with tips thinned away coming back as branches: it holds only
+  2 tips more at 50 % and 25 %, with a less simple rule.
+- **Two levels of branches:** 4 branches more on today's plan.
+- **A thicker trunk:** a mini support has one diameter (TD-113).
+- **A mini support on a nearby standard support's shaft:** stronger, but not included; left for
+  later.
+
+**As implemented:**
+- **The mini pass** is `support_plan::islands::minis`: a mini support at a tip, its own or a
+  branch where it has no foot; the islands' places; the branches, longest rod first. The
+  standard supports are grown with mini supports off; the final check then runs again with the
+  mini supports, whose own fallback (a standard support it removes leaves a mini support, TD-113)
+  and regrowing keep the maximum length.
+- **The maximum length** is a field of the core's mini foot search (`MiniQuery::max_length_mm`,
+  `None` by hand) and of a junction (`Junction::max_length_mm`). A planned mini branch keeps its
+  ball along the mean normal and its rod clear of the model (`SurfaceGrid::rod_clear`).
+- **Side tips** (TD-136) are thinned at half their reach scaled by the mini density, as they
+  were placed, and one thinned away counts as held.
+- **Coverage:** with mini supports on, a candidate counts as held when a tip lies within its
+  reach scaled by the mini density; at 100 %, as before. So a lower mini density reports more of
+  the overhang held, by that rule.
+- **The Grid mode** (TD-138) follows point 1 too: its tips the standard supports leave take mini
+  supports, with branches and the maximum length, without a density.
+- **Values:** `AutoSupports::{mini_density_pct, mini_branches, mini_max_length_mm}` and
+  `IslandSupports::{mini_branches, mini_max_length_mm}`, kept in the settings
+  (`island_mini_branches` and `island_mini_max_length_mm` for the Islands tool). The strict
+  `--auto-settings` reading checks their ranges, and now `clearance_mm`'s too.
+- **The new reason** `Skip::MiniTooLong`: "No support fits, and a mini support would be longer
+  than the maximum length".
+
+**Measured** on HillGiant, as in the context (Linux release, 16 threads):
+
+| Plan | Supports | Mini (branches) | Islands held | Overhang points | Places left | Mini rods on the model | 8 mm or more | Longest |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Before (TD-164) | 488 | 221 (0) | 306 of 307 | 99.0 % | 17 | 824 mm | 35 | 26.4 mm |
+| Defaults: 100 %, 2 branches, 10 mm | 472 | 117 (2) | 307 of 307 | 98.7 % | 7 | 182 mm | 7 | 9.8 mm |
+| Mini density 50 % | 422 | 67 (0) | 307 of 307 | 99.4 % | 7 | 119 mm | 4 | 9.8 mm |
+| Mini density 25 % | 403 | 48 (0) | 307 of 307 | 99.9 % | 3 | 109 mm | 5 | 9.8 mm |
+| 0 branches | 472 | 117 (0) | 307 of 307 | 98.7 % | 7 | — | — | — |
+| Maximum length 50 mm | 474 | 119 (5) | 307 of 307 | 99.1 % | 8 | 224 mm | 9 | 22.0 mm |
+| Mini supports off | 355 | 0 | 262 of 307 | 84.9 % | 113 | — | — | — |
+
+These rows have no minimum height. With one (the defaults otherwise):
+
+| Minimum height | Supports | Mini (branches) | Islands held | Overhang points | Places left | Lowest mini | Mini rods on the model |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| None | 472 | 117 (2) | 307 of 307 | 98.7 % | 7 | 0.15 mm | 182 mm |
+| 1 mm | 428 | 73 (7) | 304 of 307 | 95.3 % | 43 | 1.10 mm | 219 mm |
+| 2 mm (default) | 415 | 60 (8) | 299 of 307 | 94.5 % | 59 | 2.15 mm | 249 mm |
+
+- **What 2 mm costs:** 8 islands and about 4 % of the overhang points, crevices where only a
+  lower mini support fits, are left and listed; of the 20 places the command line lists, 16 say
+  the mini support would be too low.
+- The lowest mini is measured from tip to foot on the surface, a little more than between the
+  balls' centres.
+
+- **Mini supports off:** the document and the print file are identical, byte for byte, to
+  TD-164's.
+- **Places left** with the defaults: all 7 are tips crowded by a wall (TD-164); none is left as
+  too long, since every mini support past 10 mm found a shorter, slanted foot.
+- **Against the estimate:** 117 mini supports for about 121. Only 2 branches for 4 or 5: the
+  maximum length bounds trunks and branches too.
+- **Time:** 6.8 to 8.9 s with mini supports on, 3.8 to 6.6 s off, on a machine whose timings
+  varied run to run; before, 3.6 to 4.7 s. The mini pass itself takes 0.4 s (islands 35 ms,
+  candidates 260 ms, the final check 110 ms); the rest is the standard supports trying every
+  place of an island, as with mini supports off. Peak memory 450 to 520 MB, as before.
+
+**Validation:**
+1. **Mini supports off** gives byte-identical plans: HillGiant above; the existing tests of
+   both tools and of the command line pass unchanged.
+2. **Tests:**
+   - `an_island_takes_a_standard_support_at_another_place_before_a_mini_one` (it gives a mini
+     support when the standard supports are grown with mini supports on);
+   - `a_mini_support_out_of_its_limits_is_not_placed_and_says_why`: too long, and too low;
+   - `a_mini_support_stands_on_another_where_its_rod_gets_shorter`, built against the model
+     without an error, and none with 0 branches;
+   - `the_mini_density_thins_the_mini_supports_and_counts_the_rest_held`;
+   - the core's foot search within a maximum length, a slanted foot found where the one
+     straight down is too far, and above a minimum height;
+   - the command line's options, refusals and summary, and the strict settings' ranges.
+3. **Not tested on its own:** a trunk the final check removes, whose branches are then grown
+   again (the existing mechanism of TD-113).
+4. **Still to come:** native Windows validation, and a test print of mini branches (2 per
+   trunk) and of 10 mm mini supports.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 

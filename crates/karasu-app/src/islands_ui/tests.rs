@@ -1077,8 +1077,9 @@ fn an_island_too_low_for_the_preset_says_how_much_to_lift_the_model() {
 
 #[test]
 fn an_island_with_no_room_for_a_support_gets_a_mini_one_on_the_model_below() {
-    // A slab 2 mm above a wide block: no support fits under it (a Light support needs a 2 mm
-    // tip and a 1.5 mm foot), none finds a way aside, so before mini supports it was left.
+    // A slab 3 mm above a wide block: no support fits under it (a Light support needs a 2 mm
+    // tip and a 1.5 mm foot), none finds a way aside, so before mini supports it was left. The
+    // mini support rises 2.8 mm, above the default minimum height (TD-167).
     let folder = std::env::temp_dir().join(format!("karasu-islands-mini-{}", std::process::id()));
     std::fs::create_dir_all(&folder).unwrap();
     let path = folder.join("gap.stl");
@@ -1086,7 +1087,7 @@ fn an_island_with_no_room_for_a_support_gets_a_mini_one_on_the_model_below() {
     let inner = block
         .trim_start_matches("solid box\n")
         .trim_end_matches("endsolid box\n");
-    let slab = crate::workspace::tests::box_stl([5.0, 5.0, 6.0], [15.0, 15.0, 8.0]);
+    let slab = crate::workspace::tests::box_stl([5.0, 5.0, 7.0], [15.0, 15.0, 9.0]);
     let stl = slab.replace("endsolid box\n", &format!("{inner}endsolid box\n"));
     std::fs::write(&path, stl).unwrap();
     let (mut workspace, preparation) =
@@ -1119,7 +1120,7 @@ fn an_island_with_no_room_for_a_support_gets_a_mini_one_on_the_model_below() {
         let [foot, tip] = [point_mm, added[0].tip_mm].map(|p| to_world.point(p));
         let z0 = workspace.placement_of(0).unwrap().min.coordinates()[2];
         assert!((foot[2] - (z0 + 4.0)).abs() < 1e-6, "{foot:?}");
-        assert!(tip[2] > z0 + 5.9, "{tip:?}");
+        assert!(tip[2] > z0 + 6.9, "{tip:?}");
     }
     let _ = std::fs::remove_dir_all(folder);
 }

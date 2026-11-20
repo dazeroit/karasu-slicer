@@ -29,10 +29,13 @@
 //! the floor; a support with no way down is skipped and its island counted with the reason.
 //! Nothing goes through the model by this tool.
 //!
-//! **Mini supports** (owner, 2026-10-30; TD-113): with the values' switch on, a tip whose
-//! standard support is refused (no way down, too low, out of reach, unbuildable) gets a mini
-//! support standing on the model straight below it, where one fits. A mini support is never a
-//! trunk and never merged: it is too thin to carry others.
+//! **Mini supports** (owner, 2026-10-30; TD-113, TD-167): with the values' switch on, the
+//! standard supports are grown first, as with it off, every place of an island tried; then the
+//! mini pass (`islands::minis`) gives each island still not held a mini support at the first of
+//! its places where one fits, standing on the model within the maximum length, or on another
+//! mini support's rod. Mini supports then stand on one another where their rods get shorter, each
+//! carrying at most the branches per mini support set, one level. A mini support carries no
+//! standard support and is never merged.
 //!
 //! **The final check** ([`check`]): with the model given, the supports are built as a slice
 //! builds them and those a slice would build with an error go (owner, 2026-10-30), what hung
@@ -40,7 +43,7 @@
 //! entering a drain hole stays, only warned about (TD-131): a hole often makes the island.
 use super::{
     branches::{junction_on, Junction},
-    route::{axis_to_model, mini_routed, route_planned, widest, RouteSurface, Routed},
+    route::{axis_to_model, mini_routed, route_planned, widest, MiniLimits, RouteSurface, Routed},
     tangent_triangle,
     trees::{self, MergeValues, Room, Stem},
     values::{NextSupport, SupportPreset, SupportValues, Weight},
@@ -59,6 +62,7 @@ use karasu_core::{
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub mod check;
+pub(crate) mod minis;
 
 /// How far beyond an island's footprint a support's tip still holds it, in mm: a contact's
 /// radius and a pixel's rounding.
@@ -127,6 +131,13 @@ pub const PER_TRUNK: std::ops::RangeInclusive<f64> = 1.0..=12.0;
 pub const MERGE_MM: std::ops::RangeInclusive<f64> = 0.0..=30.0;
 /// The trunks a group merges at most, as the panel accepts them.
 pub const PER_GROUP: std::ops::RangeInclusive<f64> = 2.0..=8.0;
+/// The branches a mini support carries at most, as the panels accept them (TD-167); zero, none.
+pub const MINI_BRANCHES: std::ops::RangeInclusive<f64> = 0.0..=4.0;
+/// The longest a mini support the tools place may be, as the panels accept it, in mm (TD-167).
+pub const MINI_MAX_LENGTH_MM: std::ops::RangeInclusive<f64> = 1.0..=50.0;
+/// The least height a mini support the tools place may rise, as the panels accept it, in mm
+/// (TD-167, owner 2026-11-20); zero, no minimum. It is at most the maximum length.
+pub const MINI_MIN_HEIGHT_MM: std::ops::RangeInclusive<f64> = 0.0..=10.0;
 /// The levels of merging the panel accepts.
 pub const LEVELS: std::ops::RangeInclusive<f64> = 1.0..=4.0;
 /// The range of the smallest diameter a fitted contact narrows to, in mm (the core's).
@@ -149,6 +160,13 @@ pub struct IslandSupports {
     /// Where a support finds no room or no way down, a mini support stands on the model below
     /// its tip (owner, 2026-10-30).
     pub minis: bool,
+    /// The branches a mini support carries at most, other mini supports (TD-167); zero, none.
+    pub mini_branches: u32,
+    /// The longest a mini support may be, between its balls' centres, in mm (TD-167).
+    pub mini_max_length_mm: f64,
+    /// The least height a mini support may rise, between its balls' centres, in mm (TD-167,
+    /// owner 2026-11-20); zero, no minimum.
+    pub mini_min_height_mm: f64,
     /// Tips closer than this in plan share a trunk, in mm; zero, no branches.
     pub branch_mm: f64,
     /// The branches a trunk takes at most.
@@ -173,6 +191,9 @@ pub const DEFAULT_ISLAND_SUPPORTS: IslandSupports = IslandSupports {
     skip_under_mm2: 0.0,
     foot_on_model: true,
     minis: true,
+    mini_branches: 2,
+    mini_max_length_mm: 10.0,
+    mini_min_height_mm: 2.0,
     branch_mm: 5.0,
     per_trunk: 4,
     merge_mm: 10.0,
@@ -199,6 +220,10 @@ impl IslandSupports {
             && MERGE_MM.contains(&self.merge_mm)
             && PER_GROUP.contains(&f64::from(self.per_group))
             && LEVELS.contains(&f64::from(self.levels))
+            && MINI_BRANCHES.contains(&f64::from(self.mini_branches))
+            && MINI_MAX_LENGTH_MM.contains(&self.mini_max_length_mm)
+            && MINI_MIN_HEIGHT_MM.contains(&self.mini_min_height_mm)
+            && self.mini_min_height_mm <= self.mini_max_length_mm
             && self
                 .contact_fit_min_mm
                 .is_none_or(|m| CONTACT_MIN_MM.contains(&m))
@@ -206,6 +231,15 @@ impl IslandSupports {
             self
         } else {
             DEFAULT_ISLAND_SUPPORTS
+        }
+    }
+
+    /// How long and how high the mini supports the tool places may be (TD-167).
+    #[must_use]
+    pub fn mini_limits(&self) -> MiniLimits {
+        MiniLimits {
+            max_length_mm: self.mini_max_length_mm,
+            min_height_mm: self.mini_min_height_mm,
         }
     }
 
@@ -262,6 +296,12 @@ pub enum Skip {
     /// Its tip, kept along the surface's normal (TD-164), comes too close to the model beside it,
     /// a wall that holds the surface there; and no place nearby the plan may move it to has room.
     Crowded,
+    /// No standard support fits, and a mini support would be longer than the maximum length
+    /// (TD-167).
+    MiniTooLong,
+    /// No standard support fits, and a mini support would rise less than the minimum height
+    /// (TD-167).
+    MiniTooShort,
 }
 
 /// A support planned under an island: the support in world coordinates with its anchors, and
@@ -453,22 +493,29 @@ fn routed_alone(t: &Tree<'_>, task: usize, minis: bool) -> Result<(Routed, Suppo
 /// alone; `None` where it finds nowhere to stand or cannot be built.
 fn mini_alone(t: &Tree<'_>, task: usize) -> Option<(Routed, SupportScene)> {
     let (tip, normal, _) = t.tasks[task].1;
-    mini_built(t.surface, t.parameters, t.document, t.volume, tip, normal)
+    mini_built(
+        t.surface,
+        t.parameters,
+        t.document,
+        t.volume,
+        (tip, normal),
+        Some(t.values.mini_limits()),
+    )
 }
 
 /// The mini support of `parameters` with its tip at `tip` (outward `normal`), standing on the
-/// model on `surface` with its rod clear of it (TD-126), built alone within `volume`; `None`
-/// where it finds nowhere to stand or cannot be built.
+/// model on `surface` with its rod clear of it (TD-126) and within `limits` when given (TD-167),
+/// built alone within `volume`; `None` where it finds nowhere to stand or cannot be built.
 pub(crate) fn mini_built(
     surface: &RouteSurface,
     parameters: &SupportParameters,
     document: Option<&SupportDocument>,
     volume: BuildVolume,
-    tip: [f64; 3],
-    normal: [f64; 3],
+    (tip, normal): ([f64; 3], [f64; 3]),
+    limits: Option<MiniLimits>,
 ) -> Option<(Routed, SupportScene)> {
     // Placed by the tool: its rod keeps off the model, or it is not placed (TD-126).
-    let routed = mini_routed(surface, parameters, document, tip, normal, true)?;
+    let routed = mini_routed(surface, parameters, document, (tip, normal), (true, limits))?;
     let scene = alone(&[(&routed, None)], volume)?;
     scene
         .supports()
@@ -622,6 +669,7 @@ fn tree(t: &Tree<'_>) -> Vec<Grown> {
             document: t.document,
             surface: Some(t.surface),
             keep_normal: true,
+            limits: None,
         });
         let result = match at {
             Some(at) => Ok((
@@ -676,11 +724,16 @@ pub fn plan(
         outcome.skipped = islands.iter().map(|&(k, _)| (k, Skip::NoSurface)).collect();
         return outcome;
     };
+    // Standard supports first, every place of an island tried; mini supports last (TD-167).
+    let standard = IslandSupports {
+        minis: false,
+        ..*values
+    };
     let growing = Growing {
         surface,
         next,
         document,
-        values,
+        values: &standard,
         volume,
         origin: SupportOrigin::Islands,
         nudge: None,
@@ -706,6 +759,15 @@ pub fn plan(
     // Merging bends trunks: they are checked again.
     if let Some((kept, model)) = checking {
         check::check_built(kept, model, &mut outcome, &growing, &mut why_at, stop);
+    }
+    if values.minis && !stop.load(Ordering::Relaxed) {
+        let with_minis = Growing { values, ..growing };
+        let mut minis = minis::Minis::new(&with_minis);
+        minis.at_islands(islands, mesh, &mut outcome, &mut why_at, stop);
+        minis.branch(&mut outcome);
+        if let Some((kept, model)) = checking {
+            check::check_built(kept, model, &mut outcome, &with_minis, &mut why_at, stop);
+        }
     }
     tally(
         &mut outcome,
