@@ -1234,6 +1234,8 @@ impl Project {
             copies: 1,
             arrange: false,
             spacing_mm: settings.spacing_mm,
+            arrange_turn: false,
+            arrange_footprint: karasu_core::plate::Footprint::Box,
             memory_budget_bytes: None,
             verify_walls: false,
             find_unsupported: None,

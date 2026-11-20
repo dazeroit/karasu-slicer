@@ -286,7 +286,16 @@ fn run(
         )?);
     }
     let layout = (args.model().is_none() || args.arrange)
-        .then(|| plate::Layout::new(&prepared, names.clone(), &printer, spacing_mm))
+        // Exported plates are laid out without turns: their copies stay on the export grid.
+        .then(|| {
+            plate::Layout::new(
+                &prepared,
+                names.clone(),
+                &printer,
+                spacing_mm,
+                plate::Arrangement::default(),
+            )
+        })
         .transpose()?;
     let mut offsets: Vec<Vec<[f64; 3]>> = vec![Vec::new(); prepared.len()];
     match &layout {

@@ -76,18 +76,7 @@ pub enum LeftOut {
     AnotherPrinter,
 }
 
-/// The room Arrange gives each model on the plate (TD-165; owner, 2026-11-20).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Footprint {
-    /// The rectangle round the model, its supports and raft (TD-135): tidy rows, room between
-    /// them for the tools that take models off the plate, and the fastest.
-    #[default]
-    Box,
-    /// The model's convex outline seen from above, its supports and raft included (TD-165):
-    /// round and pointed models nest closer.
-    Outline,
-}
+pub use karasu_core::plate::Footprint;
 
 /// How Arrange arranges (TD-135, TD-162).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -133,9 +122,7 @@ pub struct Arranged {
     pub every: Option<(usize, usize, Vec<String>)>,
 }
 
-/// The least share of its room a turn about Z must save for Arrange to make it (owner,
-/// 2026-11-19, TD-162): below it, the model keeps the orientation the user chose.
-pub const TURN_MARGIN: f64 = 0.01;
+pub use karasu_core::plate::TURN_MARGIN;
 
 /// `object` turned `turn_deg` about Z (counter-clockwise from above), its Z rotation kept
 /// within [-180°, 180°); unchanged for no turn. The fixed-axis order X, Y, Z makes the Z
@@ -223,25 +210,6 @@ pub(crate) fn reference(placement: &Placement) -> Option<[f64; 2]> {
 /// `turn_deg` within [-180°, 180°).
 fn wrapped(turn_deg: f64) -> f64 {
     (turn_deg + 180.0).rem_euclid(360.0) - 180.0
-}
-
-/// The turns about Z, from a model turned `turn_deg` already, that Arrange offers its outline
-/// (TD-165): with turns, its four quarter turns and those of the turn back to none, the least
-/// total turn first; without, none.
-fn outline_turns(turn: bool, turn_deg: f64) -> Vec<f64> {
-    if !turn {
-        return vec![0.0];
-    }
-    let mut turns: Vec<f64> = vec![0.0, 90.0, 180.0, 270.0];
-    if turn_deg != 0.0 {
-        turns.extend([0.0, 90.0, 180.0, 270.0].map(|q| q - turn_deg));
-    }
-    turns.sort_by(|a, b| {
-        wrapped(turn_deg + a)
-            .abs()
-            .total_cmp(&wrapped(turn_deg + b).abs())
-    });
-    turns
 }
 
 /// The turn about Z, in degrees, that makes `object`'s convex footprint smallest on a plate of
@@ -846,7 +814,7 @@ pub fn plan_arrangement(
         let object = turned_by(object, turn);
         let measure = measure(mesh, centre, &object, outlines).ok_or(Unarranged::Loading)?;
         if let Some((relative, _)) = &measure.outline {
-            let offers = outline_turns(options.turn, turn);
+            let offers = karasu_core::plate::turns_offered(options.turn, turn);
             orientations.push(
                 offers
                     .iter()

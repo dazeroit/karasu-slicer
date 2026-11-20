@@ -621,6 +621,11 @@ pub struct SliceRequest {
     pub arrange: bool,
     /// Gap between arranged footprints, in mm.
     pub spacing_mm: f64,
+    /// Arranged instances may turn about Z (`--arrange-turn`, issue #48; TD-162): each object
+    /// by the turn that makes its footprint smallest or fit, each instance a quarter turn more.
+    pub arrange_turn: bool,
+    /// The room arranged instances take: rectangles or outlines (`--arrange-footprint`, TD-165).
+    pub arrange_footprint: karasu_core::plate::Footprint,
     /// Bytes the hollowing, and each index of drain holes, may request (TD-094), or `None` for
     /// [`crate::pipeline::DEFAULT_MEMORY_BUDGET_BYTES`]. A cavity no hole index could take is
     /// refused when hollowed, so what can be hollowed can be drilled.
@@ -729,6 +734,8 @@ impl SliceRequest {
             repair: object.repair.unwrap_or(self.repair),
             layer_plan: self.layer_plan.clone(),
             spacing_mm: self.spacing_mm,
+            arrange_turn: self.arrange_turn,
+            arrange_footprint: self.arrange_footprint,
             memory_budget_bytes: self.memory_budget_bytes,
             verify_walls: self.verify_walls,
             find_unsupported: self.find_unsupported,

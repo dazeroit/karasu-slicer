@@ -1442,8 +1442,9 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        only when the estimated time is shorter), and models may turn about Z at any angle to fit
        (off by default). Arrange works on a thread of its own, with its progress and Cancel.
        "Arrange every plate" arranges the models of every plate (with the same printer, or all)
-       together, each plate keeping its name. The command line's turns are still to come (issue
-       #48).
+       together, each plate keeping its name. On the command line, `--arrange-turn` turns
+       arranged copies (issue #48, 2026-11-20), and `--arrange-footprint` packs them by outline
+       (TD-165).
      - **A model moved, copied or cloned to a plate always lands (owner, 2026-11-19, TD-163,
        implemented the same day, issue #39):** with no room, it goes to the middle of the plate instead of
        being refused, and the notification says so; the status bar warns when footprints
