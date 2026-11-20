@@ -1453,6 +1453,15 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        follow the surface's normal and bend at their joint; a setting keeps the contact part
        a safety distance from other model surfaces; concave corners take no edge tips. It waits
        for the owner's approval, the gap test and a test print.
+     - **Arrange by outline (owner, 2026-11-20, TD-165, proposed, issue #51):** a choice in the
+       Arrange dialog, "Footprint: Box / Outline". Box packs rectangles as today. Outline packs
+       each model's convex footprint with no-fit polygons, turning models more ways with "Turn
+       about Z". The overlap checks of the status bar and the slice follow the outlines. It
+       waits for the owner's approval.
+     - **Each drilled model cuts only its own material (owner, 2026-11-20, TD-166, proposed,
+       issue #52):** a plate is sliced in groups, so a drain hole never cuts another model, as
+       the viewport shows. The slice no longer refuses a plate whose cutters reach another
+       model. It waits for the owner's approval.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

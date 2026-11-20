@@ -6787,6 +6787,325 @@ Not implemented.
 - whether shafts and braces need more than `clearance_mm`, should the gap test show that 0.3 mm
   cures shut too.
 
+## TD-165 — Arrange by outline: convex footprints beside the rectangles
+
+**Status:** Proposed on 2026-11-20 at the owner's request (issue #51). It still needs the
+owner's approval of the design. Not implemented.
+
+**Context:**
+- **Arrange packs rectangles.** Every arrangement works on axis-aligned XY rectangles
+  (`karasu_core::plate::arrange`, `arrange_turning`, `overlapping_pairs`):
+  - the application's Arrange, on one plate or every plate (TD-162);
+  - the silent landing of a model moved, copied or cloned to a plate (TD-163);
+  - a plate document's `arrange`;
+  - the overlap checks of the status bar (TD-163) and of the slice, which refuses overlapping
+    models with drain holes.
+- **What a rectangle covers:**
+  - **In the application** (`placed_footprint`): the placed model, its supports' tips, bends and
+    feet with their pads, and the raft's margin and slope. Drain cutters are left out.
+  - **In the slice** (`karasu-project`, `Layout`): the sliced surface, supports and raft
+    included, and the drain cutters.
+- **The hull only turns.** The convex hull that TD-162 measures only chooses the turn about Z;
+  the turned model is packed by its rectangle again.
+- **What the rectangle wastes** (geometry, not measured on prints):
+  - **Round bases:** a round base fills π/4, 78.5 %, of its square. Circles packed in a hexagonal
+    pattern fill π/(2√3), 90.7 %: about 15 % more models in the ideal case.
+  - **Triangles and wedges:** a triangle fills at most half of its rectangle, and two of them,
+    one turned half round, can share it.
+  - **Non-convex models:** a model the turn does not straighten, such as an L or a cross, keeps
+    its rectangle's empty corners. Its convex hull keeps them too (left for later, below).
+- **What the rectangle is good for (owner, 2026-11-20):**
+  - it is fast, 400 footprints in 82 ms;
+  - its arrangement is predictable and tidy: models in rows, with room between them for the
+    tools that take them off the plate.
+
+  The owner chose to keep it and to add the outline as a choice.
+- **TD-162 rejected packing the true outlines** as much more complex and slower than turns
+  need. This proposal packs the convex hull only, whose no-fit polygons are simple and exact,
+  and leaves the non-convex outline for later.
+
+**Proposal:**
+1. **A choice in the Arrange dialog: "Footprint: Box / Outline".**
+   - **Box:** today's packing, unchanged bit for bit.
+   - **Outline:** each model takes its convex footprint: the shape a band stretched round it
+     would have seen from above, with its supports and raft.
+   - **Kept across restarts** (`PlateSettings`), Box by default, so arrangements do not change
+     unless the user asks.
+   - **Only the packer changes.** These work the same with both choices, their obstacles
+     becoming outlines with Outline:
+     - both scopes, This plate and Every plate;
+     - the grouping by height;
+     - "Stay where they are";
+     - new plates;
+     - the progress and Cancel.
+   - **The silent landing** (TD-163) uses the choice last made in the dialog.
+2. **The footprint (application).**
+   - **What it is made of:** the convex hull of these points:
+     - the placed model's vertices;
+     - a polygon round each support circle, as TD-162 measures it;
+     - no drain cutter: with TD-166 a hole cuts only its own model, so the slice's footprints
+       leave the cutters out too (see "Open for the owner").
+   - **Bounded size:** a hull with more than 32 vertices (proposed) is replaced by one with at
+     most 32 that contains it.
+     - Each step drops the edge whose removal adds the least area, extending its neighbours
+       until they meet. A convex polygon with five or more sides always has such an edge.
+     - This is a greedy approximation of the smallest circumscribing polygon (Aggarwal, Chang
+       and Yap, 1985). The area added is bounded and tested.
+   - **Spacing:** each footprint is grown by half the spacing, with a polygon round the circle of
+     that radius (8 sides, proposed), so two outlines stay at least the spacing apart. The
+     ungrown footprint stays within the plate's area, as the rectangle does today.
+3. **The packer** (`karasu_core::plate`, a new function beside `arrange_turning`).
+   - **Order:** footprints by decreasing area, then by their rectangle's sides, then by index.
+     The order is deterministic, as today.
+   - **No-fit polygons:** for each footprint placed (and each obstacle), the no-fit polygon with
+     the one to place.
+     - It is their Minkowski sum, the one to place turned half round, made by merging the two
+       polygons' edges by angle in linear time (Cuninghame-Green, 1989; Bennell and Oliveira,
+       2008).
+     - The footprint to place overlaps the placed one exactly when its reference point lies
+       inside that polygon.
+   - **The plate's room:** a rectangle of reference points (the inner-fit rectangle), since a
+     convex footprint lies within a rectangle exactly when its own rectangle does.
+   - **Candidates:**
+     - the reference point that puts the footprint's centre at the plate's middle;
+     - the no-fit polygons' vertices;
+     - the crossings of their edges with each other and with the inner-fit rectangle's edges.
+
+     The crossings are where a footprint touches two placed ones at once, which is where round
+     bases nest.
+   - **The choice:**
+     - **Nearest the middle:** the free candidate nearest the plate's middle, as today, with
+       ties broken by Y, then X.
+     - **Free:** a candidate is free when it lies within the inner-fit rectangle and inside no
+       no-fit polygon.
+     - **Tolerance:** the test allows 1 µm (proposed). That is far below a pixel and above the
+       rounding of the moves.
+   - **Speed:** a grid of cells, as the rectangle packer has, so that edges and candidates are
+     tested only against the no-fit polygons near them.
+   - **Never worse than Box:**
+     - A rectangle arrangement is also a valid outline arrangement, since a footprint lies within
+       its rectangle.
+     - So when the outline packing leaves out more models than the rectangle packing (with its
+       shelves), the rectangle packing is taken.
+     - The rectangles are packed only when the outlines leave some out.
+4. **Turns about Z, with Outline.**
+   - **Why more angles:** a convex footprint has not just two ways round, as a rectangle has.
+     Half a turn changes how it nests: a triangle sits beside another turned half round.
+   - **The angles tried:**
+     - for each model, no turn and the turn TD-162 chooses, each with its four quarter turns;
+     - that makes up to eight footprints, each turned exactly about the model's centre;
+     - the packer takes the free candidate nearest the middle among them all, with ties broken by
+       the least turn.
+   - **A model that fits the plate only another way** keeps TD-162's search, every 0.5° from no
+     turn outwards.
+   - **Without "Turn about Z"** a model keeps its turn, as with Box.
+5. **The overlap checks follow the outlines, for both choices.**
+   - **Why:** with Outline, two models may stand clear of each other while their rectangles
+     overlap. The status bar would then warn of them, and the slice would report them and
+     refuse them with drain holes.
+   - **The test:**
+     - two footprints overlap when the interiors of their convex footprints overlap by more than
+       the tolerance (separating axes);
+     - the rectangles are tested first, and only pairs whose rectangles overlap test their
+       outlines;
+     - a Box arrangement then costs what it costs today.
+   - **The slice** (`karasu-project`, `Layout`):
+     - each object's outline is made once, from its sliced surface and drain cutters at its
+       design placement, and moved with each copy;
+     - it applies to the command line too: copies clear of each other whose rectangles overlap
+       are no longer reported or refused.
+   - **The status bar:**
+     - each model's outline is kept for its rotation and scale, and moved with its translation,
+       so dragging a model does not make it again;
+     - when its rotation or scale changes, it is made again away from the window's thread
+       (proposed, to be measured first: the Dragon's hull takes about 0.2 s);
+     - until then, the status bar keeps its last verdict.
+
+**Not in this proposal:**
+- **The command line's choice:** a plate document's `arrange` packs rectangles. A choice there
+  goes with the command line's turns (issue #48).
+- **The true, non-convex outline:** the model's exact shadow with its hollows, packed with
+  non-convex no-fit polygons, for L shapes, crosses and rings. It is a later step, a third
+  choice in the same row, only if Outline is not enough.
+- **Footprints drawn in the viewport.**
+
+**Alternatives considered:**
+- **Replacing the rectangles by the outlines:** the owner keeps both. The rectangles' rows are
+  easier to reach with tools, and they arrange as before.
+- **Circles as footprints** (the smallest circle round each model): exact for round bases, poor
+  for anything long.
+- **The non-convex outline at once:**
+  - the shadow of millions of triangles has to be united and simplified;
+  - its no-fit polygons need decomposition or orbiting.
+
+  That is much slower and numerically delicate.
+- **Candidates at the no-fit polygons' vertices only:** simpler, but it misses the places where
+  a footprint touches two placed ones, where round bases nest closest.
+- **Bottom-left placement** (Burke, Hellier, Kendall and Whitwell, 2006): it packs towards one
+  corner, and Arrange packs from the plate's middle.
+
+**References:**
+- R. Cuninghame-Green, "Geometry, shoemaking and the milk tray problem", New Scientist, 1989.
+- J. A. Bennell and J. F. Oliveira, "The geometry of nesting problems: a tutorial", European
+  Journal of Operational Research 184 (2), 2008.
+- E. K. Burke, R. S. R. Hellier, G. Kendall and G. Whitwell, "A new bottom-left-fill heuristic
+  algorithm for the two-dimensional irregular packing problem", Operations Research 54 (3),
+  2006.
+- A. Aggarwal, J. S. Chang and C. K. Yap, "Minimum area circumscribing polygons", The Visual
+  Computer 1, 1985.
+
+**Validation (planned):**
+1. **Automated tests:**
+   - Box arrangements unchanged bit for bit (the existing tests);
+   - no-fit polygons checked against a brute-force overlap test on random convex polygons;
+   - on random sets, no two outlines closer than the spacing and every outline within the plate;
+   - circles of one size nesting in rows offset by half a step;
+   - triangles turned half round, with Turn about Z, sharing their room;
+   - the outline packing never leaving out more models than the rectangles;
+   - outlines clear of each other with overlapping rectangles, reported by neither the status
+     bar nor the slice;
+   - the application's outline containing the slice's, on every raft shape.
+2. **Measured** (release build, reported with the change):
+   - models per plate with Box and with Outline, on three sets:
+     - 30 round bases of one size;
+     - the tip test's specimens;
+     - a mixed set of figures;
+   - the time for 400 small models, for the grouping by height across plates, and for the Dragon
+     (7.2 million triangles).
+3. **A sliced plate,** arranged by Outline, checked in its layers: no two models closer than the
+   spacing.
+
+**Open for the owner:**
+- the row's names, "Footprint: Box / Outline", and Box as the default;
+- an acceptable time for 400 models (the rectangles take 82 ms);
+- whether the silent landing follows the dialog's choice or always packs rectangles;
+- the drain cutters in footprints: with TD-166 no footprint counts them, as a hole cuts only
+  its own model. Should TD-166 not be accepted, the outline counts them as the slice does, and
+  Box should too: the application's rectangle leaves them out today, so a cutter that reaches
+  outside its model can make the slice refuse a plate Arrange left.
+
+## TD-166 — Each drilled model cuts only its own material on a plate
+
+**Status:** Proposed on 2026-11-20 at the owner's request (issue #52). It still needs the
+owner's approval of the design. Not implemented.
+
+**Context:**
+- **The owner's test (2026-11-20, observed in the application):**
+  - **The setup:** two hollowed bowls stood side by side with room between them. One was
+    drilled, and its hole was stretched until its cylinder ran across the gap into the other
+    bowl's wall.
+  - **Hole applied (blue):** the slice is refused with "the footprints of A and B overlap, and
+    drain holes would cut both; move them apart".
+  - **Hole not applied (green):** the slice passes, because a hole not applied does not reach
+    the slice (a separate question, left for later).
+  - **The viewport:** seen in section, only the drilled model shows the hole, and the other
+    stays whole. That is the rule the owner expects: a hole belongs to its model.
+- **How a plate is sliced** (TD-065, TD-089, TD-123; `karasu_project::pipeline::plate`):
+  - **One body:** every instance is concatenated into one world mesh and sliced under the
+    positive winding rule, so overlapping instances print as their union.
+  - **The cut:** drain cutters are evaluated analytically per layer. The union of every
+    instance's rings is removed from the whole layer's material.
+  - **Only the supports are spared:** their faces are listed apart and a sample inside them is
+    material whatever the cut (TD-123).
+  - **So a cutter that reached another model would cut it.** The refusal prevents that: it
+    keeps the rings of a drilled instance away from every other instance
+    ([PLATE-SPEC](PLATE-SPEC.md), "Drain cutters").
+- **The refusal is stricter than it needs to be.**
+  - **The footprint:** a footprint counts each cutter as a disc of its radius round both ends
+    of its axis, wider than the cylinder. For a level hole, the cylinder reaches 1 mm beyond the
+    surface and the disc another radius beyond that.
+  - **Any overlap:** two footprints that overlap anywhere are refused when either carries holes,
+    even when the holes are on the far side.
+- **Arranged copies are the common case.**
+  - Ten copies of a hollowed miniature all carry holes, and each cutter starts 1 mm outside its
+    surface (`SURFACE_HOLE_MARGIN_MM`, TD-066).
+  - At the default 2 mm spacing, two holes facing each other already touch.
+  - A smaller spacing, a tilted or longer hole, models moved close by hand, or the closer
+    nesting of TD-165 gets the plate refused.
+  - Keeping only the models without holes out of the cut (the owner's step 1, considered) does
+    nothing for copies that are all drilled.
+- **The model export (TD-139)** already drills each object into its own geometry with the exact
+  kernel. It goes through the same layout check, so it is refused too.
+
+**Proposal:**
+1. **A drain hole cuts only its own model's material.**
+   - **Reach:** a drilled instance's cutter reaches another instance when the cutter's exact
+     bounding box (below) meets that instance's footprint.
+   - **Groups:**
+     - The first group holds every instance except the drilled ones whose cutters reach
+       another. Its cut is the rings of its drilled instances, which reach nothing else.
+     - Each drilled instance whose cutter reaches another goes into a later group. Groups are
+       assigned greedily, in instance order, so that no group holds a cutter and an instance it
+       reaches. Each group's cut is its own instances' rings.
+     - The assignment is deterministic. On a plate, each instance touches only its
+       neighbours, so the groups stay few.
+   - **Sampling, in the same raster pass:**
+     - each sample keeps one winding number per group, over the models' faces of that group;
+     - a sample is material when one group's winding satisfies the rule and the sample lies
+       outside that group's cut, or when it lies in a support (TD-123, unchanged);
+     - the union of the groups is taken per sample, before the gray level is formed, so
+       anti-aliasing and binary supports (TD-134) treat a plate of several groups as one body.
+   - **One group is today's sampling,** unchanged. Every plate that slices today has no reach,
+     so it slices byte-identically.
+2. **No refusal with winding layers.** Strict layers (`--fill strict`) cannot keep groups
+   apart, as they cannot keep supports apart. They still refuse a reach, naming the hole and the
+   instance it reaches.
+3. **Footprints without cutters.**
+   - **What a footprint is:** the sliced surface alone (model, supports and raft), the cutters
+     being tested by their reach instead.
+   - **The overlap diagnostic** ("Overlapping footprints") then lists the models that really
+     overlap.
+   - **The cutter's exact bounding box:** for the axis from `p` to `q`, unit direction `a` and
+     radius `r`, it spans `min(p_k, q_k) − r·√(1 − a_k²)` to `max(p_k, q_k) + r·√(1 − a_k²)` on
+     each axis `k`. A level hole's box reaches exactly 1 mm beyond its surface.
+4. **No report of plugged holes (owner, 2026-11-20).** Another model could plug a hole only by
+   standing in its channel or against its mouth, and that is a matter of placement:
+   - **Models that interpenetrate** fuse in print. The whole print is compromised, and the
+     status bar already warns of overlapping footprints (TD-163).
+   - **The likely case:** models stand with room between them. A cylinder that runs across the
+     gap into another model leaves the hole's mouth open to the gap, so the hole drains.
+5. **Where it applies:**
+   - the slice of a plate, in the application and on the command line;
+   - the model export, which is no longer refused;
+   - unchanged: a single model, whose cutters reach nothing else; the support check of TD-123;
+     the drainage findings of each hole (TD-089), made on its own model.
+
+**Not in this proposal:**
+- **Holes not applied (green):** they are ignored by the slice, and the owner will take that up
+  separately.
+- **The arrangement:** with no cutter in the slice's footprints, Arrange need not count cutters
+  (TD-165).
+
+**Alternatives considered:**
+- **Keeping the models without holes out of the cut** (the owner's step 1): smaller, but copies
+  that are all drilled still refuse.
+- **Drilling each model's mesh with the exact kernel before slicing,** as the export does:
+  - exact;
+  - but it costs seconds per model on large meshes (TD-140), against an analytic cut per layer.
+- **A raster pass per group, the masks joined after:** joining gray levels differs from sampling
+  the union, at the edges where groups meet.
+- **A refusal kept, made exact:** it still refuses copies whose holes face each other.
+- **A report of plugged holes:** another model's material in a hole's channel or within 1 mm of
+  its mouth, counted while sampling. The owner judged it a matter of placement (point 4), so it
+  is left out.
+
+**Validation (planned):**
+1. **Byte-identical slices** of the plates that slice today: the existing tests and the
+   reference plates.
+2. **The owner's case** (two bowls, the hole running into the other's wall):
+   - the plate slices;
+   - the second bowl is intact in every layer;
+   - the drilled bowl's hole is open in its own layers.
+3. **Two drilled copies** whose cutters reach each other: neither cuts the other.
+4. **Two overlapping drilled models** whose holes are elsewhere: they slice, united where they
+   overlap. Today they are refused.
+5. **Anti-aliasing:** where two groups meet, the gray levels equal those of the same union
+   sliced as one group.
+6. **Strict layers** refuse a reach with a message that names the hole.
+7. **The model export** of the owner's plate succeeds.
+8. **Measured** (release build): a plate of 20 drilled copies whose cutters reach each other,
+   against the same plate spaced apart, in one group.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are
