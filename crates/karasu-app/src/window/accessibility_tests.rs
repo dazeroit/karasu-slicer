@@ -86,6 +86,7 @@ fn every_dialog_names_its_controls_and_a_modal_keeps_the_focus() {
         Action::ToggleLog,
         Action::ToggleMessages,
         Action::ArrangeModels,
+        Action::ArrangeEveryPlate,
         Action::ExportEveryPlate,
         Action::RenamePlate,
         Action::Delete,

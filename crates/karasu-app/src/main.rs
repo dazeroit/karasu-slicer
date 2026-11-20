@@ -36,6 +36,7 @@
 mod accessibility_check;
 mod actions;
 mod appearance;
+mod arranging;
 mod auto_ui;
 mod camera;
 mod desktop;

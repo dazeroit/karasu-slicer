@@ -127,6 +127,7 @@ pub const DEFAULT_EXPORT_PATTERN: &str = karasu_project::project::batch::DEFAULT
 /// spacing Arrange offers is the plate's own, not kept here.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
+#[allow(clippy::struct_excessive_bools)] // Independent choices, each kept as the user left it.
 pub struct PlateSettings {
     /// Where Arrange puts the models that do not fit.
     pub arrange_overflow: crate::workspace::Overflow,
@@ -134,6 +135,10 @@ pub struct PlateSettings {
     pub arrange_by_height: bool,
     /// Arrange may turn models about Z (TD-162; off by default, owner).
     pub arrange_turn: bool,
+    /// Which plates "Arrange every plate" takes (TD-162, phase 3).
+    pub arrange_plates: crate::workspace::PlateChoice,
+    /// "Arrange every plate" removes the plates it leaves empty (TD-162, phase 3).
+    pub arrange_remove_empty: bool,
     /// The folder Export every plate wrote to last.
     pub export_folder: Option<PathBuf>,
     /// The file names' pattern: `{project}`, `{number}` and `{plate}` are replaced.
@@ -148,6 +153,8 @@ impl Default for PlateSettings {
             arrange_overflow: crate::workspace::Overflow::default(),
             arrange_by_height: true,
             arrange_turn: false,
+            arrange_plates: crate::workspace::PlateChoice::SamePrinter,
+            arrange_remove_empty: false,
             export_folder: None,
             export_pattern: DEFAULT_EXPORT_PATTERN.to_owned(),
             export_slice_first: true,

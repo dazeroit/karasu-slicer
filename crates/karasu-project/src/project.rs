@@ -776,8 +776,29 @@ impl Project {
         contents: Vec<(PlateId, PlateContent)>,
         added: Vec<(usize, PlateContent)>,
     ) -> Result<Vec<PlateId>, ProjectError> {
-        if let Some((id, _)) = contents.iter().find(|(id, _)| self.plate(*id).is_none()) {
-            return Err(ProjectError::UnknownPlate(*id));
+        self.rearrange_plates(contents, added, &[])
+    }
+
+    /// [`Self::edit_plates`], then take out the plates `removed`, as one undo step of the
+    /// project's structure: Arrange over every plate, which may leave some empty (TD-162).
+    /// Undone, they come back where they were, with their own histories.
+    ///
+    /// # Errors
+    /// [`ProjectError::UnknownPlate`], before anything changes.
+    pub fn rearrange_plates(
+        &mut self,
+        contents: Vec<(PlateId, PlateContent)>,
+        added: Vec<(usize, PlateContent)>,
+        removed: &[PlateId],
+    ) -> Result<Vec<PlateId>, ProjectError> {
+        let known = |id: PlateId| self.plate(id).is_some();
+        if let Some(&id) = contents
+            .iter()
+            .map(|(id, _)| id)
+            .chain(removed)
+            .find(|&&id| !known(id))
+        {
+            return Err(ProjectError::UnknownPlate(id));
         }
         let mut contents = StructureStep::Contents { plates: contents };
         self.replay(&mut contents, true);
@@ -789,6 +810,12 @@ impl Project {
             self.plates.insert(index, plate.clone());
             steps.push(StructureStep::Added { index, plate });
             added_ids.push(id);
+        }
+        for &id in removed {
+            if let Some(index) = self.plates.iter().position(|p| p.id == id) {
+                let plate = self.plates.remove(index);
+                steps.push(StructureStep::Removed { index, plate });
+            }
         }
         let step = if steps.len() == 1 {
             steps.remove(0)

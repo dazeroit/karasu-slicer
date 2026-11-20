@@ -1140,6 +1140,7 @@ impl MainWindow {
                                 Action::NextPlate,
                                 Action::TogglePlatesBar,
                                 Action::ArrangeModels,
+                                Action::ArrangeEveryPlate,
                                 Action::PlatesOverview,
                                 Action::SliceEveryPlate,
                                 Action::ExportEveryPlate,
@@ -3234,6 +3235,7 @@ impl MainWindow {
             | Action::TogglePlatesBar
             | Action::PlatesOverview
             | Action::ArrangeModels
+            | Action::ArrangeEveryPlate
             | Action::SliceEveryPlate
             | Action::ExportEveryPlate => self.plate_action_enabled(action),
             Action::RestoreDefaults
@@ -3802,6 +3804,7 @@ impl MainWindow {
             | Action::TogglePlatesBar
             | Action::PlatesOverview
             | Action::ArrangeModels
+            | Action::ArrangeEveryPlate
             | Action::SliceEveryPlate
             | Action::ExportEveryPlate => self.perform_plate(action),
             Action::Undo => self.undo(),

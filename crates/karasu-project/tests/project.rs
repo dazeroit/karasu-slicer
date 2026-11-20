@@ -988,3 +988,49 @@ fn every_plate_is_sliced_in_a_format_its_printer_writes_under_a_name_of_its_own(
     assert_eq!(plate_file_name(pattern, "a/b", 1, "c:d?"), "a_b 1 c_d_");
     assert_eq!(plate_file_name("{plate}", "p", 4, " "), "4");
 }
+
+#[test]
+fn a_rearrangement_that_empties_a_plate_takes_it_out_in_the_same_step() {
+    // TD-162, phase 3: Arrange over every plate may move every model off a plate and remove
+    // it; undone, it comes back where it was, with its content.
+    let (mut project, _, first) = project();
+    let content = project.plate(first).unwrap().content().clone();
+    let second = project.insert_plate(
+        1,
+        PlateContent {
+            name: "Second".into(),
+            ..content.clone()
+        },
+    );
+    let mut both = content.clone();
+    both.objects.extend(content.objects.clone());
+    let mut emptied = content.clone();
+    emptied.objects.clear();
+    project
+        .rearrange_plates(
+            vec![(first, both), (second, emptied)],
+            Vec::new(),
+            &[second],
+        )
+        .unwrap();
+    assert_eq!(project.plates().len(), 1);
+    assert_eq!(project.plate(first).unwrap().content().objects.len(), 2);
+    assert!(project.plate(second).is_none());
+    // One step: undone, the second plate is back at its place with its model.
+    project.undo(first).unwrap();
+    assert_eq!(project.plates().len(), 2);
+    assert_eq!(project.plates()[1].id(), second);
+    assert_eq!(
+        project.plate(second).unwrap().content(),
+        &PlateContent {
+            name: "Second".into(),
+            ..content.clone()
+        }
+    );
+    assert_eq!(project.plate(first).unwrap().content().objects.len(), 1);
+    // An unknown plate to remove changes nothing.
+    assert!(project
+        .rearrange_plates(Vec::new(), Vec::new(), &[PlateId(999)])
+        .is_err());
+    assert_eq!(project.plates().len(), 2);
+}

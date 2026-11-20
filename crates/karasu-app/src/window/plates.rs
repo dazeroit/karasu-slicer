@@ -80,8 +80,8 @@ pub(super) struct Plates {
     overview_opened: bool,
     /// The plate whose deletion waits for the user's answer.
     pub(super) deleting: Option<PlateId>,
-    /// Arrange models… is open, with this spacing in mm.
-    arranging: Option<f64>,
+    /// Arrange models… is open, with this spacing in mm, on the plate shown or every plate.
+    arranging: Option<(f64, crate::workspace::ArrangeScope)>,
     /// Arrange working on a thread of its own, its dialog showing how far (TD-162).
     arrange_job: Option<arrange::Running>,
     /// Clone is open (owner, 2026-11-10).
@@ -291,6 +291,15 @@ impl MainWindow {
                 !self.workspace.plate().objects.is_empty()
                     && self.workspace.plate().printer.is_some()
             }
+            // A model on any plate it would take (TD-162, phase 3).
+            Action::ArrangeEveryPlate => {
+                self.workspace.plate().printer.is_some()
+                    && self
+                        .workspace
+                        .plates()
+                        .iter()
+                        .any(|p| p.content().printer.is_some() && !p.content().objects.is_empty())
+            }
             Action::SliceEveryPlate | Action::ExportEveryPlate => self.plates.batch.is_none(),
             _ => true,
         }
@@ -319,7 +328,10 @@ impl MainWindow {
                 self.plates.overview = !self.plates.overview;
                 self.plates.overview_opened = self.plates.overview;
             }
-            Action::ArrangeModels => self.open_arrange(),
+            Action::ArrangeModels => self.open_arrange(crate::workspace::ArrangeScope::ThisPlate),
+            Action::ArrangeEveryPlate => {
+                self.open_arrange(crate::workspace::ArrangeScope::EveryPlate);
+            }
             Action::SliceEveryPlate => self.slice_every_plate(),
             Action::ExportEveryPlate => self.open_export_every_plate(),
             _ => {}
