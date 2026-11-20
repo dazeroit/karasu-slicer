@@ -13,16 +13,28 @@
 //! then packs them plate by plate in the project's order, as packed by footprint
 //! ([`Plan::packed`]) and, with "Group by height", grouped by height ([`Plan::by_height`]),
 //! keeping the grouping when it prints sooner by the estimate ([`Plan::sooner`]).
+//!
+//! **Footprints** (TD-165): each model takes its rectangle ([`Footprint::Box`]), or its convex
+//! outline seen from above ([`Footprint::Outline`]), packed by
+//! [`karasu_core::plate::outline::arrange_outlines`]; everything else is the same either way.
 use crate::workspace::{convex_footprint, fresh_name, placed_footprint, Overflow, Unarranged};
 use karasu_core::{
     cancellation::Cancellation,
+    geometry::Point3,
     mesh::TriangleMesh,
-    plate::{arrange_turning, footprint_turn, Placed, Rect},
+    plate::{
+        arrange_turning, footprint_turn,
+        outline::{
+            self, arrange_outlines, bounded, bounds, translated, PlacedOutline,
+            MAX_OUTLINE_VERTICES,
+        },
+        Placed, Rect, Unplaced,
+    },
     print_job::uniform_time_s,
     profiles::{PrintSettings, PrinterProfile},
 };
 use karasu_project::{
-    placement,
+    placement::{self, Placement},
     project::{ModelId, PlateContent, PlateId, PlateObject},
 };
 use std::{
@@ -64,6 +76,19 @@ pub enum LeftOut {
     AnotherPrinter,
 }
 
+/// The room Arrange gives each model on the plate (TD-165; owner, 2026-11-20).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Footprint {
+    /// The rectangle round the model, its supports and raft (TD-135): tidy rows, room between
+    /// them for the tools that take models off the plate, and the fastest.
+    #[default]
+    Box,
+    /// The model's convex outline seen from above, its supports and raft included (TD-165):
+    /// round and pointed models nest closer.
+    Outline,
+}
+
 /// How Arrange arranges (TD-135, TD-162).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ArrangeOptions {
@@ -81,6 +106,8 @@ pub struct ArrangeOptions {
     pub plates: PlateChoice,
     /// "Every plate" removes the plates it leaves empty.
     pub remove_empty: bool,
+    /// Rectangles or outlines (TD-165).
+    pub footprint: Footprint,
 }
 
 /// What Arrange did (TD-135, phase 5; TD-162).
@@ -130,6 +157,29 @@ pub(crate) fn measured(
     centre: [f64; 2],
     object: &PlateObject,
 ) -> Option<(Rect, [f64; 3], f64)> {
+    measure(mesh, centre, object, false).map(|m| (m.rect, m.translation, m.top))
+}
+
+/// What Arrange measures of a model placed on a plate.
+pub(crate) struct Measure {
+    /// Its footprint's rectangle (the model, its supports and raft, from above).
+    pub(crate) rect: Rect,
+    /// The translation the placement used.
+    pub(crate) translation: [f64; 3],
+    /// Its top above the plate.
+    pub(crate) top: f64,
+    /// With outlines (TD-165): its convex outline, bounded to
+    /// [`MAX_OUTLINE_VERTICES`], relative to its reference point ([`reference()`]), and that point.
+    pub(crate) outline: Option<(Vec<[f64; 2]>, [f64; 2])>,
+}
+
+/// [`measured`], with the outline when `outline` asks for it (TD-165).
+pub(crate) fn measure(
+    mesh: &TriangleMesh,
+    centre: [f64; 2],
+    object: &PlateObject,
+    outline: bool,
+) -> Option<Measure> {
     let placement = placement::place(
         mesh,
         object.translate_mm,
@@ -138,11 +188,60 @@ pub(crate) fn measured(
         &mut Cancellation::never(),
     )
     .ok()?;
-    Some((
-        placed_footprint(&placement, object)?,
-        placement.translation_mm,
-        placement.max.z,
-    ))
+    let outline = if outline {
+        let hull = convex_footprint(mesh, &placement, object)?;
+        let origin = reference(&placement)?;
+        let relative = translated(
+            &bounded(&hull, MAX_OUTLINE_VERTICES),
+            [-origin[0], -origin[1]],
+        );
+        Some((relative, origin))
+    } else {
+        None
+    };
+    Some(Measure {
+        rect: placed_footprint(&placement, object)?,
+        translation: placement.translation_mm,
+        top: placement.max.z,
+        outline,
+    })
+}
+
+/// Where `placement` puts the model's own origin, in world XY (TD-165). A turn about Z turns the
+/// model's outline about this point exactly as it turns the outline in the plate's frame: the
+/// turn is the last rotation the placement applies, so points keep their places relative to it.
+pub(crate) fn reference(placement: &Placement) -> Option<[f64; 2]> {
+    let origin = placement
+        .transform
+        .to_affine()
+        .ok()?
+        .transform_point(Point3::new(0.0, 0.0, 0.0))
+        .ok()?;
+    Some([origin.x, origin.y])
+}
+
+/// `turn_deg` within [-180°, 180°).
+fn wrapped(turn_deg: f64) -> f64 {
+    (turn_deg + 180.0).rem_euclid(360.0) - 180.0
+}
+
+/// The turns about Z, from a model turned `turn_deg` already, that Arrange offers its outline
+/// (TD-165): with turns, its four quarter turns and those of the turn back to none, the least
+/// total turn first; without, none.
+fn outline_turns(turn: bool, turn_deg: f64) -> Vec<f64> {
+    if !turn {
+        return vec![0.0];
+    }
+    let mut turns: Vec<f64> = vec![0.0, 90.0, 180.0, 270.0];
+    if turn_deg != 0.0 {
+        turns.extend([0.0, 90.0, 180.0, 270.0].map(|q| q - turn_deg));
+    }
+    turns.sort_by(|a, b| {
+        wrapped(turn_deg + a)
+            .abs()
+            .total_cmp(&wrapped(turn_deg + b).abs())
+    });
+    turns
 }
 
 /// The turn about Z, in degrees, that makes `object`'s convex footprint smallest on a plate of
@@ -314,33 +413,101 @@ impl Target {
     }
 }
 
-/// The models to place: their footprints' sizes, whether they may turn, and their tops.
+/// The models' footprints, as the packer chosen takes them (TD-165).
+#[derive(Clone, Copy)]
+enum Shapes<'a> {
+    /// Rectangles' sizes, and whether each may lie a quarter turn round (TD-162).
+    Box {
+        sizes: &'a [[f64; 2]],
+        turnable: &'a [bool],
+    },
+    /// Convex outlines, relative to each model's reference point, in each orientation offered.
+    Outline {
+        orientations: &'a [Vec<Vec<[f64; 2]>>],
+    },
+}
+
+/// Where the packer put a model: a rectangle's lowest corner, or an outline's orientation and
+/// where its reference point goes.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Spot {
+    Box(Placed),
+    Outline(PlacedOutline),
+}
+
+/// The models to place: their footprints and their tops.
 struct Models<'a> {
-    sizes: &'a [[f64; 2]],
-    turnable: &'a [bool],
+    shapes: Shapes<'a>,
     tops: &'a [f64],
 }
 
 impl Models<'_> {
-    /// Whether model `i` fits `target` alone: by its top, and by its footprint either way it
-    /// may lie.
+    /// Whether model `i` fits `target` alone: by its top, and by its footprint any way it may
+    /// lie.
     fn fit(&self, i: usize, target: &Target, spacing: f64) -> bool {
-        self.tops[i] <= target.height
-            && arrange_turning(
-                &[self.sizes[i]],
-                &[self.turnable[i]],
-                target.area,
-                &[],
-                spacing,
-            )
-            .is_ok()
+        self.tops[i] <= target.height && self.arrange(&[i], target.area, &[], spacing).is_ok()
+    }
+
+    /// The room model `i` takes, as the models are ordered by it.
+    fn room(&self, i: usize) -> f64 {
+        match self.shapes {
+            Shapes::Box { sizes, .. } => sizes[i][0] * sizes[i][1],
+            Shapes::Outline { orientations } => outline::area(&orientations[i][0]),
+        }
+    }
+
+    /// `items` packed on `area` `spacing` apart and clear of `obstacles`, by the packer chosen.
+    fn arrange(
+        &self,
+        items: &[usize],
+        area: Rect,
+        obstacles: &[Vec<[f64; 2]>],
+        spacing: f64,
+    ) -> Result<Vec<Spot>, Unplaced> {
+        match self.shapes {
+            Shapes::Box { sizes, turnable } => {
+                let wanted: Vec<[f64; 2]> = items.iter().map(|&i| sizes[i]).collect();
+                let free: Vec<bool> = items.iter().map(|&i| turnable[i]).collect();
+                let rects: Vec<Rect> = obstacles.iter().map(|o| bounds(o)).collect();
+                arrange_turning(&wanted, &free, area, &rects, spacing)
+                    .map(|placed| placed.into_iter().map(Spot::Box).collect())
+            }
+            Shapes::Outline { orientations } => {
+                let wanted: Vec<Vec<Vec<[f64; 2]>>> =
+                    items.iter().map(|&i| orientations[i].clone()).collect();
+                arrange_outlines(&wanted, area, obstacles, spacing)
+                    .map(|placed| placed.into_iter().map(Spot::Outline).collect())
+            }
+        }
+    }
+
+    /// The polygon model `i` covers where it was put at `spot`: an obstacle to those after it.
+    fn cover(&self, i: usize, spot: Spot) -> Vec<[f64; 2]> {
+        match (self.shapes, spot) {
+            (Shapes::Box { sizes, .. }, Spot::Box(placed)) => corners(lying(sizes[i], placed)),
+            (Shapes::Outline { orientations }, Spot::Outline(placed)) => {
+                translated(&orientations[i][placed.orientation], placed.offset)
+            }
+            // A spot always comes from the models' own packer.
+            _ => Vec::new(),
+        }
     }
 }
 
+/// The corners of `rect`, counter-clockwise from its lowest: the polygon it is.
+fn corners(rect: Rect) -> Vec<[f64; 2]> {
+    vec![
+        rect.min,
+        [rect.max[0], rect.min[1]],
+        rect.max,
+        [rect.min[0], rect.max[1]],
+    ]
+}
+
 /// Where Arrange puts each model: the models of each plate arranged (in their order) with their
-/// lowest corners, then each new plate's, and those that fit nowhere and stay.
+/// spots, then each new plate's, and those that fit nowhere and stay.
 struct Plan {
-    plates: Vec<Vec<(usize, Placed)>>,
+    plates: Vec<Vec<(usize, Spot)>>,
     stayed: Vec<usize>,
 }
 
@@ -353,7 +520,7 @@ impl Plan {
         items: &[usize],
         models: &Models<'_>,
         targets: &[Target],
-        obstacles: &[Vec<Rect>],
+        obstacles: &[Vec<Vec<[f64; 2]>>],
         new: &Target,
         spacing: f64,
         overflow: Overflow,
@@ -366,7 +533,7 @@ impl Plan {
                 .copied()
                 .filter(|&i| models.tops[i] <= target.height)
                 .collect();
-            let (placed, _) = pack_turning(&allowed, models, target.area, &obstacles[k], spacing);
+            let (placed, _) = pack(&allowed, models, target.area, &obstacles[k], spacing);
             left.retain(|i| !placed.iter().any(|(p, _)| p == i));
             plates.push(placed);
         }
@@ -377,7 +544,7 @@ impl Plan {
                     .copied()
                     .filter(|&i| models.tops[i] <= new.height)
                     .collect();
-                let (on_new, _) = pack_turning(&allowed, models, new.area, &[], spacing);
+                let (on_new, _) = pack(&allowed, models, new.area, &[], spacing);
                 if on_new.is_empty() {
                     break;
                 }
@@ -405,7 +572,6 @@ impl Plan {
         new: &Target,
         spacing: f64,
     ) -> Self {
-        let footprint = |i: usize| models.sizes[i][0] * models.sizes[i][1];
         let (mut order, stayed): (Vec<usize>, Vec<usize>) = items.iter().partition(|&&i| {
             targets
                 .iter()
@@ -415,7 +581,7 @@ impl Plan {
         order.sort_by(|&a, &b| {
             models.tops[b]
                 .total_cmp(&models.tops[a])
-                .then(footprint(b).total_cmp(&footprint(a)))
+                .then(models.room(b).total_cmp(&models.room(a)))
                 .then(a.cmp(&b))
         });
         let mut plates = Vec::new();
@@ -524,7 +690,7 @@ fn fill(
     models: &Models<'_>,
     target: &Target,
     spacing: f64,
-) -> Vec<(usize, Placed)> {
+) -> Vec<(usize, Spot)> {
     let candidates: Vec<usize> = order
         .iter()
         .copied()
@@ -535,12 +701,8 @@ fn fill(
     }
     // The first `k` of the candidates packed together, if they all fit.
     let run = |k: usize| {
-        let wanted: Vec<[f64; 2]> = candidates[..k].iter().map(|&i| models.sizes[i]).collect();
-        let free: Vec<bool> = candidates[..k]
-            .iter()
-            .map(|&i| models.turnable[i])
-            .collect();
-        arrange_turning(&wanted, &free, target.area, &[], spacing)
+        models
+            .arrange(&candidates[..k], target.area, &[], spacing)
             .ok()
             .map(|placed| {
                 candidates[..k]
@@ -569,11 +731,11 @@ fn fill(
         }
     }
     let mut plate = best.unwrap_or_default();
-    let obstacles: Vec<Rect> = plate
+    let obstacles: Vec<Vec<[f64; 2]>> = plate
         .iter()
-        .map(|&(i, placed)| lying(models.sizes[i], placed))
+        .map(|&(i, spot)| models.cover(i, spot))
         .collect();
-    let (around, _) = pack_turning(&candidates[low..], models, target.area, &obstacles, spacing);
+    let (around, _) = pack(&candidates[low..], models, target.area, &obstacles, spacing);
     plate.extend(around);
     order.retain(|i| !plate.iter().any(|(p, _)| p == i));
     plate
@@ -592,23 +754,20 @@ fn lying(size: [f64; 2], placed: Placed) -> Rect {
     }
 }
 
-/// `items` packed on `area` `spacing` apart and clear of `obstacles`, those `models` marks
-/// turnable free to lie a quarter turn round (TD-162): those placed, and those left, increasing.
-/// The packer lists what does not fit; those are left out and the rest packed again, until all
-/// that remain fit.
-fn pack_turning(
+/// `items` packed on `area` `spacing` apart and clear of `obstacles` by the models' packer:
+/// those placed, and those left, increasing. The packer lists what does not fit; those are left
+/// out and the rest packed again, until all that remain fit.
+fn pack(
     items: &[usize],
     models: &Models<'_>,
     area: Rect,
-    obstacles: &[Rect],
+    obstacles: &[Vec<[f64; 2]>],
     spacing: f64,
-) -> (Vec<(usize, Placed)>, Vec<usize>) {
+) -> (Vec<(usize, Spot)>, Vec<usize>) {
     let mut keep = items.to_vec();
     let mut left = Vec::new();
     while !keep.is_empty() {
-        let wanted: Vec<[f64; 2]> = keep.iter().map(|&i| models.sizes[i]).collect();
-        let free: Vec<bool> = keep.iter().map(|&i| models.turnable[i]).collect();
-        match arrange_turning(&wanted, &free, area, obstacles, spacing) {
+        match models.arrange(&keep, area, obstacles, spacing) {
             Ok(placed) => {
                 left.sort_unstable();
                 return (keep.into_iter().zip(placed).collect(), left);
@@ -663,11 +822,15 @@ pub fn plan_arrangement(
         .flat_map(|(k, (_, content, _))| content.objects.iter().map(move |o| (k, o)))
         .collect();
     let count = items.len();
+    let outlines = options.footprint == Footprint::Outline;
     let mut origin = Vec::with_capacity(count);
     let mut turns = Vec::with_capacity(count);
     let mut turned = Vec::with_capacity(count);
     let mut footprints = Vec::with_capacity(count);
     let mut tops = Vec::with_capacity(count);
+    // With outlines (TD-165): each model's turns offered, and its outline turned by each.
+    let mut offered: Vec<Vec<f64>> = Vec::new();
+    let mut orientations: Vec<Vec<Vec<[f64; 2]>>> = Vec::new();
     for (done, &(k, object)) in items.iter().enumerate() {
         if progress.stopped() {
             return Err(Unarranged::Cancelled);
@@ -681,13 +844,22 @@ pub fn plan_arrangement(
             0.0
         };
         let object = turned_by(object, turn);
-        let (rect, translation, top) =
-            measured(mesh, centre, &object).ok_or(Unarranged::Loading)?;
+        let measure = measure(mesh, centre, &object, outlines).ok_or(Unarranged::Loading)?;
+        if let Some((relative, _)) = &measure.outline {
+            let offers = outline_turns(options.turn, turn);
+            orientations.push(
+                offers
+                    .iter()
+                    .map(|&t| outline::turned(relative, t))
+                    .collect(),
+            );
+            offered.push(offers);
+        }
         origin.push(k);
         turns.push(turn);
         turned.push(object);
-        footprints.push((rect, translation));
-        tops.push(top);
+        footprints.push((measure.rect, measure.translation));
+        tops.push(measure.top);
     }
     if progress.stopped() {
         return Err(Unarranged::Cancelled);
@@ -696,8 +868,16 @@ pub fn plan_arrangement(
     let sizes: Vec<[f64; 2]> = footprints.iter().map(|(rect, _)| rect.size()).collect();
     let turnable = vec![options.turn; count];
     let models = Models {
-        sizes: &sizes,
-        turnable: &turnable,
+        shapes: if outlines {
+            Shapes::Outline {
+                orientations: &orientations,
+            }
+        } else {
+            Shapes::Box {
+                sizes: &sizes,
+                turnable: &turnable,
+            }
+        },
         tops: &tops,
     };
     let times = Times {
@@ -717,9 +897,13 @@ pub fn plan_arrangement(
             for &i in &stays {
                 let (_, object) = items[i];
                 let mesh = &input.meshes[&object.model];
-                let (rect, _, _) =
-                    measured(mesh, targets[origin[i]].centre, object).ok_or(Unarranged::Loading)?;
-                obstacles[origin[i]].push(rect);
+                let stays = measure(mesh, targets[origin[i]].centre, object, outlines)
+                    .ok_or(Unarranged::Loading)?;
+                // Where it stands: its rectangle, or its outline moved back to its place.
+                obstacles[origin[i]].push(match stays.outline {
+                    Some((relative, at)) => translated(&relative, at),
+                    None => corners(stays.rect),
+                });
             }
             let free: Vec<usize> = all.iter().copied().filter(|i| !stays.contains(i)).collect();
             let mut plan = Plan::packed(
@@ -756,8 +940,7 @@ pub fn plan_arrangement(
     if progress.stopped() {
         return Err(Unarranged::Cancelled);
     }
-    // Each model as it lands: turned, a quarter turn more where the packer turned it, then
-    // moved so its footprint's lowest corner is the corner planned.
+    // Each model as it lands: turned as planned, then moved to its spot.
     let mut landed: Vec<Option<PlateObject>> = vec![None; count];
     let mut out = Arranged {
         grouped: saved.is_some(),
@@ -766,20 +949,46 @@ pub fn plan_arrangement(
     };
     for (k, plate) in plan.plates.iter().enumerate() {
         let target = targets.get(k).unwrap_or(&new);
-        for &(i, placed) in plate {
-            let (mut object, (rect, translation)) = if placed.turned {
-                let object = turned_by(&turned[i], 90.0);
-                let mesh = &input.meshes[&object.model];
-                let (rect, translation, _) =
-                    measured(mesh, target.centre, &object).ok_or(Unarranged::Loading)?;
-                (object, (rect, translation))
-            } else {
-                (turned[i].clone(), footprints[i])
+        for &(i, spot) in plate {
+            let mesh = &input.meshes[&turned[i].model];
+            let (object, more) = match spot {
+                // A quarter turn more where the packer turned it, its footprint's lowest corner
+                // at the corner planned.
+                Spot::Box(placed) => {
+                    let (mut object, (rect, translation)) = if placed.turned {
+                        let object = turned_by(&turned[i], 90.0);
+                        let (rect, translation, _) =
+                            measured(mesh, target.centre, &object).ok_or(Unarranged::Loading)?;
+                        (object, (rect, translation))
+                    } else {
+                        (turned[i].clone(), footprints[i])
+                    };
+                    object.translate_mm[0] = translation[0] + placed.corner[0] - rect.min[0];
+                    object.translate_mm[1] = translation[1] + placed.corner[1] - rect.min[1];
+                    (object, if placed.turned { 90.0 } else { 0.0 })
+                }
+                // The orientation's turn, its reference point where the packer put it.
+                Spot::Outline(placed) => {
+                    let more = offered[i][placed.orientation];
+                    let mut object = turned_by(&turned[i], more);
+                    let placement = placement::place(
+                        mesh,
+                        object.translate_mm,
+                        &object.pose,
+                        target.centre,
+                        &mut Cancellation::never(),
+                    )
+                    .map_err(|_| Unarranged::Loading)?;
+                    let at = reference(&placement).ok_or(Unarranged::Loading)?;
+                    let translation = placement.translation_mm;
+                    object.translate_mm[0] = translation[0] + placed.offset[0] - at[0];
+                    object.translate_mm[1] = translation[1] + placed.offset[1] - at[1];
+                    (object, more)
+                }
             };
-            object.translate_mm[0] = translation[0] + placed.corner[0] - rect.min[0];
-            object.translate_mm[1] = translation[1] + placed.corner[1] - rect.min[1];
+            let mut object = object;
             object.pose.center = false;
-            if turns[i] != 0.0 || placed.turned {
+            if wrapped(turns[i] + more) != 0.0 {
                 out.turned += 1;
             }
             landed[i] = Some(object);

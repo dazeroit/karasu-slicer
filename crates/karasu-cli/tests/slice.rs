@@ -3208,6 +3208,69 @@ fn drain_holes_cut_only_their_own_model_on_a_plate() {
     );
 }
 
+/// A prism `height` tall on the convex, counter-clockwise polygon `base`, as ASCII STL.
+fn prism_stl(base: &[[f64; 2]], height: f64) -> String {
+    let mut text = String::from("solid prism\n");
+    let mut facet = |corners: [[f64; 3]; 3]| {
+        text.push_str("facet normal 0 0 0\nouter loop\n");
+        for [x, y, z] in corners {
+            text.push_str("vertex ");
+            text.push_str(&[x, y, z].map(|v| v.to_string()).join(" "));
+            text.push('\n');
+        }
+        text.push_str("endloop\nendfacet\n");
+    };
+    let n = base.len();
+    let low = |k: usize| [base[k % n][0], base[k % n][1], 0.0];
+    let high = |k: usize| [base[k % n][0], base[k % n][1], height];
+    for k in 1..n - 1 {
+        facet([low(0), low(k + 1), low(k)]);
+        facet([high(0), high(k), high(k + 1)]);
+    }
+    for k in 0..n {
+        facet([low(k), low(k + 1), high(k + 1)]);
+        facet([low(k), high(k + 1), high(k)]);
+    }
+    text + "endsolid prism\n"
+}
+
+#[test]
+fn footprints_overlap_by_their_outlines() {
+    // TD-165: two right triangles back to back, their rectangles overlapping and their long
+    // sides 2.8 mm apart, are not united; pushed together, they are.
+    let setup = Setup::new();
+    setup.temp.write(
+        "triangle.stl",
+        prism_stl(&[[0.0, 0.0], [20.0, 0.0], [0.0, 20.0]], 2.0),
+    );
+    let plate = |name: &str, second: [f64; 2]| {
+        setup.temp.write(
+            name,
+            format!(
+                r#"{{"format":"karasu-plate","version":2,"objects":[
+                    {{"name":"A","model":"triangle.stl","units":"mm","arrange":false,"translate_mm":[20,10,0]}},
+                    {{"name":"B","model":"triangle.stl","units":"mm","arrange":false,"rotate_deg":[0,0,180],"translate_mm":[{},{},0]}}]}}"#,
+                second[0], second[1]
+            ),
+        )
+    };
+    let apart = success(&setup.slice_plate(
+        &plate("apart.json", [22.0, 12.0]),
+        "reference",
+        &setup.temp.path("apart"),
+    ));
+    assert_eq!(field(&apart, "Overlapping footprints"), "none");
+    let together = success(&setup.slice_plate(
+        &plate("together.json", [15.0, 5.0]),
+        "reference",
+        &setup.temp.path("together"),
+    ));
+    assert_eq!(
+        field(&together, "Overlapping footprints"),
+        r#"1 pairs, united: object 1 ("A") copy 1 and object 2 ("B") copy 1"#
+    );
+}
+
 #[test]
 fn plates_unite_fixed_and_arranged_objects() {
     let setup = Setup::new();

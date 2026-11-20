@@ -6789,8 +6789,9 @@ Not implemented.
 
 ## TD-165 — Arrange by outline: convex footprints beside the rectangles
 
-**Status:** Proposed on 2026-11-20 at the owner's request (issue #51). It still needs the
-owner's approval of the design. Not implemented.
+**Status:** Proposed on 2026-11-20 at the owner's request (issue #51), accepted by the owner
+the same day ("procedi con la issue #51") with the proposals of "Open for the owner" as they
+stand, and implemented the same day (see "As implemented" below).
 
 **Context:**
 - **Arrange packs rectangles.** Every arrangement works on axis-aligned XY rectangles
@@ -6983,6 +6984,92 @@ owner's approval of the design. Not implemented.
   its own model. Should TD-166 not be accepted, the outline counts them as the slice does, and
   Box should too: the application's rectangle leaves them out today, so a cutter that reaches
   outside its model can make the slice refuse a plate Arrange left.
+
+**As implemented (2026-11-20, issue #51):**
+- **The owner's choices,** as proposed:
+  - "Footprint: Box / Outline", with Box by default and kept across restarts
+    (`PlateSettings::arrange_footprint`);
+  - moves, copies and clones to a plate land by the choice last made;
+  - no footprint counts drain cutters (TD-166 was implemented first).
+- **Core (`karasu_core::plate::outline`):**
+  - `bounded`, `grown`, `minkowski`, `turned`, `outlines_overlap` and `overlapping_outlines`;
+  - `arrange_outlines`, the packer as proposed, with three changes found while testing:
+    - **Feet:** the candidates also hold, on each no-fit polygon's edge, the point nearest the
+      move that centres the footprint. The free move nearest the middle often lies along an
+      edge. Without it, a triangle copied beside the same triangle landed 40 mm from it
+      instead of 30.
+    - **A fallback from the corner:** centre-out, a honeycomb centred on the plate loses rows
+      at its edges, so on a full plate round bases fitted no more than their squares (25 mm
+      bases on a 218 x 123 mm plate: 27 by outline, 32 by rectangles). When not all fit from
+      the middle, the same placement aiming at the front left corner (lowest, then leftmost:
+      bottom-left fill, Burke et al., 2006) is tried too; the arrangement leaving fewest out is
+      taken, centred again on the plate when nothing else is on it. Measured on discs, 2 mm
+      apart:
+
+      | Plate (mm) | Discs | Rectangles | From the middle | From the corner |
+      |---|---|---|---|---|
+      | 218 x 123 | 10 mm, 1 mm apart | 209 | 209 | 234 |
+      | 218 x 123 | 25 mm | 32 | 27 | 38 |
+      | 223.6 x 126 | 32 mm | 18 | 18 | 24 |
+      | 100 x 60 | 10 mm, 1 mm apart | 45 | 43 | 51 |
+
+      The rectangle fallback stays last, so outlines never fit fewer than rectangles.
+    - **Each form's no-fit polygons are kept** while footprints of the same shape (copies)
+      are placed. Those whose every candidate was taken are dead and give no more candidates:
+      footprints placed only cover more. The result is the same as without them (tested).
+- **Application:**
+  - **Measuring:** `arranging::measure` gives each model's outline, bounded, relative to its
+    reference point (where its own origin lands). A turn about Z turns the outline about that
+    point, so the orientations offered are the measured outline turned. Measuring each turn
+    gives the same polygons; this was tested with a model turned, scaled and mirrored.
+  - **Turns:** with "Turn about Z", each model is offered no turn and TD-162's turn, each with
+    its four quarter turns, the least total turn first.
+  - **The planning** packs by either footprint behind one interface. Rectangle obstacles become
+    their four corners and back, so Box is unchanged; the existing tests pass as they were.
+  - **Moves, copies and clones:** `Workspace::transfer` and `clone_object` take the footprint.
+    An object lands where it is when its outline, grown by half the spacing, is on the plate
+    and clear of the others grown the same way.
+  - **The status bar:**
+    - the rectangles are compared first; the outlines only for the pairs whose rectangles
+      overlap, so a Box plate costs what it did;
+    - each outline is kept per object, relative to its reference point, and made again only
+      when the object changes other than by moving, on the window's thread;
+    - its cost is a hull of the placed vertices, 0.2 s for a 7.2-million-triangle model
+      (TD-162), only while such a model is turned or scaled with its rectangle over another's.
+      The proposed worker thread was not needed for the models measured.
+- **The slice (`karasu-project`, `Layout`):** each object's outline is the hull of its sliced
+  surface at its design placement, moved with each copy. "Overlapping footprints" lists the
+  pairs whose rectangles and outlines overlap. The drain cutters' reach (TD-166) still uses the
+  rectangles, which only makes more groups.
+- **Measured** (release, Linux; the core's ignored test
+  `arrange_outlines_is_timed_on_many_footprints`, a 218 x 123 mm plate, 2 mm apart, two
+  orientations each):
+
+  | Outlines | Mixed shapes | Copies | 12 mm discs, not all fitting |
+  |---|---|---|---|
+  | 50 | 38 ms | 62 ms | 31 ms |
+  | 100 | 119 ms | 196 ms | 84 ms |
+  | 200 | 342 ms | 648 ms | 277 ms (50 left out) |
+  | 400 | 981 ms | 1,848 ms | 295 ms (250 left out) |
+
+  Rectangles take 82 ms for 400. With "Turn about Z", up to eight orientations make the
+  outline packing up to four times longer. It runs on Arrange's thread, with its progress and
+  Cancel.
+- **Tests:**
+  - **Core:**
+    - Minkowski sums, bounding, growing, overlaps and quarter turns;
+    - round bases nesting more than squares, 38 against 32, centred again;
+    - triangles turned half round sharing their room;
+    - random outlines apart and on the plate, the same twice;
+    - never fewer than rectangles;
+    - keeping forms changing nothing.
+  - **Application:**
+    - an outline turned about its reference point matching the model turned and measured;
+    - twelve triangles: ten or more on the plate by outline, six by rectangles, no outlines
+      overlapping;
+    - a copy by outline landing 30 mm away instead of 42;
+    - rectangles overlapping with outlines clear: no overlap in the status bar.
+  - **Command line:** two triangles back to back are not united; pushed together, they are.
 
 ## TD-166 — Each drilled model cuts only its own material on a plate
 

@@ -19,6 +19,8 @@
 //! - They include everything an object prints: supports, raft and drain-hole cutters.
 //! - [`arrange`] never rotates objects; a caller that turns them (the application's Arrange,
 //!   TD-162) gives [`arrange_turning`] the footprints it may turn.
+pub mod outline;
+
 use crate::{
     mesh::formats::LengthUnit,
     preparation::{HoleTilt, MAX_HOLE_TILT_DEG},

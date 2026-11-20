@@ -169,15 +169,18 @@ impl MainWindow {
             .map_or_else(|| name.clone(), |p| p.content().name.clone());
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 1 to 100.
         let copies = form.copies.round().clamp(*COPIES.start(), *COPIES.end()) as usize;
-        let message =
-            match self
-                .workspace
-                .clone_object(form.index, copies, form.to, form.arranged, name)
-            {
-                Ok(cloned) => cloned_message(&model, &plate, &cloned),
-                Err(Refused::Loading) => Message::new(Level::Info, tr!("plates-transfer-loading")),
-                Err(Refused::Unknown) => return,
-            };
+        // Arranged, the copies take Arrange's footprints (TD-165).
+        let arranged = form
+            .arranged
+            .then_some(self.plates.choices.arrange_footprint);
+        let message = match self
+            .workspace
+            .clone_object(form.index, copies, form.to, arranged, name)
+        {
+            Ok(cloned) => cloned_message(&model, &plate, &cloned),
+            Err(Refused::Loading) => Message::new(Level::Info, tr!("plates-transfer-loading")),
+            Err(Refused::Unknown) => return,
+        };
         self.messages.push(message);
     }
 }

@@ -28,8 +28,9 @@ use crate::request::{
 use karasu_core::{
     geometry::Point3,
     plate::{
-        arrange, overlapping_pairs, DrainRequest, PlateDocument, Rect, SimplifyRequest,
-        MAX_DOCUMENT_BYTES,
+        arrange, convex_hull,
+        outline::{outlines_overlap, translated},
+        overlapping_pairs, DrainRequest, PlateDocument, Rect, SimplifyRequest, MAX_DOCUMENT_BYTES,
     },
     preparation::sampled::HoleSurface,
     raster::LayerCut,
@@ -233,8 +234,11 @@ pub(super) struct Layout {
     names: Vec<String>,
     /// Design footprint of each object.
     design: Vec<Rect>,
+    /// Each object's convex outline at its design placement (TD-165), for the overlap test.
+    outlines: Vec<Vec<[f64; 2]>>,
     instances: Vec<Instance>,
-    /// Pairs of instances whose footprints overlap (united when sliced).
+    /// Pairs of instances whose footprints overlap (united when sliced): their rectangles, and
+    /// then their outlines (TD-165).
     overlaps: Vec<(usize, usize)>,
     /// Drain cutters that reach another instance, in instance and hole order (TD-166).
     reaches: Vec<Reach>,
@@ -266,6 +270,14 @@ fn footprint(object: &PreparedObject) -> Result<Rect, String> {
         ));
     }
     Ok(rect)
+}
+
+/// The convex outline of the sliced surface of `object` at its design placement, from above
+/// (TD-165): what the overlap test compares where rectangles overlap.
+fn outline(object: &PreparedObject) -> Result<Vec<[f64; 2]>, String> {
+    let surface = world_surface(object)?;
+    let points: Vec<[f64; 2]> = surface.vertices().iter().map(|p| [p.x, p.y]).collect();
+    Ok(convex_hull(&points))
 }
 
 /// The XY box of each drain cutter of `object` at its design placement, with its 1-based hole
@@ -326,6 +338,7 @@ impl Layout {
             .iter()
             .map(footprint)
             .collect::<Result<Vec<_>, _>>()?;
+        let outlines = objects.iter().map(outline).collect::<Result<Vec<_>, _>>()?;
         let mut instances = Vec::new();
         let (mut sizes, mut moved, mut fixed) = (Vec::new(), Vec::new(), Vec::new());
         for (index, (object, rect)) in objects.iter().zip(&design).enumerate() {
@@ -358,6 +371,7 @@ impl Layout {
         let mut layout = Self {
             names,
             design,
+            outlines,
             instances,
             overlaps: Vec::new(),
             reaches: Vec::new(),
@@ -394,9 +408,23 @@ impl Layout {
                 layout.instances[slot].offset = [corner[0] - rect.min[0], corner[1] - rect.min[1]];
             }
         }
-        layout.overlaps = overlapping_pairs(&layout.footprints());
+        layout.overlaps = layout.overlapping();
         layout.group_cutters();
         Ok(layout)
+    }
+
+    /// The pairs of instances whose footprints overlap, in increasing order: their rectangles,
+    /// then, where those overlap, their convex outlines (TD-165), so models clear of each other
+    /// whose rectangles overlap, as Arrange by outline places them, are not united.
+    fn overlapping(&self) -> Vec<(usize, usize)> {
+        let at = |k: usize| {
+            let instance = &self.instances[k];
+            translated(&self.outlines[instance.object], instance.offset)
+        };
+        overlapping_pairs(&self.footprints())
+            .into_iter()
+            .filter(|&(a, b)| outlines_overlap(&at(a), &at(b)))
+            .collect()
     }
 
     /// Find the drain cutters that reach another instance's footprint, and give each instance
@@ -806,6 +834,17 @@ mod tests {
                 .map(|&(c, _)| Rect {
                     min: c,
                     max: [c[0] + 10.0, c[1] + 10.0],
+                })
+                .collect(),
+            outlines: objects
+                .iter()
+                .map(|&(c, _)| {
+                    vec![
+                        c,
+                        [c[0] + 10.0, c[1]],
+                        [c[0] + 10.0, c[1] + 10.0],
+                        [c[0], c[1] + 10.0],
+                    ]
                 })
                 .collect(),
             instances: (0..objects.len())
