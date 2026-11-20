@@ -6285,9 +6285,9 @@ Should a run fail to start all the same, a `recheck` comment runs it again.
 
 **Status:** Accepted on 2026-11-19 by the owner ("confermo entrambi"), as proposed below with
 the 1 % margin, and with Clone and moves to another plate packing without turns. Phase 1
-(grouping by height) and phase 2's turns in the application were implemented the same day
-(issue #38); phase 2's command line and phase 3 are not implemented yet. The design follows the
-owner's proposals of the same day. The owner decided:
+(grouping by height), phase 2's turns in the application and phase 3 (Arrange every plate)
+were implemented on 2026-11-19 and 2026-11-20 (issue #38); phase 2's command line is put off to
+issue #48. The design follows the owner's proposals of 2026-11-19. The owner decided:
 - both are options of the Arrange dialog;
 - grouping by height is on by default, turning off;
 - turns are about Z only, at any angle;
@@ -6394,13 +6394,27 @@ owner's proposals of the same day. The owner decided:
    arranged objects; the option and the document field are named when implemented. Copies of one
    model may lie both ways of its rectangle. Grouping has no place there, since the command line
    slices one plate and fails when something does not fit.
-6. **Arrange every plate (a later phase):** an action that takes every model of the plates
-   sharing the shown plate's printer, print setting and resin, and arranges them again over
-   those plates, with both options and new plates when needed, as one undoable step. Open for
-   the owner before that phase:
-   - whether plates left empty are deleted;
-   - how the plates are ordered and named;
-   - that plates with other profiles are left alone.
+6. **Arrange every plate (a later phase):** an action that takes every model of several
+   plates and arranges them again over those plates, with both options and new plates when
+   needed, as one undoable step. The owner decided on 2026-11-19:
+   - **One dialog:** the Arrange dialog gains a choice, "This plate" or "Every plate". The Plate
+     menu's "Arrange models" opens it on the first, and a new "Arrange every plate" opens it on
+     the second; each is an action with a configurable shortcut.
+   - **Which plates** (shown only with "Every plate"): "Same printer", the plates with the shown
+     plate's printer, or "All plates", whatever their printer, resin and print setting. Setting
+     those is the user's part. Plates without a printer are left out.
+   - **The room is automatic:** a model goes only on a plate whose printer it fits, by its
+     footprint and by its height.
+   - **Plates left empty:** a switch, "Remove plates left empty".
+   - **Names:** a plate's name is never changed; plates added are named as Arrange names them
+     ("Arms (2)").
+   - **Order:** the project's. With "Group by height" the first plate takes the tallest group.
+     Plates added go after the last plate arranged, with the shown plate's profiles.
+   - **One spacing,** the dialog's, for every plate.
+   - **Slices:** the plates changed are out of date, as after any edit; Slice every plate
+     slices them all.
+   - **The dialog** says which plates and how many models it takes, and which plates it leaves
+     out and why ("Plate 4: another printer").
 
 **Phases:**
 1. Grouping by height in Arrange (the plate shown and its overflow), with the estimate.
@@ -6512,6 +6526,47 @@ owner's proposals of the same day. The owner decided:
     - a 205 mm bar along the diagonal;
     - a supported model whose support document is unchanged by the turn;
     - the dialog's switch.
+
+**Phase 3, as implemented (2026-11-20, issue #38):**
+- **The module:** the planning moves to `karasu-app::arranging`. `ArrangeInput` takes a snapshot
+  of every plate arranged (its content and revision), its models' meshes, every plate's name
+  and the project's plate order.
+  - `Workspace::arranged_plates` gives the plates and those left out, with why
+    (`LeftOut::NoPrinter`, `LeftOut::AnotherPrinter`).
+  - `ArrangeOptions` gains `scope`, `plates` (`PlateChoice`) and `remove_empty`.
+- **Each plate's own room:** each plate arranged is a target with its printer's area, height
+  and centre, and with its print setting for the estimate. Plates added take the shown plate's.
+  - **Packing** fills the targets in the project's order, each taking the models its printer
+    fits by height, then new plates.
+  - **Grouping by height** fills them in the same order, each with the longest run of the
+    tallest models that fit it.
+  - **The estimate** times each plate with its own print setting. The models that stay count
+    on the plate they come from.
+  - **"This plate"** is the same planning with one target, its results unchanged.
+- **"Every plate" with "Stay where they are":** a model that fits nowhere keeps its place on
+  its plate, and that plate is packed around it. Each round that leaves more such models packs
+  again around them all. "This plate" keeps its earlier behaviour.
+- **Making it:** `Project::rearrange_plates` replaces the contents, adds plates and removes
+  plates in one undoable step of the structure. The plates removed are those it left empty
+  that held models, when asked. `Workspace::finish_arrange` refuses when the project's plate
+  order or a plate's revision changed.
+- **Window:**
+  - the scope choice and the rows of "Every plate", with the line of what it takes;
+  - the Plate menu's "Arrange every plate" action;
+  - `PlateSettings::arrange_plates` (Same printer by default) and `arrange_remove_empty` (off
+    by default);
+  - the notification says the models and plates, the plates added or removed, and the rest;
+  - with every plate, the plate shown's models are all forgotten by the window, as they were
+    all arranged again.
+- **Tests:**
+  - two plates of tall and short slabs grouped across them, names and order kept, undone in
+    one step;
+  - the plates taken and left out with each choice, and a 200 mm box moved from a 175 mm
+    printer's plate to a 245 mm one;
+  - plates emptied, removed only when asked and brought back by undo;
+  - a model that fits nowhere staying, with the boxes packed clear of it;
+  - `rearrange_plates` in the project;
+  - the dialog's rows, the menu action, the saved choices and the accessibility check.
 
 **Tests (planned):**
 - **Grouping:**

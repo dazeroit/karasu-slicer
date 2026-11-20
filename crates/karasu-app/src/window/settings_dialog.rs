@@ -456,6 +456,7 @@ fn shortcut_groups() -> Vec<(String, Vec<Action>)> {
                 Action::NextPlate,
                 Action::TogglePlatesBar,
                 Action::ArrangeModels,
+                Action::ArrangeEveryPlate,
                 Action::PlatesOverview,
                 Action::SliceEveryPlate,
                 Action::ExportEveryPlate,

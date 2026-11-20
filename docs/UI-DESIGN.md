@@ -495,6 +495,17 @@ plate", 2026-11-07):
   models (mm, the plate's spacing to start with), Models "All on the plate (n)", Models that do
   not fit as a two-way choice "Go to a new plate" / "Stay where they are" with a weak help line
   for the choice; footer Arrange (primary) and Cancel.
+  - **Arrange every plate** (TD-162, phase 3; Plate menu, its own action):
+    - **The scope:** the same dialog, its first choice "Arrange: This plate / Every plate" set
+      to the second.
+    - **Its own rows:**
+      - "Plates: Same printer / All plates", kept across restarts;
+      - the switch "Remove plates left empty", off to start with and kept across restarts;
+      - a weak line of what it takes and leaves out, for example "3 plates, 24 models · left
+        out: Plate 4: another printer".
+    - **What changes:** the plates keep their names and order; the plates added are named as
+      Arrange names them.
+    - **The notification:** "Arranged: 24 models on 3 plates".
   - **Group by height** (TD-162): a switch, on to start with and kept across restarts. It shows
     only with "Go to a new plate".
   - **Turn about Z** (TD-162): a switch, off to start with and kept across restarts. Models may

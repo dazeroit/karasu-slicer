@@ -114,6 +114,8 @@ pub enum Action {
     /// Arrange the plate shown's models, those that do not fit to new plates or left in place
     /// (TD-135, phase 5).
     ArrangeModels,
+    /// Arrange the models of every plate together (TD-162, phase 3).
+    ArrangeEveryPlate,
     /// Slice, one after another, every plate whose slice is missing or out of date (TD-135,
     /// phase 4).
     SliceEveryPlate,
@@ -250,6 +252,7 @@ impl Action {
             Self::TogglePlatesBar => tr!("action-plates-bar"),
             Self::PlatesOverview => tr!("action-plates-overview"),
             Self::ArrangeModels => tr!("action-arrange-models"),
+            Self::ArrangeEveryPlate => tr!("action-arrange-every-plate"),
             Self::SliceEveryPlate => tr!("action-slice-every-plate"),
             Self::ExportEveryPlate => tr!("action-export-every-plate"),
             Self::Undo => tr!("action-undo"),
@@ -317,6 +320,7 @@ impl Action {
             Self::TogglePlatesBar => Some(tr!("action-plates-bar-hint")),
             Self::PlatesOverview => Some(tr!("action-plates-overview-hint")),
             Self::ArrangeModels => Some(tr!("action-arrange-models-hint")),
+            Self::ArrangeEveryPlate => Some(tr!("action-arrange-every-plate-hint")),
             Self::SliceEveryPlate => Some(tr!("action-slice-every-plate-hint")),
             Self::ExportEveryPlate => Some(tr!("action-export-every-plate-hint")),
             Self::ExportModels => Some(tr!("action-export-models-hint")),
@@ -370,6 +374,7 @@ impl Action {
             Self::TogglePlatesBar,
             Self::PlatesOverview,
             Self::ArrangeModels,
+            Self::ArrangeEveryPlate,
             Self::SliceEveryPlate,
             Self::ExportEveryPlate,
             Self::Undo,
@@ -444,6 +449,7 @@ impl Action {
             Self::TogglePlatesBar => "plates-bar",
             Self::PlatesOverview => "plates-overview",
             Self::ArrangeModels => "arrange-models",
+            Self::ArrangeEveryPlate => "arrange-every-plate",
             Self::SliceEveryPlate => "slice-every-plate",
             Self::ExportEveryPlate => "export-every-plate",
             Self::Undo => "undo",

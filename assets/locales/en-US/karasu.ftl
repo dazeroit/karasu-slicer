@@ -52,6 +52,8 @@ action-plates-overview = All plates
 action-plates-overview-hint = Every plate side by side, with its profiles and its last slice
 action-arrange-models = Arrange models
 action-arrange-models-hint = Arrange the plate's models; those that do not fit go to a new plate or stay where they are
+action-arrange-every-plate = Arrange every plate
+action-arrange-every-plate-hint = Arrange the models of every plate together, over those plates and new ones when needed
 action-slice-every-plate = Slice every plate
 action-slice-every-plate-hint = Slice, one after another, every plate not sliced as it is
 action-export-every-plate = Export every plate
@@ -106,6 +108,35 @@ plates-moved-middle = { $model } moved to { $plate }, in the middle of the plate
 plates-copied-middle = { $model } copied to { $plate }, in the middle of the plate: there was no room beside the models there, so it may overlap them
 plates-transfer-loading = A model is still loading: try again once it has opened
 arrange-title = Arrange models · { $plate }
+arrange-scope = Arrange
+arrange-scope-this = This plate
+arrange-scope-every = Every plate
+arrange-plates = Plates
+arrange-plates-same = Same printer
+arrange-plates-all = All plates
+arrange-remove-empty = Remove plates left empty
+arrange-remove-empty-hint = The plates whose models all go elsewhere are removed; Ctrl+Z brings them back
+arrange-every-takes = { $plates ->
+    [one] { $plates } plate
+   *[other] { $plates } plates
+}, { $models ->
+    [one] { $models } model
+   *[other] { $models } models
+}
+arrange-left-out = left out: { $plates }
+arrange-left-no-printer = no printer
+arrange-left-another-printer = another printer
+arrange-every-done = Arranged: { $models ->
+    [one] { $models } model
+   *[other] { $models } models
+} on { $plates ->
+    [one] { $plates } plate
+   *[other] { $plates } plates
+}
+arrange-every-removed = { $count ->
+    [one] Removed { $count } plate left empty: { $plates }.
+   *[other] Removed { $count } plates left empty: { $plates }.
+}
 arrange-spacing = Spacing between models
 arrange-models = Models
 arrange-models-all = All on the plate ({ $count })
