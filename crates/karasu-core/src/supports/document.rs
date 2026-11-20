@@ -109,9 +109,9 @@ impl Preset {
         };
         SupportParameters {
             contact_shape: ContactShape::Cone,
-            contact_diameter_mm: pick([0.3, 0.5, 0.6]),
+            contact_diameter_mm: pick([0.22, 0.32, 0.43]),
             contact_fit_min_mm: None,
-            contact_sphere_diameter_mm: pick([0.5, 0.6, 0.8]),
+            contact_sphere_diameter_mm: pick([0.25, 0.35, 0.45]),
             tip_body_diameter_mm: pick([0.8, 1.0, 1.0]),
             tip_length_mm: pick([2.0, 2.5, 2.5]),
             penetration_mm: pick([0.1, 0.1, 0.1]),
@@ -414,6 +414,9 @@ struct RawDocument {
     defaults: Overrides,
     #[serde(skip_serializing_if = "Option::is_none")]
     clearance_mm: Option<f64>,
+    /// Absent in documents written before TD-164: their contacts keep the earlier rule.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    contact_clearance: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     anchor_tolerance_mm: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -473,21 +476,10 @@ impl PlanarMotion {
         self.turn_deg == 0.0 && self.from_mm == self.to_mm
     }
 
+    /// The turn's sine and cosine: exact for whole quarter turns, and identical on every platform
+    /// (issue #21).
     fn sin_cos(&self) -> (f64, f64) {
-        let quarter = self.turn_deg / 90.0;
-        if quarter.fract() == 0.0 {
-            // Exact values for whole quarter turns.
-            // Reduced modulo 4 first: an exact whole number from 0 to 3.
-            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            match quarter.rem_euclid(4.0) as u8 {
-                0 => (0.0, 1.0),
-                1 => (1.0, 0.0),
-                2 => (0.0, -1.0),
-                _ => (-1.0, 0.0),
-            }
-        } else {
-            self.turn_deg.to_radians().sin_cos()
-        }
+        crate::geometry::sin_cos_degrees(self.turn_deg)
     }
 
     /// The moved point.
@@ -754,8 +746,15 @@ pub struct SupportDocument {
     pub binding: Option<Binding>,
     /// Preset the parameters started from.
     pub preset: Preset,
-    /// Minimum distance between non-contact support parts and the model.
+    /// Minimum distance between support parts and the model: every part but the contacts and
+    /// model feet, and the contacts too from the walls beside them when `contact_clearance` is
+    /// set.
     pub clearance_mm: f64,
+    /// The contacts keep `clearance_mm` from the walls beside them (TD-164): surfaces reaching
+    /// beyond the contact's tangent plane, turned from it by more than 45°, with the part in front
+    /// of them. Documents made since have it; a document written before reads without it and
+    /// keeps the earlier rule, under which contacts are exempt. Model feet stay exempt.
+    pub contact_clearance: bool,
     /// Largest distance between an anchor and the model surface.
     pub anchor_tolerance_mm: f64,
     /// Largest angle between a tip or foot axis and the anchor normal, in degrees.
@@ -838,6 +837,71 @@ impl SupportParameters {
                 d + (self.tip_body_diameter_mm - d) * share
             }
             ContactShape::Sphere => 2.0 * self.footprint_radius_mm(),
+        }
+    }
+
+    /// These parameters with the contact ending as `shape`, sunk as deep (TD-164, owner
+    /// 2026-11-20); the same shape changes nothing.
+    /// - **To a ball:** the ball, and the cone from its centre, as wide as the cone's mark `W` at
+    ///   the surface. Sunk as deep as the cone, it meets the surface on a narrower circle,
+    ///   `2·√(p·(W − p))` wide: the ball makes the contact smaller still.
+    /// - **To a cone:** its mark as wide as the ball, its narrow end
+    ///   `d = (W − body·p/L) / (1 − p/L)` within 0.05 mm and the tip's body: the cone the ball
+    ///   was made from comes back.
+    ///
+    /// The couplings hold after either: a fitted contact's smallest at most the contact, a ball
+    /// at least as wide as the contact.
+    #[must_use]
+    pub fn with_contact_shape(&self, shape: ContactShape) -> Self {
+        if shape == self.contact_shape {
+            return self.clone();
+        }
+        let mut p = self.clone();
+        p.contact_shape = shape;
+        match shape {
+            ContactShape::Sphere => {
+                let w = self.surface_width_mm().min(p.tip_body_diameter_mm);
+                p.contact_sphere_diameter_mm = w;
+                p.contact_diameter_mm = w;
+            }
+            ContactShape::Cone => {
+                let width = self.contact_sphere_diameter_mm;
+                // The share of the way from the narrow end to the body at the surface.
+                let part = if p.tip_length_mm > 0.0 {
+                    (p.penetration_mm / p.tip_length_mm).min(1.0)
+                } else {
+                    1.0
+                };
+                let d = if part < 1.0 {
+                    (width - p.tip_body_diameter_mm * part) / (1.0 - part)
+                } else {
+                    width
+                };
+                p.contact_diameter_mm = d.clamp(0.05, p.tip_body_diameter_mm.max(0.05));
+                p.contact_sphere_diameter_mm =
+                    p.contact_sphere_diameter_mm.max(p.contact_diameter_mm);
+            }
+        }
+        p.contact_fit_min_mm = p.contact_fit_min_mm.map(|m| m.min(p.contact_diameter_mm));
+        p
+    }
+
+    /// These parameters with a ball contact of their own ball's diameter, the cone from its
+    /// centre as wide, sunk as deep as before (TD-164). The Islands and Automatic tools make
+    /// their contacts so with their ball switch on: with a preset's values, a ball as wide as its
+    /// cone's mark (0.25, 0.35 and 0.45 mm), sunk 0.1 mm, meeting the surface 0.245, 0.316 and
+    /// 0.374 mm wide. A ball wider than the tip's body is narrowed to it.
+    #[must_use]
+    pub fn as_ball(&self) -> Self {
+        let d = self
+            .contact_sphere_diameter_mm
+            .min(self.tip_body_diameter_mm);
+        Self {
+            contact_shape: ContactShape::Sphere,
+            contact_diameter_mm: d,
+            contact_sphere_diameter_mm: d,
+            contact_fit_min_mm: self.contact_fit_min_mm.map(|m| m.min(d)),
+            ..self.clone()
         }
     }
 
@@ -924,11 +988,18 @@ impl SupportParameters {
                 p.cone_diameter_mm,
                 p.pad_diameter_mm,
             ),
+            // Only a ball contact needs its ball at least as wide as the cone from its centre
+            // (TD-164): a cone contact's ball is unused, and narrower presets' balls must not
+            // refuse a wider cone given alone.
             (
                 "contact_diameter_mm",
                 "contact_sphere_diameter_mm",
                 p.contact_diameter_mm,
-                p.contact_sphere_diameter_mm,
+                if p.contact_shape == ContactShape::Sphere {
+                    p.contact_sphere_diameter_mm
+                } else {
+                    f64::INFINITY
+                },
             ),
         ] {
             if a > b {
@@ -1215,6 +1286,7 @@ impl SupportDocument {
             binding,
             preset: raw.preset,
             clearance_mm,
+            contact_clearance: raw.contact_clearance,
             anchor_tolerance_mm,
             max_axis_deviation_deg,
             raft,
@@ -1242,6 +1314,7 @@ impl SupportDocument {
             preset: self.preset,
             defaults: Overrides::default(),
             clearance_mm: Some(self.clearance_mm),
+            contact_clearance: self.contact_clearance,
             anchor_tolerance_mm: Some(self.anchor_tolerance_mm),
             max_axis_deviation_deg: Some(self.max_axis_deviation_deg),
             raft: self.raft.map(|r| RawRaft {
@@ -1360,13 +1433,14 @@ fn raw_support(s: &ManualSupport) -> RawSupport {
 impl SupportDocument {
     /// An empty document with `preset` and the default checks of a document read without
     /// them: 0.3 mm of clearance, 0.05 mm of anchor tolerance and 60° of axis deviation; no
-    /// raft, no binding.
+    /// raft, no binding. Its contacts keep the clearance from the walls beside them (TD-164).
     #[must_use]
     pub fn new(preset: Preset) -> Self {
         Self {
             binding: None,
             preset,
             clearance_mm: 0.3,
+            contact_clearance: true,
             anchor_tolerance_mm: DEFAULT_ANCHOR_TOLERANCE_MM,
             max_axis_deviation_deg: 60.0,
             raft: None,

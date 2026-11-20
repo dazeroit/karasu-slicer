@@ -40,6 +40,7 @@ pub(crate) fn reason(skip: Skip) -> String {
         Skip::FootInHole => tr!("auto-left-foot-in-hole"),
         Skip::Collides => tr!("auto-left-collides"),
         Skip::Pierces => tr!("auto-left-pierces"),
+        Skip::Crowded => tr!("auto-left-crowded"),
     }
 }
 
@@ -680,6 +681,10 @@ impl IslandsUi {
             (
                 Skip::Pierces,
                 tr!("islands-skip-pierces", count = count(Skip::Pierces)),
+            ),
+            (
+                Skip::Crowded,
+                tr!("islands-skip-crowded", count = count(Skip::Crowded)),
             ),
         ]
         .into_iter()

@@ -19,7 +19,7 @@ use crate::{
     placement::Affine,
 };
 use karasu_core::{
-    geometry::ObjectTransform,
+    geometry::{plan_length, ObjectTransform},
     mesh::TriangleMesh,
     supports::{BracePlan, FindingKind, Preset, Severity, SupportDocument, SupportKind},
 };
@@ -86,7 +86,8 @@ pub(crate) fn held(island: &Island, tips: &[[f64; 3]], join_mm: f64) -> bool {
 /// The distance between `a` and `b`.
 #[must_use]
 pub fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1]).hypot(a[2] - b[2])
+    let d = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt()
 }
 
 /// Why a finding's support cannot stay.
@@ -275,7 +276,7 @@ pub(crate) fn check_built(
 pub(crate) fn why_near(why_at: &[([f64; 3], Skip)], point: [f64; 3]) -> Option<Skip> {
     why_at
         .iter()
-        .filter(|w| (w.0[0] - point[0]).hypot(w.0[1] - point[1]) <= START_REACH_MM)
+        .filter(|w| plan_length(w.0[0] - point[0], w.0[1] - point[1]) <= START_REACH_MM)
         .min_by(|a, b| distance(a.0, point).total_cmp(&distance(b.0, point)))
         .map(|w| w.1)
 }

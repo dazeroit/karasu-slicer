@@ -1,4 +1,4 @@
-use super::{transform_error::validate, TransformError, Vector3};
+use super::{fixed::sin_cos_degrees, transform_error::validate, TransformError, Vector3};
 
 /// Right-handed active rotation represented by a finite unit quaternion in X/Y/Z/W order.
 /// Inputs/compositions are explicitly normalized without an epsilon. Quaternion equality is
@@ -159,81 +159,9 @@ impl Rotation3 {
     }
 }
 
-/// Sine and cosine of a finite angle in degrees, from fixed IEEE operations only (no platform
-/// math library), so results are identical on every platform.
-///
-/// The angle is reduced exactly: the remainder modulo 360 is exact, and each reflection into
-/// `[0, 45]` degrees is an exact subtraction (Sterbenz). Only the conversion to radians and the
-/// Taylor polynomials round; on `[0, π/4]` the omitted terms are below 2^-60 relative. Multiples
-/// of 90 degrees give exact results.
-pub(crate) fn sin_cos_degrees(degrees: f64) -> (f64, f64) {
-    let mut angle = degrees % 360.0;
-    if angle < 0.0 {
-        angle += 360.0;
-    }
-    // Quadrant symmetries: sin(a + 180) = -sin a, sin(180 - a) = sin a, cos(180 - a) = -cos a.
-    let (mut sine_sign, mut cosine_sign) = (1.0, 1.0);
-    if angle >= 180.0 {
-        angle -= 180.0;
-        sine_sign = -sine_sign;
-        cosine_sign = -cosine_sign;
-    }
-    if angle > 90.0 {
-        angle = 180.0 - angle;
-        cosine_sign = -cosine_sign;
-    }
-    // sin(90 - a) = cos a.
-    let swap = angle > 45.0;
-    if swap {
-        angle = 90.0 - angle;
-    }
-    let radians = angle * (std::f64::consts::PI / 180.0);
-    let square = radians * radians;
-    // Horner forms of the Taylor series through x^19 and x^18:
-    // sin x = x (1 - x²/(2·3) (1 - x²/(4·5) (…))), cos x = 1 - x²/(1·2) (1 - x²/(3·4) (…)).
-    let (mut sine, mut cosine) = (1.0, 1.0);
-    for k in (1..=9_u8).rev() {
-        let even = 2.0 * f64::from(k);
-        sine = 1.0 - square / (even * (even + 1.0)) * sine;
-        cosine = 1.0 - square / ((even - 1.0) * even) * cosine;
-    }
-    let sine = radians * sine;
-    let (sine, cosine) = if swap { (cosine, sine) } else { (sine, cosine) };
-    (sine_sign * sine, cosine_sign * cosine)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn degree_sine_and_cosine_are_exact_at_right_angles_and_accurate_elsewhere() {
-        for (degrees, expected) in [
-            (0.0, (0.0, 1.0)),
-            (90.0, (1.0, 0.0)),
-            (180.0, (0.0, -1.0)),
-            (270.0, (-1.0, 0.0)),
-            (360.0, (0.0, 1.0)),
-            (-90.0, (-1.0, 0.0)),
-            (450.0, (1.0, 0.0)),
-        ] {
-            let (sine, cosine) = sin_cos_degrees(degrees);
-            // Signed zeros compare equal, as the rotation algebra treats them.
-            assert_eq!((sine, cosine), expected, "{degrees}");
-        }
-        assert!((sin_cos_degrees(30.0).0 - 0.5).abs() <= f64::EPSILON / 2.0);
-        let mut degrees = -720.0;
-        while degrees <= 720.0 {
-            let (sine, cosine) = sin_cos_degrees(degrees);
-            // The platform functions on the reduced angle, whose conversion to radians rounds.
-            let (s, c) = degrees.rem_euclid(360.0).to_radians().sin_cos();
-            assert!(
-                (sine - s).abs() < 1e-15 && (cosine - c).abs() < 1e-15,
-                "{degrees}"
-            );
-            degrees += 0.37;
-        }
-    }
 
     #[test]
     fn degree_euler_rotations_match_the_radian_convention() {

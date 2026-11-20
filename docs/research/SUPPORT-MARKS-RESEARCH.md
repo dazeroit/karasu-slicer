@@ -483,6 +483,69 @@ for An: 0.11 to 0.15 mm).
   the 24 mm side of karasu's tile exceeds its size by about 0.2 mm more than the 30 mm side
   does, the panel's pitch is 24.8 µm; if both exceed it by the same, 24.605 µm is right.
 
+## Lychee's contacts at Light and Heavy, and their distance from walls (E-SUP-10, owner, 2026-11-20)
+
+**Conditions (observed, owner's screenshots of the support panel):** Lychee Slicer 8.0, automatic
+supports "Classic", density "Normal", Auto-Bracing off, Auto-Parent on, Auto-Lift off, cone tips.
+Light: tip diameter 0.24 mm, tip length 2.50 mm, diameter 1.00 mm. Heavy: 0.40, 2.50 and
+1.30 mm. The mini supports cannot be left out of the automatic supports (owner); few appear.
+
+**Exports** (kept outside the repository, read as data by an independent script):
+
+| File | SHA-256 |
+| --- | --- |
+| `tip_test_L_lychee_light.stl` | `39f0885ccd13416c7d6263632c48f9207e2d87819234147ef7d37aed3b28439b` |
+| `tip_test_L_lychee_light.pp1` | `b732e1cadfa1e50264ef5028e78927ef6509274d07945290dbcb70a901bdc284` |
+| `tip_test_L_lychee_heavy.stl` | `e4be22859b9edc4b29863a00fc096e046238afec9a87527da83ee6c92d912e59` |
+| `tip_test_L_lychee_heavy.pp1` | `a8ad3585bf803072891f2cae61bd85d494b8fb7486539586b3a9786850950a7b` |
+| `Arm_R_lychee_light.stl` | `4b337402046bb774eabecdef9196ce0d07ddb0757ac1bd31eaff8aa256e13472` |
+| `Arm_R_lychee_light.pp1` | `2d873f9df35beef2556827bda534985f145d5234f99bc6cb9259935cc50cab02` |
+| `Arm_R_lychee_heavy.stl` | `9de51ee1794702d317a6fffdf98b5d37e0bf0ca96a051d96de879908b1dd9244` |
+| `Arm_R_lychee_heavy.pp1` | `509237490afba105fc2afe5e39468ef54c86efc1f72bde2b905deb60b3f2ace1` |
+
+The specimen is E-SUP-07's specimen L; the arm is E-SUP-05's.
+
+**The contacts (observed, from the STLs; Medium from E-SUP-07):**
+
+| | Light | Medium | Heavy |
+| --- | --- | --- | --- |
+| Width at the surface | 0.243 mm | 0.304 mm | 0.407 mm |
+| The cap's depth below the surface | 0.120 mm | 0.150 mm | 0.200 mm |
+| Tip body | 0.99 mm | 1.09 mm | 1.28 mm |
+
+- The cap is a hemisphere sunk exactly its radius, so the width at the surface is the panel's
+  tip diameter, and the narrowest section is at the surface.
+- The tips follow the surface's normal (median 0°).
+- The placement does not change with the preset: 44 tips on the specimen at every weight; 530 at
+  Light and 533 at Heavy on the arm. Only the sizes change.
+
+**Distance from walls (observed, then inferred).** A wall is measured as a model surface that lies
+beyond the contact's tangent plane, on the support's side, and turns more than 45° from the
+surface the contact holds; the distance is the nearest approach of the tip's part to it.
+- **Two simpler rules fail on the arm (observed):** normals more than 45° away alone take the
+  sides of convex fingers, which curve away from the tip, for walls; the tangent plane alone
+  takes gently concave surfaces around the contact.
+- **The specimen:** no tip within 2.8 mm of the cylinder's side, at any weight; Lychee places no
+  tip in the concave corner.
+- **The arm, Light:** 19 of 530 tips (about 4 %) come within 0.5 mm of a wall, 10 within 0.2 mm.
+  Heavy has more.
+- **Other parts:** 5 to 7 of about 700 parts pass within 0.3 mm of the model; 26 stand on it.
+- **Inferred:** Lychee keeps no strict safety distance. It mostly avoids concave corners by where
+  it places tips.
+
+**Decisions taken from it (owner, 2026-11-20; TD-164):**
+- **Contact shapes:** cone and sphere both stay; cone is the default.
+- **Sphere contacts:** the sphere is as wide as the contact and sinks its radius, a hemisphere.
+  Revised the same day after the owner tried it: sunk its radius, the ball looked and marked no
+  differently from the cone, so it sinks as deep as the cone (0.1 mm) and meets the surface on a
+  smaller circle, which makes the contact smaller still.
+- **Presets' widths at the surface:** 0.25, 0.35 and 0.45 mm, karasu's own values. The 0.35 mm
+  is the section that left the best marks in E-SUP-09; the scale agrees with what is observed
+  here.
+- **The safety distance:** `clearance_mm`, 0.3 mm by default, for the whole support, its contact
+  part included, against walls by the rule above. Lychee keeps none, and karasu's corner tips
+  joined the wall at 0.12 to 0.22 mm.
+
 ## Open questions and candidate changes
 
 **Waiting for the owner:**
@@ -500,8 +563,10 @@ for An: 0.11 to 0.15 mm).
   with the owner's resin and exposure. They also show whether `clearance_mm`'s 0.3 mm is enough
   for the other parts.
 
-**Candidate changes, not decided:** each needs its own design, a decision the owner approves,
-and a test print. Candidates 1, 7 and 8 are proposed together in TD-164 (2026-11-19).
+**Candidate changes:** each needs its own design, a decision the owner approves, and a test
+print. Candidates 1, 7 and 8 were proposed together in TD-164 (2026-11-19), accepted with the
+owner's decisions and implemented on 2026-11-20 (E-SUP-10); candidate 5's contact sizes were set
+there too, at karasu's own widths. The others are not decided.
 1. **Outline tips only at free edges.** Give edge tips only where the surface beyond an outline
    is missing or higher, not where it is lower (a concave corner whose wall holds the
    underside). Change 8 would keep any tip clear of a wall.

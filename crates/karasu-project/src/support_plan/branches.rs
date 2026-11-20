@@ -7,10 +7,17 @@
 //! the tip pointing at the junction) is at most 45° from vertical, the tip within the axis limit
 //! from the surface, and, when the model's surface for routes is gridded, clear of the model by
 //! the support's widest radius and the clearance.
-use super::route::{widest, RouteSurface};
-use karasu_core::supports::{
-    BaseSpec, SupportDocument, SupportKind, SupportParameters, SupportScene, TipCone,
-    DEFAULT_ANCHOR_TOLERANCE_MM,
+//!
+//! The planners keep a branch's tip along the surface's normal (TD-164,
+//! [`Junction::keep_normal`]): the slanted part starts at the tip's join along the normal, and
+//! the junction is lowered until that part is at most 45° from vertical.
+use super::route::{contact_clearance, widest, RouteSurface};
+use karasu_core::{
+    geometry::{plan_length, sin_cos_degrees},
+    supports::{
+        BaseSpec, SupportDocument, SupportKind, SupportParameters, SupportScene, TipCone,
+        DEFAULT_ANCHOR_TOLERANCE_MM,
+    },
 };
 
 /// The supports of `document` that `ids` are, and every support standing on any of them,
@@ -76,6 +83,9 @@ pub struct Junction<'a> {
     pub document: Option<&'a SupportDocument>,
     /// The model's surface for routes, if gridded.
     pub surface: Option<&'a RouteSurface>,
+    /// A standard branch's tip stays along the surface's normal (the planners, TD-164), rather
+    /// than pointing at the junction.
+    pub keep_normal: bool,
 }
 
 /// Where a branch joins its trunk: the highest point of the trunk's shaft, clear of its ends,
@@ -99,11 +109,7 @@ pub fn junction_on(j: &Junction<'_>) -> Option<[f64; 3]> {
             (r - j.parameters.mini_penetration_mm, None)
         }
     };
-    let limit = j
-        .document
-        .map_or(60.0, |d| d.max_axis_deviation_deg)
-        .to_radians()
-        .cos();
+    let limit = sin_cos_degrees(j.document.map_or(60.0, |d| d.max_axis_deviation_deg)).1;
     let surface = j.surface.and_then(|r| r.mesh().map(|m| (r, m)));
     let cone = TipCone::of(
         j.parameters,
@@ -119,15 +125,47 @@ pub fn junction_on(j: &Junction<'_>) -> Option<[f64; 3]> {
         };
         r.normal_at(j.tip, j.normal, radius)
     });
-    let top = (high - FROM_ENDS * j.trunk_mm).min(j.tip[2] - length);
     let bottom = low + FROM_ENDS * j.trunk_mm;
+    // A standard tip keeps the clearance from the walls beside its contact, when the document
+    // asks (TD-164).
+    let walls = contact_clearance(j.document).filter(|_| j.kind == SupportKind::Standard);
+    if j.keep_normal && j.kind == SupportKind::Standard {
+        // The tip along the normal, or no junction: it is never tilted (TD-164).
+        let axis = unit(normal)?;
+        if let Some((r, mesh)) = surface {
+            if !r.grid().reach_clear(mesh, &cone, j.tip, axis, axis)
+                || walls.is_some_and(|c| !r.grid().contact_clear(mesh, &cone, j.tip, axis, axis, c))
+            {
+                return None;
+            }
+        }
+        let join = add(j.tip, scale(axis, length));
+        let mut z = (high - FROM_ENDS * j.trunk_mm).min(join[2]);
+        while z >= bottom {
+            if let Some(at) = j.scene.shaft_point(j.parent, z) {
+                let across = plan_length(join[0] - at[0], join[1] - at[1]);
+                let rise = join[2] - at[2];
+                if rise > 0.0
+                    && across <= rise * SLANT
+                    && radius.is_none_or(|radius| {
+                        surface.is_none_or(|(r, mesh)| r.grid().clear(mesh, join, at, radius))
+                    })
+                {
+                    return Some(at);
+                }
+            }
+            z -= STEP_MM;
+        }
+        return None;
+    }
+    let top = (high - FROM_ENDS * j.trunk_mm).min(j.tip[2] - length);
     let mut z = top;
     while z >= bottom {
         if let Some(at) = j.scene.shaft_point(j.parent, z) {
             let towards = unit(sub(at, j.tip));
             if let Some(axis) = towards.filter(|a| dot(*a, normal) >= limit) {
                 let join = add(j.tip, scale(axis, length));
-                let across = (join[0] - at[0]).hypot(join[1] - at[1]);
+                let across = plan_length(join[0] - at[0], join[1] - at[1]);
                 let rise = join[2] - at[2];
                 // A standard tip also keeps off the model beside its contact (TD-124): a lower
                 // junction leans it another way.
@@ -135,6 +173,9 @@ pub fn junction_on(j: &Junction<'_>) -> Option<[f64; 3]> {
                     surface.is_none_or(|(r, mesh)| {
                         r.grid().clear(mesh, join, at, radius)
                             && r.grid().reach_clear(mesh, &cone, j.tip, axis, normal)
+                            && walls.is_none_or(|c| {
+                                r.grid().contact_clear(mesh, &cone, j.tip, axis, normal, c)
+                            })
                     })
                 });
                 if rise > 0.0 && across <= rise * SLANT && clear {

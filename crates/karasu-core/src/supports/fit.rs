@@ -191,9 +191,20 @@ mod tests {
         TriangleMesh::try_new(vertices, triangles).unwrap()
     }
 
+    /// Heavy's parameters with the contact these tests measure, a 0.6 mm cone and a 0.8 mm ball
+    /// (the preset's before TD-164), fitting down to `least`.
     fn heavy_fitted(least: f64) -> SupportParameters {
         SupportParameters {
             contact_fit_min_mm: Some(least),
+            ..heavy()
+        }
+    }
+
+    /// Heavy's parameters with a 0.6 mm cone and a 0.8 mm ball.
+    fn heavy() -> SupportParameters {
+        SupportParameters {
+            contact_diameter_mm: 0.6,
+            contact_sphere_diameter_mm: 0.8,
             ..Preset::Heavy.parameters()
         }
     }
@@ -243,7 +254,7 @@ mod tests {
         assert!(room);
         assert!((built.contact_diameter_mm - 0.45).abs() < 1e-12);
         let factor = 0.45 / 0.6;
-        let heavy = Preset::Heavy.parameters();
+        let heavy = heavy();
         assert!((built.penetration_mm - heavy.penetration_mm * factor).abs() < 1e-12);
         assert!(
             (built.contact_sphere_diameter_mm - heavy.contact_sphere_diameter_mm * factor).abs()

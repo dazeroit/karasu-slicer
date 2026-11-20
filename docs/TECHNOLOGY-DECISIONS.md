@@ -6064,7 +6064,9 @@ state, its threads and its workspace.
    degree sine and cosine, the square root of the sum of squares) made both platforms plan the
    same document on that model, but changed about 70 of its 436 supports against either
    platform's plan today. The owner left it open (2026-11-16): each platform stays consistent
-   with itself; issue #21 tracks it, and ARCHITECTURE.md records the exception.
+   with itself; issue #21 tracks it, and ARCHITECTURE.md records the exception. **Fixed with
+   TD-164 (2026-11-20):** the planners now use fixed IEEE operations, so the plans changed once
+   and both platforms plan the same supports.
 
 **Alternatives:** writing the model-frame document, which `--supports` would read as world
 coordinates, or a frame field in the document, a change to the format (TD-062, TD-108) for one
@@ -6138,7 +6140,7 @@ within 30 degrees and unlimited.
 **Consequences:** `karasu-project` owns a second algorithm after the support planners. The
 candidates are deterministic on each platform; the search uses the platform's math library
 (`sin_cos`, `atan2`, `asin`), so equal candidates are not promised across platforms, as for the
-support planners (TD-157 item 6). Automatic orientation on the command line would now need only
+support planners (TD-157 item 6; the planners use fixed operations since TD-164). Automatic orientation on the command line would now need only
 its options, the input built from a request, and a parity check against the application.
 
 ## TD-159 — Every plate of a project from the command line
@@ -6719,14 +6721,11 @@ a model where it was when it fitted nowhere on the target.
 
 ## TD-164 — Support contacts along the normal, and a safety distance from other surfaces
 
-**Status:** Proposed on 2026-11-19 at the owner's request. It comes from the support marks
-research ([SUPPORT-MARKS-RESEARCH.md](research/SUPPORT-MARKS-RESEARCH.md), E-SUP-06 to E-SUP-09),
-candidate changes 1, 7 and 8. It still needs:
-- the owner's approval of the design;
-- the gap test that sets the default;
-- a test print.
-
-Not implemented.
+**Status:** Proposed on 2026-11-19 at the owner's request; accepted with the owner's decisions on
+2026-11-20 and implemented the same day, with bug #21 (issue #44). It comes from the support marks
+research ([SUPPORT-MARKS-RESEARCH.md](research/SUPPORT-MARKS-RESEARCH.md), E-SUP-06 to E-SUP-10),
+candidate changes 1, 7 and 8. The gap test print and a third tip test are still to come; they
+may change the defaults, not the rules.
 
 **Context (from the research):**
 - **Tilted tips (E-SUP-06, E-SUP-09; observed in the PP1, then inferred):**
@@ -6755,77 +6754,138 @@ Not implemented.
 - **Another slicer's output (E-SUP-07, E-SUP-08; observed in files exported for the purpose):**
   Lychee's tips follow the normal, and it places none near the concave corners.
 
-**Proposal:**
-1. **Tips along the normal (candidate 7).**
-   - Every automatic support's tip, from its contact to its joint `J`, follows the surface's
-     normal at the contact (`axis: normal`, already in the document format), and the support
-     bends at `J`.
-   - **A support standing on another:** the planner chooses the junction on the parent so that
-     the segment from `J` leans no more than the shafts' limit (45°). It lowers the junction, as
-     E-SUP-09 did by hand, or else takes another parent or the plate.
-   - **It never tilts the tip instead.** A contact with no such route is left out and reported,
-     as one with no route is today.
-   - **Unchanged:** the straight axis stays in the format, for supports placed by hand and for
-     documents saved before; mini supports are unchanged.
-2. **A safety distance for the contact part (owner's proposal, candidate 8).**
-   - **The setting:** a document setting, `contact_clearance_mm` (proposed name). It is the least
-     distance between a support's contact part and every model surface other than the one the
-     contact holds, along the part's whole length. It is proven as the clearance is (separating
-     axes, conservative).
-   - **The surface the contact holds:** proposed as the connected patch around the contact whose
-     normals stay within the planner's overhang angle of the contact's normal. Every other
-     triangle is tested: in a concave corner, the wall beside the underside. The rule needs
-     checking on curved surfaces and at creases before it is adopted.
-   - **The default:** set from the gap test (tips 0.1 to 0.7 mm from a wall, proposed in the
-     research). The provisional proposal is 0.3 mm, the clearance's.
-   - **In the interface:** shown and set in the Supports panel beside Clearance, and kept with the
-     document.
-   - **Documents saved before:** a document without the setting keeps today's rule, the contact
-     part left out, so existing projects plan and slice as before.
-   - **Automatic planning:** a candidate tip that breaks it moves away from the wall along the
-     surface, within the grid's step, or is dropped.
-   - **Placed by hand:** a support that breaks it is a collision, accepted only through
-     `accept_collision`, as other collisions are.
-3. **Edge tips only at free edges (candidate 1).**
-   - An outline counts as an edge where the surface beyond it is missing or higher, no longer
-     where it is lower.
-   - **Why:** a concave corner's wall prints before the underside and holds it there, so it takes
-     no edge row. The safety distance would move or drop those tips anyway; this rule says why
-     they are not needed.
+- **Another slicer's contacts at its three presets (E-SUP-10; observed in files exported for the
+  purpose, 2026-11-20):** each contact is a hemisphere sunk exactly its radius, its tips follow
+  the normal whatever the preset, and the presets change the contact's width only. It keeps no
+  strict distance from walls: a few tips of a test arm stand within 0.2 mm of one. Measured
+  there, a wall is told from the surface a contact holds only by both conditions together: 45°
+  alone takes the far side of a convex finger for a wall, the tangent plane alone a gently
+  concave surface.
 
-**Not in this proposal:** the other candidate changes, each still waiting for its own evidence:
-- a smaller, shallower Medium contact (5), which needs a hold test on a larger part;
-- fewer tips on flat undersides (2);
-- lower fillets on a raft (3);
-- a slender tip (4);
-- a regular frame (6).
+**Decision (owner, 2026-11-20):**
+1. **Tips along the normal.** Every tip the Islands and Automatic tools place follows the
+   surface's mean normal at its contact (`axis: normal`), and the support bends at the tip's
+   join `J`. A tip is never tilted: a contact with no route along the normal is left out and
+   reported. Supports placed by hand keep their choice (the normal, or towards the shaft), and
+   may still tilt to find a way, as before; mini supports are unchanged.
+2. **The safety distance is the clearance.** `clearance_mm` (0.3 mm by default) applies to the
+   whole support, the contact part included, against the walls beside the contact:
+   - a wall is a surface reaching more than 0.05 mm beyond the contact's tangent plane, on the
+     support's side;
+   - its normal is more than 45° from the held surface's;
+   - the support part is in front of it.
 
-**Alternatives considered:**
-- **A short neck along the normal, the rest of the tip tilted:** the tilted body still stands
-  over the surface, beside the contact.
-- **The depth measured along the normal:** it sets the depth, but the footprint stays oblique.
-- **A lower tilt limit:** fewer tips tilted, but tilted all the same.
-- **Edge tips farther from a corner (0.8 mm), the exemption kept:** it solves the corner, not the
-  other walls (grooves, ribs, the edges of holes).
+   `clearance_mm` stays an advanced value; the Automatic panel shows it too (it was only in the
+   Supports panel's checks).
+3. **Edge tips only at free edges.** A concave corner's wall prints before the underside and
+   holds it, so it takes no edge row. The owner's L: with the short leg pointing down, the long
+   side's underside meets the leg's wall and takes no edge tips there; with the leg pointing up,
+   the underside ends freely and keeps them. The tilted tiles of TD-136 keep their tips under and
+   beside the leading edge.
+4. **The contacts' sizes.** Widths at the surface of 0.25, 0.35 and 0.45 mm (Light, Medium,
+   Heavy), karasu's own values: cone contacts of 0.22, 0.32 and 0.43 mm sunk 0.1 mm, whose
+   marks are 0.249, 0.347 and 0.453 mm wide. The default shape stays the cone; the ball stays,
+   0.25, 0.35 and 0.45 mm wide.
+5. **The shape switch keeps the depth** (owner, 2026-11-20, after trying the build: sunk its
+   radius, the ball looked and marked no differently from the cone). A cone made a ball becomes
+   a ball as wide as its mark, the cone's narrow end as wide, sunk as deep as the cone (0.1 mm),
+   so the ball meets the surface on a smaller circle: 0.245, 0.316 and 0.374 mm with the
+   presets. The ball makes the contact smaller still. A ball made a cone becomes the cone as
+   wide as the ball, its narrow end `d = (D − body·p/L) / (1 − p/L)`, as deep: the cone it was
+   made from.
+6. **Bug #21 with it:** the plans change anyway, so the planners move to fixed IEEE operations
+   in the same change, and Linux and Windows plan the same supports.
 
-**Validation (planned):**
-1. **The gap test print,** for the safety distance's default.
-2. **A third tip test:** the specimen planned automatically under these rules.
-   - Measured in the PP1: band tips within 1° of the normal, none within the safety distance
-     of the cylinder, and no corner row.
-   - Compared in hand with E-SUP-09.
-3. **The venom arm:** the number of contacts, their area and their marks, against E-SUP-05.
-4. **Automated tests:**
-   - tips along the normal, and junctions within the shafts' limit;
-   - the safety distance's proof, the concave corner included;
-   - documents without the setting slicing byte-identical to before;
-   - the command line's automatic supports planning the same.
+**As implemented (2026-11-20):**
+- **Fixed operations (#21).** `karasu_core::geometry` exposes `sin_cos_degrees` (TD-061),
+  `tan_degrees`, `acos_degrees` (`2 atan √((1 − c)/(1 + c))`, the arc tangent halved three times
+  and summed through `u^19`, exact at 0, 90 and 180 degrees) and `plan_length`
+  (`√(dx² + dy²)`). The support planners and the core's supports use them instead of `hypot`,
+  `sin`, `cos`, `tan` and `acos`; a turned document's motion too. The trunk merge's first
+  junction height, a tie by construction, takes a margin of 10⁻⁹ mm, so rounding no longer moves
+  it a whole step. The Orient tool's search (TD-158) still uses the platform's library.
+- **Routes (`find_route`, `RouteQuery::keep_normal`).** For the planners, way 2 (a tilted tip) is
+  left out and way 3 becomes `Route::Bent(knee)`: from `J` along the normal, the nearest clear
+  column beside `J`, ring by ring every 0.5 mm up to 15 mm, the part from `J` to the knee at
+  most 44.5° from vertical, then straight down. A tip whose cone along the normal meets the
+  model away from its contact, whose contact comes within the clearance of a wall, or whose
+  join is closer to the model than the support's widest radius and the clearance, is
+  `Route::Crowded`: every way starts at `J`, so none is looked for. `route_planned` routes so;
+  `route_support` (by hand) keeps its ways, tilting included, and in a document with the rule
+  its tips avoid the walls beside their contacts too.
+- **Branches.** `junction_on` with `keep_normal` keeps the branch's tip along the normal and
+  lowers the junction until the segment from `J` leans at most 45°, as E-SUP-09 did by hand;
+  without a junction the tip gets a support of its own.
+- **A crowded overhang tip moves.** The Automatic tool's overhang tips hold an area, not a
+  point: a crowded one moves along the surface, ring by ring every 0.25 mm in 8 directions, up
+  to the probe grid's step at the level spacing and at least the support's widest radius, the
+  clearance and a ring, to the first place facing down within 30° of its surface, on the same
+  side of a hollowed shell and not cut by a drain hole, that is not crowded. An island's tip
+  holds where the island starts and does not move. A tip left crowded is reported with the new
+  reason `Skip::Crowded` ("its tip, along the surface, would come too close to a wall beside
+  it").
+- **The edge rule** (`auto::edges`): an outline is no edge where the model is met within
+  `WALL_REACH_MM` (0.5 mm) beyond it, `WALL_BELOW_MM` (0.05 mm) below the underside: a concave
+  corner. The other edge rules are unchanged.
+- **The walls** (`karasu_core::supports` `walls`, `WALL_BEYOND_MM`): the three conditions
+  above, per triangle, the part in front when its axis capsule reaches the triangle's outward
+  side; a triangle with no normal beyond the plane counts as a wall. The build proves a contact
+  part `clearance_mm` clear of every wall by the same separating axes as other parts, as an
+  error that `accept_collision` accepts. Routes and junctions check the contact's cone (and its
+  ball) the same way.
+- **Documents.** A new field `contact_clearance` (written only when set) turns the rule on. New
+  documents have it; a document written before reads without it and keeps the earlier rule, the
+  contact exempt, so existing projects build and slice as before. The Automatic tool's Apply
+  writes its clearance and the rule to the model's document, and its plan keeps them: the
+  tool's value `clearance_mm` (0 to 5 mm, 0.3 by default, under Advanced), and on the command
+  line `--auto-clearance <mm>`. Model feet and mini supports stay exempt.
+- **Presets and the switch.** The presets' contacts are 0.22, 0.32 and 0.43 mm and their balls
+  0.25, 0.35 and 0.45 mm. `SupportParameters::with_contact_shape` keeps the depth (the Supports
+  panel's switch); `as_ball` makes the Islands and Automatic tools' ball, their preset's ball as
+  deep as its cone.
 
-**Open for the owner:**
-- the provisional default before the gap test;
-- the rule that tells the surface held from a wall beside it;
-- whether shafts and braces need more than `clearance_mm`, should the gap test show that 0.3 mm
-  cures shut too.
+**Validation:**
+- **Automated:** the degree arc cosine against the platform's within 10⁻¹² degrees and exact at
+  the ends; the planners' routes straight, bent at the join, on the model, crowded and none;
+  every planned tip along the normal and every segment from its join within 45° on a tile tilted
+  30° with branches; the L in both orientations (no edge tips beside the leg pointing down,
+  corners and edge tips at the free end with it up), the TD-136 tiles held as before; the wall
+  rule (a concave corner's wall, the same facing away, a 30° concave surface, a convex rib, a
+  surface 0.05 mm beyond); a contact 0.1 mm from a rib a collision in a new document and none
+  in one written before; the shape switch keeping the depth and coming back to the same cone.
+- **Measured (Linux, release, `slice --auto-supports`, Photon P1, Medium, 2026-11-20), against
+  `main` (f7e9e2b):**
+  - **The tip test's specimen** (E-SUP-06): 155 supports against 161, every tip along the normal
+    (`main`: 92 of 161 branch tips pointing at their junction); 0.47 s either way. No edge row
+    at the concave corners; the band's tips nearest the cylinder stand 0.57 to 0.59 mm from it
+    (`main`: 0.39 to 0.42 mm, the edge rows), 22 within 1 mm against 28: grid tips the clearance
+    moved off the wall.
+  - **The 500,000-triangle miniature turned 80° about X** (TD-157): 478 supports against 502;
+    islands held 305 of 307 (306 on `main`); overhang points held 99.0 % against 99.3 %; places
+    left 18 against 5, 13 of them crowded by a wall and 5 reaching through a thin part; 258 mini
+    supports against 84 and 117 branches against 283, where `main` tilted 87 tips and pointed
+    181 branches at their junction. Planning and slicing about 6 s against 8.5 to 8.8 s; peak
+    memory about 460 MB against 476 to 526 MB. Two runs gave the same document.
+  - **An island's tip does not move** (owner, 2026-11-21): first implemented, a crowded island
+    tip moved up to 0.6 mm along the surface (488 supports, 221 mini supports), which put 30
+    island tips off their island's first layer; counted where they start, the islands held rise
+    from 252 to 282 without it.
+  - **Why the crowded tips (traced, then the trace removed):** almost every one meets a wall
+    within the clearance of its contact, a concave crease 0.1 to 0.5 mm away, which the
+    miniature's fine detail is full of; the rest meet the model with their cone (the TD-124
+    reach) or their join. They fall back to mini supports, which keep no clearance.
+  - **Linux and native Windows (#21):** both models planned the same support documents to the
+    last bit on both, and their print files differ only in the PP1's `os` provenance (the
+    specimen 0.64 s, the miniature 6.3 s on Windows), measured while island tips still moved.
+- **Still to come:** the gap test print for the default; a third tip test planned under these
+  rules (band tips within 1° of the normal, none within the clearance of the cylinder); the venom
+  arm against E-SUP-05.
+- **Noted for a later revision of the planner (owner, 2026-11-20):** a concave corner's wall may
+  also hold the underside beside it, as it holds its edge: points within a strip along the wall
+  (a tip's reach, or narrower) would then want no tip, and the grid tips the clearance now moves
+  0.57 mm off the wall (the specimen's remaining rows) would not be placed. Left as it is for
+  now.
+- **Open for the owner:** whether the miniature's mini supports are acceptable.
 
 ## TD-165 — Arrange by outline: convex footprints beside the rectangles
 

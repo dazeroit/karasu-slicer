@@ -20,6 +20,16 @@
 //!    below it and start in mid-air.
 //! 5. Otherwise none: the support goes straight down, and its build reports the collision.
 //!
+//! **A tip kept along the normal (TD-164).** The Islands and Automatic tools keep every tip along
+//! the surface's normal ([`RouteQuery::keep_normal`]): a tilted tip touches more than it is set
+//! to, off its centre (E-SUP-06, E-SUP-09). Way 2 is then left out, and way 3 bends the support
+//! at the tip's join instead: the nearest vertical column beside the join that is clear from a
+//! knee down to the plate, the part from the join to the knee at most 45° from vertical
+//! ([`Route::Bent`]). A tip whose cone along the normal meets the model away from its contact,
+//! or whose join is closer to the model than the support's widest radius and the clearance, is
+//! [`Route::Crowded`]: every way starts at that join, so none is looked for, and the tip is never
+//! tilted instead. The planner may move it along the surface, away from what crowds it.
+//!
 //! A mini support (owner, 2026-10-30) has one way when placed by hand: [`find_mini_foot`] stands
 //! it on the first surface straight below its tip's ball, when that surface faces up, and its rod
 //! may touch the model on its way. Placed by the Islands or Automatic tool (owner, 2026-11-04,
@@ -45,12 +55,14 @@
 //! reports it.
 #![allow(clippy::many_single_char_names)] // Geometric notation: points, segments, normals.
 use super::{
-    index::{normal, segment_meets_triangle, segment_triangle_distance, Grid},
-    shapes::{add, dot, frame, length, scale, sub, unit, V},
+    index::{normal, proven_clear, segment_meets_triangle, segment_triangle_distance, Grid},
+    shapes::{add, dot, frame, frustum, length, scale, sphere, sub, unit, V},
     tip::{surface_normal, TipCone},
+    walls::is_wall,
 };
 use crate::{
     cancellation::{Cancellation, Cancelled},
+    geometry::{plan_length, sin_cos_degrees, tan_degrees},
     mesh::TriangleMesh,
 };
 
@@ -159,6 +171,58 @@ impl SurfaceGrid {
             .candidates(mesh, lo, hi)
             .into_iter()
             .all(|t| !reach.meets(Self::corners(mesh, t)))
+    }
+
+    /// Whether the contact part of `cone`, at `tip` along the unit `axis` on a surface of unit
+    /// outward `normal` there, keeps `clearance` from the walls beside it, as a document with
+    /// `contact_clearance` proves it (TD-164): its cone, and its ball for a sphere contact.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)] // The contact, its surface and its clearance.
+    pub fn contact_clear(
+        &self,
+        mesh: &TriangleMesh,
+        cone: &TipCone,
+        tip: V,
+        axis: V,
+        normal: V,
+        clearance: f64,
+    ) -> bool {
+        if cone.from_mm >= cone.length_mm {
+            // No cone to build: the build refuses the support itself.
+            return true;
+        }
+        let start = add(tip, scale(axis, cone.from_mm));
+        let join = add(tip, scale(axis, cone.length_mm));
+        let mut parts = vec![frustum(
+            start,
+            cone.radii_mm[0],
+            join,
+            cone.radii_mm[1],
+            cone.sides,
+        )];
+        if let Some(ball) = cone.ball_mm {
+            parts.push(sphere(start, ball, cone.sides));
+        }
+        parts.iter().all(|part| {
+            let lo = [0, 1, 2].map(|k| {
+                part.vertices
+                    .iter()
+                    .map(|v| v[k])
+                    .fold(f64::INFINITY, f64::min)
+                    - clearance
+            });
+            let hi = [0, 1, 2].map(|k| {
+                part.vertices
+                    .iter()
+                    .map(|v| v[k])
+                    .fold(f64::NEG_INFINITY, f64::max)
+                    + clearance
+            });
+            self.grid.candidates(mesh, lo, hi).into_iter().all(|t| {
+                let triangle = Self::corners(mesh, t);
+                !is_wall(tip, normal, triangle, part) || proven_clear(part, triangle, clearance)
+            })
+        })
     }
 
     /// Where the segment straight up from `from` to the height `to_z` first meets `mesh`: the
@@ -319,6 +383,13 @@ pub struct RouteQuery {
     /// The tip points towards its shaft (`AxisSpec::Straight`), not along the surface's normal:
     /// straight down when the shaft goes straight down below it, as the build makes it (TD-129).
     pub towards_shaft: bool,
+    /// The tip stays along the surface's normal (the Islands and Automatic tools, TD-164): no
+    /// tilted tip, and the support bends at the tip's join to go aside. Not with
+    /// `towards_shaft`.
+    pub keep_normal: bool,
+    /// The clearance the contact part keeps from the walls beside it, in mm, when the document
+    /// applies it (`contact_clearance`, TD-164): a tip that would not is no way.
+    pub contact_clearance_mm: Option<f64>,
 }
 
 /// The way a support goes.
@@ -331,6 +402,9 @@ pub enum Route {
     Tilted([f64; 3]),
     /// The tip points at this knee, in world mm; the shaft goes straight down from it.
     Aside([f64; 3]),
+    /// The tip along the normal; the shaft bends at the tip's join towards this knee, in world
+    /// mm, at most 45° from vertical, and goes straight down from it (TD-164).
+    Bent([f64; 3]),
     /// The foot stands on the model at this point, with this outward normal, along this axis.
     OnModel {
         /// The foot's contact, in world mm.
@@ -340,6 +414,11 @@ pub enum Route {
         /// The foot's unit axis, out of the surface towards its shaft (TD-132).
         axis: [f64; 3],
     },
+    /// The tip kept along the normal (TD-164) meets the model beside its contact, or its join
+    /// comes closer to the model than the support's widest radius and the clearance: no way
+    /// starts there. Placed by hand it never arises; built anyway, the support goes straight
+    /// down, as with [`Route::None`].
+    Crowded,
     /// No way found: the support goes straight down, through the model.
     None,
 }
@@ -354,9 +433,15 @@ pub fn find_route(mesh: &TriangleMesh, grid: &SurfaceGrid, query: &RouteQuery) -
     let n = grid.surface_normal(mesh, tip, anchor, query.tip.footprint_mm);
     let r = query.radius_mm;
     let floor = query.floor_mm;
-    let cos_limit = query.max_axis_deviation_deg.to_radians().cos();
-    // The tip along `axis` keeps off the model away from its contact.
-    let tip_clear = |axis: V| grid.reach_clear(mesh, &query.tip, tip, axis, n);
+    let cos_limit = sin_cos_degrees(query.max_axis_deviation_deg).1;
+    // The tip along `axis` keeps off the model away from its contact, and the clearance from
+    // the walls beside it when the document asks.
+    let tip_clear = |axis: V| {
+        grid.reach_clear(mesh, &query.tip, tip, axis, n)
+            && query
+                .contact_clearance_mm
+                .is_none_or(|c| grid.contact_clear(mesh, &query.tip, tip, axis, n, c))
+    };
     // Ways 1 and 4 build the tip along the normal, or straight down when it points towards a
     // shaft below it: that tip must be within the axis limit and keep off the model (TD-129).
     let axis = if query.towards_shaft {
@@ -370,13 +455,23 @@ pub fn find_route(mesh: &TriangleMesh, grid: &SurfaceGrid, query: &RouteQuery) -
     if axis_clear && (join[2] <= floor || grid.clear(mesh, join, [join[0], join[1], floor], r)) {
         return Route::Straight;
     }
+    let tan_slant = tan_degrees(MAX_SLANT_DEG);
+    if query.keep_normal {
+        // The tip along the normal or not at all (TD-164); every way starts at its join.
+        if !axis_clear || !grid.clear(mesh, join, join, r) {
+            return Route::Crowded;
+        }
+        if let Some(knee) = bent(mesh, grid, query, join, tan_slant) {
+            return Route::Bent(knee);
+        }
+        return on_model(mesh, grid, query, join, tan_slant).unwrap_or(Route::None);
+    }
     // 2. A tilted tip: ring by ring from the normal, steepest first on each.
     if let Some(axis) = tilted(mesh, grid, query, n, &tip_clear) {
         return Route::Tilted(axis);
     }
     // 3. Aside: ring by ring, nearest first.
     let reach = query.tip.length_mm + PAST_JOIN_MM;
-    let tan_slant = MAX_SLANT_DEG.to_radians().tan();
     let rings = (MAX_ASIDE_MM / RING_STEP_MM).floor();
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 30 rings.
     for ring in 1..=rings as u32 {
@@ -390,8 +485,8 @@ pub fn find_route(mesh: &TriangleMesh, grid: &SurfaceGrid, query: &RouteQuery) -
         }
         let z = z.max(floor + KNEE_FLOOR_MM);
         for k in 0..DIRECTIONS {
-            let angle = std::f64::consts::TAU * f64::from(k) / f64::from(DIRECTIONS);
-            let knee = [tip[0] + d * angle.cos(), tip[1] + d * angle.sin(), z];
+            let (sin_a, cos_a) = sin_cos_degrees(360.0 * f64::from(k) / f64::from(DIRECTIONS));
+            let knee = [tip[0] + d * cos_a, tip[1] + d * sin_a, z];
             let Some(towards) = unit(sub(knee, tip)) else {
                 continue;
             };
@@ -409,30 +504,74 @@ pub fn find_route(mesh: &TriangleMesh, grid: &SurfaceGrid, query: &RouteQuery) -
             }
         }
     }
-    // 3. On the model: where the shaft straight down first meets a surface facing up.
-    if let Some((point, facing)) = grid.first_below(mesh, join, floor) {
-        let Some(facing) = unit(facing) else {
-            return Route::None;
-        };
-        // The foot towards its shaft (TD-132), and the way judged with it.
-        let mean = grid.surface_normal(mesh, point, facing, query.foot_radius_mm);
-        let foot = foot_axis(mean, query.max_axis_deviation_deg);
-        let foot_join = add(point, scale(foot, query.foot_length_mm));
-        let aside = (join[0] - foot_join[0]).hypot(join[1] - foot_join[1]);
-        if axis_clear
-            && facing[2] > 0.0
-            && foot_join[2] < join[2]
-            && aside <= (join[2] - foot_join[2]) * tan_slant
-            && grid.clear(mesh, join, foot_join, r)
-        {
-            return Route::OnModel {
-                point_mm: point,
-                normal: facing,
-                axis: foot,
-            };
+    // 4. On the model.
+    if !axis_clear {
+        return Route::None;
+    }
+    on_model(mesh, grid, query, join, tan_slant).unwrap_or(Route::None)
+}
+
+/// Way 4: the foot on the model where the shaft straight down from the tip's `join` first meets
+/// a surface facing up, the shaft from `join` to the foot's join clear and leaning no more than
+/// `tan_slant` (see the module).
+fn on_model(
+    mesh: &TriangleMesh,
+    grid: &SurfaceGrid,
+    query: &RouteQuery,
+    join: V,
+    tan_slant: f64,
+) -> Option<Route> {
+    let (point, facing) = grid.first_below(mesh, join, query.floor_mm)?;
+    let facing = unit(facing)?;
+    // The foot towards its shaft (TD-132), and the way judged with it.
+    let mean = grid.surface_normal(mesh, point, facing, query.foot_radius_mm);
+    let foot = foot_axis(mean, query.max_axis_deviation_deg);
+    let foot_join = add(point, scale(foot, query.foot_length_mm));
+    let aside = plan_length(join[0] - foot_join[0], join[1] - foot_join[1]);
+    (facing[2] > 0.0
+        && foot_join[2] < join[2]
+        && aside <= (join[2] - foot_join[2]) * tan_slant
+        && grid.clear(mesh, join, foot_join, query.radius_mm))
+    .then_some(Route::OnModel {
+        point_mm: point,
+        normal: facing,
+        axis: foot,
+    })
+}
+
+/// Way 3 for a tip kept along the normal (TD-164): the knee of the nearest vertical column beside
+/// the tip's `join` that is clear from the join to the knee, leaning no more than `tan_slant`,
+/// and from the knee down to the floor. Ring by ring every [`RING_STEP_MM`] up to
+/// [`MAX_ASIDE_MM`], each knee as high as the slant allows, in a fixed order of directions.
+fn bent(
+    mesh: &TriangleMesh,
+    grid: &SurfaceGrid,
+    query: &RouteQuery,
+    join: V,
+    tan_slant: f64,
+) -> Option<V> {
+    let floor = query.floor_mm;
+    let rings = (MAX_ASIDE_MM / RING_STEP_MM).floor();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 30 rings.
+    for ring in 1..=rings as u32 {
+        let d = f64::from(ring) * RING_STEP_MM;
+        // A knee exactly at the floor stays: the drop rounds just above or below it.
+        let z = join[2] - d / tan_slant;
+        if z < floor + KNEE_FLOOR_MM - ROUNDING_MM {
+            return None;
+        }
+        let z = z.max(floor + KNEE_FLOOR_MM);
+        for k in 0..DIRECTIONS {
+            let (sin_a, cos_a) = sin_cos_degrees(360.0 * f64::from(k) / f64::from(DIRECTIONS));
+            let knee = [join[0] + d * cos_a, join[1] + d * sin_a, z];
+            if grid.clear(mesh, join, knee, query.radius_mm)
+                && grid.clear(mesh, knee, [knee[0], knee[1], floor], query.radius_mm)
+            {
+                return Some(knee);
+            }
         }
     }
-    Route::None
+    None
 }
 
 /// How far short of the axis limit a foot's axis stays, in degrees: the build measures the
@@ -448,17 +587,14 @@ const FOOT_LIMIT_MARGIN_DEG: f64 = 0.5;
 #[must_use]
 pub fn foot_axis(normal: [f64; 3], max_deviation_deg: f64) -> [f64; 3] {
     let up = [0.0, 0.0, 1.0];
-    let limit = (max_deviation_deg - FOOT_LIMIT_MARGIN_DEG)
-        .max(0.0)
-        .to_radians();
-    if dot(up, normal) >= limit.cos() {
+    let (sin, cos) = sin_cos_degrees((max_deviation_deg - FOOT_LIMIT_MARGIN_DEG).max(0.0));
+    if dot(up, normal) >= cos {
         return up;
     }
     // The direction in the plane of the normal and straight up, square to the normal.
     let Some(towards) = unit(sub(up, scale(normal, dot(up, normal)))) else {
         return normal;
     };
-    let (sin, cos) = limit.sin_cos();
     add(scale(normal, cos), scale(towards, sin))
 }
 
@@ -476,11 +612,11 @@ fn tilted(
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // At most 18 rings.
     let rings = (query.max_axis_deviation_deg / TILT_STEP_DEG).floor() as u32;
     for ring in 1..=rings {
-        let (sin_t, cos_t) = (f64::from(ring) * TILT_STEP_DEG).to_radians().sin_cos();
+        let (sin_t, cos_t) = sin_cos_degrees(f64::from(ring) * TILT_STEP_DEG);
         let mut axes: Vec<V> = (0..TILT_DIRECTIONS)
             .map(|k| {
-                let angle = std::f64::consts::TAU * f64::from(k) / f64::from(TILT_DIRECTIONS);
-                let (sin_a, cos_a) = angle.sin_cos();
+                let (sin_a, cos_a) =
+                    sin_cos_degrees(360.0 * f64::from(k) / f64::from(TILT_DIRECTIONS));
                 std::array::from_fn(|c| cos_t * n[c] + sin_t * (cos_a * u[c] + sin_a * v[c]))
             })
             .collect();
@@ -551,9 +687,8 @@ pub fn find_mini_foot(
         }
         let foot = add(point, scale(facing, out));
         let rise = top[2] - foot[2];
-        let aside = (top[0] - foot[0]).hypot(top[1] - foot[1]);
-        (rise > 0.0 && aside <= rise * MAX_SLANT_DEG.to_radians().tan())
-            .then_some((point, facing, foot))
+        let aside = plan_length(top[0] - foot[0], top[1] - foot[1]);
+        (rise > 0.0 && aside <= rise * tan_degrees(MAX_SLANT_DEG)).then_some((point, facing, foot))
     };
     if !query.clear {
         return foot_along([0.0, 0.0, -1.0]).map(|(point, facing, _)| (point, facing));
@@ -561,11 +696,10 @@ pub fn find_mini_foot(
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // Ten rings.
     let rings = (MAX_SLANT_DEG / TILT_STEP_DEG).floor() as u32;
     for ring in 0..=rings {
-        let (sin_t, cos_t) = (f64::from(ring) * TILT_STEP_DEG).to_radians().sin_cos();
+        let (sin_t, cos_t) = sin_cos_degrees(f64::from(ring) * TILT_STEP_DEG);
         let directions = if ring == 0 { 1 } else { TILT_DIRECTIONS };
         for k in 0..directions {
-            let angle = std::f64::consts::TAU * f64::from(k) / f64::from(TILT_DIRECTIONS);
-            let (sin_a, cos_a) = angle.sin_cos();
+            let (sin_a, cos_a) = sin_cos_degrees(360.0 * f64::from(k) / f64::from(TILT_DIRECTIONS));
             let down = [sin_t * cos_a, sin_t * sin_a, -cos_t];
             let Some((point, facing, foot)) = foot_along(down) else {
                 continue;

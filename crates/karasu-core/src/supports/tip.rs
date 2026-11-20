@@ -96,6 +96,8 @@ pub struct TipCone {
     pub allowance_mm: f64,
     /// Sides of the cone's polygon.
     pub sides: u16,
+    /// A contact sphere's radius, its centre the cone's narrow end; `None` for a cone contact.
+    pub ball_mm: Option<f64>,
 }
 
 impl TipCone {
@@ -114,6 +116,8 @@ impl TipCone {
             margin_mm: 2.0 * anchor_tolerance_mm,
             allowance_mm: p.penetration_mm,
             sides: p.sides,
+            ball_mm: (p.contact_shape == ContactShape::Sphere)
+                .then_some(p.contact_sphere_diameter_mm / 2.0),
         }
     }
 

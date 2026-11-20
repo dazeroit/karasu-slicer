@@ -21,6 +21,7 @@
 use super::{turn_2d, Owned, SupportError, SupportPart};
 use crate::{
     cancellation::{Cancellation, Checkpoint},
+    geometry::plan_length,
     supports::{
         document::RaftSpec,
         shapes::{frustum, Part, V},
@@ -90,6 +91,7 @@ fn owned(shape: Part) -> Owned {
         accepted: false,
         exempt: false,
         reach: None,
+        held: None,
         shape,
     }
 }
@@ -114,7 +116,7 @@ fn corridor(a: [f64; 2], b: [f64; 2], size: f64) -> Vec<(i64, i64)> {
 
 /// The cells of [`corridor`] from `a` towards `b`, some more than once.
 fn walk(a: [f64; 2], b: [f64; 2], size: f64) -> impl Iterator<Item = (i64, i64)> {
-    let length = (b[0] - a[0]).hypot(b[1] - a[1]);
+    let length = plan_length(b[0] - a[0], b[1] - a[1]);
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // A few dozen steps.
     let steps = (length / (size / 2.0)).ceil() as usize;
     (0..=steps).flat_map(move |k| {
@@ -263,7 +265,7 @@ fn segment_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
 /// top: a closed convex prism, wound outward.
 fn bar(a: [f64; 2], b: [f64; 2], [plate, top]: [f64; 2], height: f64) -> Part {
     let along = [b[0] - a[0], b[1] - a[1]];
-    let length = along[0].hypot(along[1]);
+    let length = plan_length(along[0], along[1]);
     let u = [along[0] / length, along[1] / length];
     // The left of the bar's direction.
     let left = [-u[1], u[0]];
@@ -293,7 +295,7 @@ fn bar(a: [f64; 2], b: [f64; 2], [plate, top]: [f64; 2], height: f64) -> Part {
         triangles.push([k, next, 4 + next]);
         triangles.push([k, 4 + next, 4 + k]);
     }
-    let radius = plate.max(top.hypot(height));
+    let radius = plate.max(plan_length(top, height));
     Part {
         vertices,
         triangles,
@@ -336,7 +338,7 @@ fn pieces(centres: &[[f64; 2]], plates: &[f64], bars: &[(usize, usize)]) -> usiz
         for dx in -1..=1 {
             for dy in -1..=1 {
                 for &j in grid.get(&(x + dx, y + dy)).into_iter().flatten() {
-                    let d = (centres[j][0] - c[0]).hypot(centres[j][1] - c[1]);
+                    let d = plan_length(centres[j][0] - c[0], centres[j][1] - c[1]);
                     if j > i && d < plates[i] + plates[j] {
                         join(&mut parent, i, j);
                     }

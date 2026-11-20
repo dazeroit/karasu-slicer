@@ -104,7 +104,7 @@ pub(super) fn parse(mut arguments: impl Iterator<Item = OsString>) -> Result<Pro
             "--log" => set(&mut log, &name, path_value(&name, arguments.next())?)?,
             "--auto-supports" | "--auto-braces" | "--write-supports" | "--auto-settings"
             | "--support-weight" | "--auto-density" | "--auto-cover" | "--auto-place"
-            | "--auto-minis" => {
+            | "--auto-minis" | "--auto-clearance" => {
                 return Err(format!(
                     "{name} works on one model (--model): a project's plate holds its objects' \
                      supports, which the application plans"

@@ -22,7 +22,7 @@
 //! merging runs on any thread; the surface for routes proves the slanted parts clear of the
 //! model. Deterministic: stems by their places, groups in order.
 use super::route::RouteSurface;
-use karasu_core::mesh::TriangleMesh;
+use karasu_core::{geometry::plan_length, mesh::TriangleMesh};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// The steepest a merged trunk's slanted part goes, as the tangent of its angle from vertical:
@@ -36,6 +36,10 @@ const ABOVE_FLOOR_MM: f64 = 3.0;
 const STEP_MM: f64 = 0.25;
 /// The step bends are looked for down a stem, in mm.
 const BEND_STEP_MM: f64 = 1.0;
+/// How far a junction may exceed the slant in plan by rounding alone, in mm. The first height
+/// tried is placed on the slant itself, so its own check is a tie by construction: without this
+/// margin a one-ulp difference in the lengths moves the junction a whole step (issue #21).
+const SLANT_ROUNDING_MM: f64 = 1e-9;
 /// How far a junction stays from a main trunk's ends, in its shaft's diameters.
 const FROM_ENDS: f64 = 1.5;
 /// The tips a trunk carries at its own diameter: a full tree of the default branches.
@@ -211,7 +215,7 @@ fn groups(
                 break;
             }
             let q = foot(roots[other]);
-            if !taken[other] && (p[0] - q[0]).hypot(p[1] - q[1]) <= merge_mm {
+            if !taken[other] && plan_length(p[0] - q[0], p[1] - q[1]) <= merge_mm {
                 taken[other] = true;
                 group.push(roots[other]);
             }
@@ -233,7 +237,7 @@ fn nearest_middle(group: &[usize], foot: &dyn Fn(usize) -> [f64; 2]) -> usize {
         .min_by(|&&a, &&b| {
             let d = |s: usize| {
                 let p = foot(s);
-                (p[0] - middle[0]).hypot(p[1] - middle[1])
+                plan_length(p[0] - middle[0], p[1] - middle[1])
             };
             d(a).total_cmp(&d(b)).then(a.cmp(&b))
         })
@@ -270,14 +274,14 @@ pub fn join_onto(
             // The highest junction 45° allows from the bend, then lower while not clear; at
             // least a step below the bend, which may lie on the main trunk itself (two shafts
             // routed aside to one column), so the two never coincide.
-            let across = (bend[0] - column[0]).hypot(bend[1] - column[1]);
+            let across = plan_length(bend[0] - column[0], bend[1] - column[1]);
             let mut z = (h - across / SLANT).min(top).min(h - STEP_MM);
             while z >= bottom {
                 let Some(point) = at(trunk, z) else {
                     break;
                 };
-                let across = (bend[0] - point[0]).hypot(bend[1] - point[1]);
-                if across <= (bend[2] - point[2]) * SLANT
+                let across = plan_length(bend[0] - point[0], bend[1] - point[1]);
+                if across <= (bend[2] - point[2]) * SLANT + SLANT_ROUNDING_MM
                     && aside_mm.is_none_or(|most| across <= most)
                     && room.surface.grid().clear(room.mesh, bend, point, radius)
                 {

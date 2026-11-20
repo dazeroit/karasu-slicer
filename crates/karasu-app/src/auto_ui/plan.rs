@@ -4,7 +4,7 @@
 //! [`crate::grid_ui`]).
 pub use karasu_project::support_plan::auto::{
     plan, plan_tips, with_planned, AutoOutcome, AutoSupports, Cover, Input, Left, Place,
-    DEFAULT_AUTO_SUPPORTS, DENSITY_PCT, EDGE_INSET_MM, LIFT_MM, PASSES, SPACING_MM,
+    CLEARANCE_MM, DEFAULT_AUTO_SUPPORTS, DENSITY_PCT, EDGE_INSET_MM, LIFT_MM, PASSES, SPACING_MM,
     WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
 };
 

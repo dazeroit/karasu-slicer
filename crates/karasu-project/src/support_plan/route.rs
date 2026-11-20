@@ -157,6 +157,41 @@ pub fn route_support(
     tip: [f64; 3],
     normal: [f64; 3],
 ) -> (Routed, Route) {
+    routed_with(surface, parameters, (axis, false), document, tip, normal)
+}
+
+/// The support of `parameters` with its tip at `tip` (outward `normal`) on `surface`, routed as
+/// the Islands and Automatic tools route it (TD-164): its tip along the surface's normal, never
+/// tilted, bending at the tip's join to go aside ([`Route::Bent`]), with the way found;
+/// [`Route::Crowded`] where the model beside the contact leaves the tip along the normal no
+/// room, [`Route::None`] where it finds no way down. `document` as for [`route_support`].
+#[must_use]
+pub fn route_planned(
+    surface: &RouteSurface,
+    parameters: &SupportParameters,
+    document: Option<&karasu_core::supports::SupportDocument>,
+    tip: [f64; 3],
+    normal: [f64; 3],
+) -> (Routed, Route) {
+    routed_with(
+        surface,
+        parameters,
+        (AxisSpec::Normal, true),
+        document,
+        tip,
+        normal,
+    )
+}
+
+/// [`route_support`] with the tip's axis, and whether the tip is kept along the normal.
+fn routed_with(
+    surface: &RouteSurface,
+    parameters: &SupportParameters,
+    (axis, keep_normal): (AxisSpec, bool),
+    document: Option<&karasu_core::supports::SupportDocument>,
+    tip: [f64; 3],
+    normal: [f64; 3],
+) -> (Routed, Route) {
     let mut routed = Routed {
         support: ManualSupport {
             id: 1,
@@ -194,15 +229,19 @@ pub fn route_support(
         foot_radius_mm: parameters.foot_contact_diameter_mm / 2.0,
         max_axis_deviation_deg: document.map_or(60.0, |d| d.max_axis_deviation_deg),
         towards_shaft: axis == AxisSpec::Straight,
+        keep_normal,
+        contact_clearance_mm: contact_clearance(document),
     };
     let route = find_route(mesh, &surface.grid, &query);
     match route {
-        Route::Straight | Route::None => {}
+        Route::Straight | Route::Crowded | Route::None => {}
         Route::Tilted(axis) => routed.support.tip_axis = AxisSpec::Direction(axis),
         Route::Aside(knee) => {
             routed.support.bends = vec![knee];
             routed.support.tip_axis = AxisSpec::Straight;
         }
+        // The tip stays along the normal; the shaft bends at its join.
+        Route::Bent(knee) => routed.support.bends = vec![knee],
         Route::OnModel {
             point_mm,
             normal,
@@ -221,6 +260,18 @@ pub fn route_support(
     }
     (routed, route)
 }
+
+/// The clearance a contact keeps from the walls beside it in `document` (TD-164): its clearance
+/// when it applies it, as a new document does; `None` in a document written before.
+#[must_use]
+pub fn contact_clearance(document: Option<&karasu_core::supports::SupportDocument>) -> Option<f64> {
+    document.map_or(Some(DEFAULT_CLEARANCE_MM), |d| {
+        d.contact_clearance.then_some(d.clearance_mm)
+    })
+}
+
+/// The clearance of a new document, in mm (the core's default).
+const DEFAULT_CLEARANCE_MM: f64 = 0.3;
 
 /// The mini support of `parameters` with its tip at `tip` (outward `normal`) on `surface`, in
 /// world coordinates, standing on the model (see [`find_mini_foot`]): straight below its tip,

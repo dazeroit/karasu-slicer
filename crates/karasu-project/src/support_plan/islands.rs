@@ -20,8 +20,11 @@
 //! **Trees of several levels** (phase 3): trunks standing on their own close together then merge,
 //! a main trunk thickened below for what it carries (see [`super::trees`]).
 //!
-//! **How down.** Each support is routed as placing routes it ([`route_support`]): straight to the
-//! plate, aside with a knee, or standing on the model below. Standing on the model is kept only
+//! **How down.** Each support is routed as placing routes it, its tip kept along the surface's
+//! normal (TD-164, [`route_planned`]): straight to the plate, bent at the tip's join to a clear
+//! column beside it, or standing on the model below. A tip is never tilted: one whose cone along
+//! the normal meets the model, or that finds no way, is skipped with the reason, as a branch
+//! never tilts its tip towards its junction either. Standing on the model is kept only
 //! with the panel's switch on, or in the cavity, where a support always goes from the ceiling to
 //! the floor; a support with no way down is skipped and its island counted with the reason.
 //! Nothing goes through the model by this tool.
@@ -37,20 +40,20 @@
 //! entering a drain hole stays, only warned about (TD-131): a hole often makes the island.
 use super::{
     branches::{junction_on, Junction},
-    route::{axis_to_model, mini_routed, route_support, RouteSurface, Routed},
+    route::{axis_to_model, mini_routed, route_planned, widest, RouteSurface, Routed},
     tangent_triangle,
     trees::{self, MergeValues, Room, Stem},
-    values::{NextSupport, SupportPreset, Weight},
+    values::{NextSupport, SupportPreset, SupportValues, Weight},
 };
 use crate::placement::Affine;
 use karasu_core::{
     cancellation::Cancellation,
-    geometry::Point3,
+    geometry::{plan_length, sin_cos_degrees, Point3},
     mesh::TriangleMesh,
     supports::{
-        build_supports, AxisSpec, BaseSpec, BuildVolume, ManualSupport, Preset, Route,
-        SupportDocument, SupportKind, SupportOptions, SupportOrigin, SupportParameters,
-        SupportScene, SupportSurface,
+        build_supports, AxisSpec, BaseSpec, BuildVolume, ContactShape, DrainCylinder,
+        ManualSupport, Preset, Route, SupportDocument, SupportKind, SupportOptions, SupportOrigin,
+        SupportParameters, SupportScene, SupportSurface,
     },
 };
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -96,9 +99,22 @@ const APART_MM: f64 = 0.5;
 /// A place tried after a refused one is at least this far from every one refused, in mm: past
 /// a drain hole, the thin part a tip pierced, or what it came too close to.
 const RETRY_APART_MM: f64 = 2.0;
+/// After a tip crowded by a wall beside it (TD-164), the next place is only [`APART_MM`] from
+/// those refused: the island's first layer often lies all within 2 mm of the wall, and a place
+/// a little farther from it has room.
+const CROWDED_APART_MM: f64 = APART_MM;
 /// The places kept for an island's support, and how many are tried at most.
 const CANDIDATES: usize = 96;
-const ATTEMPTS: usize = 3;
+const ATTEMPTS: usize = 6;
+/// A crowded tip (TD-164) moves along the surface ring by ring, every this many mm...
+const NUDGE_STEP_MM: f64 = 0.25;
+/// ... in this many directions on each ring...
+const NUDGE_DIRECTIONS: u32 = 8;
+/// ... to a surface found within this height of the tip, in mm, as an outline's step...
+const NUDGE_RISE_MM: f64 = 0.5;
+/// ... facing down, turned from the tip's surface by no more than an outline's turn, in degrees
+/// (TD-136).
+const NUDGE_TURN_DEG: f64 = 30.0;
 /// The distance under which islands share a support the panel accepts, in mm.
 pub const JOIN_MM: std::ops::RangeInclusive<f64> = 0.0..=20.0;
 /// The smallest islands' areas Support the islands can leave out, in mm².
@@ -194,7 +210,8 @@ impl IslandSupports {
     }
 
     /// What the supports are made with: the preset's values, with the contact's shape chosen
-    /// here, fitting the surface when asked.
+    /// here, fitting the surface when asked. A cone preset made a ball takes its own ball, sunk
+    /// as deep; a ball preset made a cone becomes the cone as wide as its ball (TD-164).
     #[must_use]
     pub fn next(&self, presets: &[SupportPreset]) -> NextSupport {
         let mut next = match self.mine {
@@ -202,7 +219,15 @@ impl IslandSupports {
             _ => NextSupport::of(self.weight),
         }
         .fitting(self.contact_fit_min_mm);
-        next.values.sphere_contact = self.sphere_contact;
+        if self.sphere_contact != next.values.sphere_contact {
+            let p = next.values.parameters();
+            let shaped = if self.sphere_contact {
+                p.as_ball()
+            } else {
+                p.with_contact_shape(ContactShape::Cone)
+            };
+            next.values = SupportValues::with(&shaped, next.values.tip_towards_shaft);
+        }
         next
     }
 }
@@ -234,6 +259,9 @@ pub enum Skip {
     /// Built against the model, its tip reaches through a thin part (the Automatic tool's final
     /// check).
     Pierces,
+    /// Its tip, kept along the surface's normal (TD-164), comes too close to the model beside it,
+    /// a wall that holds the surface there; and no place nearby the plan may move it to has room.
+    Crowded,
 }
 
 /// A support planned under an island: the support in world coordinates with its anchors, and
@@ -308,8 +336,8 @@ pub fn start_tips(surface: &RouteSurface, mesh: &TriangleMesh, island: &Island) 
     for ring in 1..=RING_STEPS {
         let r = f64::from(ring) * RING_STEP_MM;
         for k in 0..RING_DIRECTIONS {
-            let a = std::f64::consts::TAU * f64::from(k) / f64::from(RING_DIRECTIONS);
-            if let Some(tip) = probe(cx + r * a.cos(), cy + r * a.sin()) {
+            let (sin, cos) = sin_cos_degrees(360.0 * f64::from(k) / f64::from(RING_DIRECTIONS));
+            if let Some(tip) = probe(cx + r * cos, cy + r * sin) {
                 add(tip);
             }
         }
@@ -334,7 +362,7 @@ pub(crate) fn groups(islands: &[(usize, Island)], join: f64) -> Vec<Vec<usize>> 
         let near = out.iter().position(|group| {
             group.iter().any(|&m| {
                 let q = islands[m].1.point;
-                (p[0] - q[0]).hypot(p[1] - q[1]) <= join && (p[2] - q[2]).abs() <= join
+                plan_length(p[0] - q[0], p[1] - q[1]) <= join && (p[2] - q[2]).abs() <= join
             })
         });
         match near.filter(|_| join > 0.0) {
@@ -365,7 +393,7 @@ fn trees(tasks: &[(usize, Tip)], branch_mm: f64, per_trunk: u32) -> Vec<Vec<usiz
             let (q, _, inside) = tasks[other].1;
             if !taken[other]
                 && inside == cavity
-                && (point[0] - q[0]).hypot(point[1] - q[1]) <= branch_mm
+                && plan_length(point[0] - q[0], point[1] - q[1]) <= branch_mm
             {
                 taken[other] = true;
                 members.push(other);
@@ -383,11 +411,24 @@ struct Tree<'a> {
     tasks: &'a [(usize, Tip)],
     surface: &'a RouteSurface,
     parameters: &'a SupportParameters,
-    axis: AxisSpec,
     document: Option<&'a SupportDocument>,
     values: &'a IslandSupports,
     volume: BuildVolume,
     origin: SupportOrigin,
+    nudge: Option<Nudge<'a>>,
+}
+
+/// How far a tip crowded by the model beside it may move along the surface (TD-164). The
+/// Automatic tool's overhang tips hold an area rather than a point: they move within their probe
+/// grid's step, and at least the support's widest radius and the clearance and a ring more, so
+/// that a tip beside a vertical wall always finds room. An island's tip holds where the island
+/// starts, so it does not move: a crowded one is tried at the island's other places.
+#[derive(Clone, Copy)]
+pub(crate) struct Nudge<'a> {
+    /// The farthest a tip moves, in mm, unless the support's room asks for more.
+    pub reach_mm: f64,
+    /// The drain holes: no tip moves where one cuts the surface away (TD-131).
+    pub cuts: &'a [DrainCylinder],
 }
 
 /// A tip planned: its place in the tasks, and its support (with the trunk's place in the tasks
@@ -436,12 +477,25 @@ pub(crate) fn mini_built(
         .then_some((routed, scene))
 }
 
-/// The standard support of the tip at `task`, routed on its own, built alone.
+/// The standard support of the tip at `task`, routed on its own, built alone. Its tip stays along
+/// the surface's normal, never tilted (TD-164); crowded by the model beside it, it moves along
+/// the surface to the nearest place with room, when the plan allows ([`Nudge`]).
 fn standard_alone(t: &Tree<'_>, task: usize) -> Result<(Routed, SupportScene), Skip> {
     let (tip, normal, cavity) = t.tasks[task].1;
-    let (routed, route) = route_support(t.surface, t.parameters, t.axis, t.document, tip, normal);
+    let mut found = route_planned(t.surface, t.parameters, t.document, tip, normal);
+    if found.1 == Route::Crowded {
+        if let Some(moved) = t
+            .nudge
+            .and_then(|nudge| nudged(t, nudge, (tip, normal, cavity)))
+        {
+            found = moved;
+        }
+    }
+    let (routed, route) = found;
+    let tip = routed.support.tip_mm;
     match route {
-        Route::Straight | Route::Tilted(_) | Route::Aside(_) => {}
+        Route::Straight | Route::Tilted(_) | Route::Aside(_) | Route::Bent(_) => {}
+        Route::Crowded => return Err(Skip::Crowded),
         Route::OnModel { .. } if t.values.foot_on_model || cavity => {}
         Route::OnModel { .. } => return Err(Skip::OutOfReach),
         Route::None => return Err(Skip::NoWay),
@@ -452,6 +506,53 @@ fn standard_alone(t: &Tree<'_>, task: usize) -> Result<(Routed, SupportScene), S
         _ if tip[2] - floor(t.document) < room_needed(t.parameters) => Err(Skip::TooLow),
         _ => Err(Skip::Unbuildable),
     }
+}
+
+/// The route from the nearest place to `tip` with room for a tip along the normal, ring by ring
+/// every [`NUDGE_STEP_MM`] up to `nudge`'s reach (see [`Nudge`]), in a fixed order of
+/// directions. A place is the first surface met going up there within [`NUDGE_RISE_MM`] of the
+/// tip, facing down within [`NUDGE_TURN_DEG`] of the tip's surface, on the same side of a
+/// hollowed model's shell and not cut away by a drain hole. The first place not crowded gives
+/// the route, whatever it is; `None` when every one is crowded.
+fn nudged(t: &Tree<'_>, nudge: Nudge<'_>, (tip, normal, cavity): Tip) -> Option<(Routed, Route)> {
+    let mesh = t.surface.mesh()?;
+    let length = |v: [f64; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    let turn = sin_cos_degrees(NUDGE_TURN_DEG).1;
+    let along = length(normal);
+    let room = widest(t.parameters) + t.document.map_or(0.3, |d| d.clearance_mm) + NUDGE_STEP_MM;
+    // Within the reach, or past the room by up to a ring.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // A few rings.
+    let rings = (nudge.reach_mm.max(room) / NUDGE_STEP_MM).ceil() as u32;
+    for ring in 1..=rings {
+        let d = f64::from(ring) * NUDGE_STEP_MM;
+        for k in 0..NUDGE_DIRECTIONS {
+            let (sin, cos) = sin_cos_degrees(360.0 * f64::from(k) / f64::from(NUDGE_DIRECTIONS));
+            let from = [tip[0] + d * cos, tip[1] + d * sin, tip[2] - NUDGE_RISE_MM];
+            let Some((point, facing, triangle)) =
+                t.surface
+                    .grid()
+                    .first_above(mesh, from, tip[2] + NUDGE_RISE_MM)
+            else {
+                continue;
+            };
+            let cosine =
+                (0..3).map(|c| facing[c] * normal[c]).sum::<f64>() / (length(facing) * along);
+            // A degenerate normal gives no cosine, and no place.
+            if facing[2] >= 0.0
+                || cosine.is_nan()
+                || cosine < turn
+                || t.surface.is_cavity(triangle) != cavity
+                || nudge.cuts.iter().any(|c| c.removes(point))
+            {
+                continue;
+            }
+            let found = route_planned(t.surface, t.parameters, t.document, point, facing);
+            if found.1 != Route::Crowded {
+                return Some(found);
+            }
+        }
+    }
+    None
 }
 
 /// The height a support of `parameters` needs under its tip: the tip, the base's cone and the
@@ -491,7 +592,7 @@ fn tree(t: &Tree<'_>) -> Vec<Grown> {
     order.sort_by(|&a, &b| {
         let d = |m: usize| {
             let p = t.tasks[m].1 .0;
-            (p[0] - middle[0]).hypot(p[1] - middle[1])
+            plan_length(p[0] - middle[0], p[1] - middle[1])
         };
         d(a).total_cmp(&d(b)).then(a.cmp(&b))
     });
@@ -520,6 +621,7 @@ fn tree(t: &Tree<'_>) -> Vec<Grown> {
             kind: karasu_core::supports::SupportKind::Standard,
             document: t.document,
             surface: Some(t.surface),
+            keep_normal: true,
         });
         let result = match at {
             Some(at) => Ok((
@@ -527,7 +629,7 @@ fn tree(t: &Tree<'_>) -> Vec<Grown> {
                     support: ManualSupport {
                         id: 1,
                         tip_mm: tip,
-                        tip_axis: AxisSpec::Straight,
+                        tip_axis: AxisSpec::Normal,
                         bends: Vec::new(),
                         base: BaseSpec::Vertical,
                         parameters: t.parameters.clone(),
@@ -581,6 +683,7 @@ pub fn plan(
         values,
         volume,
         origin: SupportOrigin::Islands,
+        nudge: None,
     };
     let kept = checked.map(|(model, to_model)| (check::Kept { document, to_model }, model));
     let checking = kept.as_ref().map(|(kept, model)| (kept, *model));
@@ -629,8 +732,9 @@ pub(crate) struct Starts<'a> {
 
 /// One support for each group of `starts`, where its lowest island starts: the first place
 /// [`start_tips`] gives, then, while it is refused (no way down, or the final check), the next
-/// at least [`RETRY_APART_MM`] from every one refused, [`ATTEMPTS`] at most. The supports are added to `outcome`; what the final check refused
-/// leaves why in `why_at`. Returns each group's last refusal (unused for a group held).
+/// at least [`RETRY_APART_MM`] from every one refused ([`CROWDED_APART_MM`] after a crowded
+/// tip), [`ATTEMPTS`] at most. The supports are added to `outcome`; what the final check
+/// refused leaves why in `why_at`. Returns each group's last refusal (unused for a group held).
 pub(crate) fn hold_starts(
     starts: &Starts<'_>,
     outcome: &mut Outcome,
@@ -655,11 +759,14 @@ pub(crate) fn hold_starts(
         let tasks: Vec<(usize, Tip)> = (0..starts.groups.len())
             .filter(|&g| !check::held(lead(g), &tips, starts.growing.values.join_mm))
             .filter_map(|g| {
-                let place = places[g].iter().find(|p| {
-                    tried[g]
-                        .iter()
-                        .all(|&t| check::distance(t, p.0) >= RETRY_APART_MM)
-                })?;
+                let apart = if why[g] == Skip::Crowded {
+                    CROWDED_APART_MM
+                } else {
+                    RETRY_APART_MM
+                };
+                let place = places[g]
+                    .iter()
+                    .find(|p| tried[g].iter().all(|&t| check::distance(t, p.0) >= apart))?;
                 Some((g, *place))
             })
             .collect();
@@ -784,6 +891,8 @@ pub(crate) struct Growing<'a> {
     pub values: &'a IslandSupports,
     pub volume: BuildVolume,
     pub origin: SupportOrigin,
+    /// How far a crowded tip may move along the surface; `None`, it stays (TD-164).
+    pub nudge: Option<Nudge<'a>>,
 }
 
 /// Supports grown from tips: trunks before their branches, which name them by their place; and
@@ -815,11 +924,11 @@ pub(crate) fn grow(
             tasks,
             surface: growing.surface,
             parameters: &parameters,
-            axis: growing.next.axis(),
             document: growing.document,
             values: growing.values,
             volume: growing.volume,
             origin: growing.origin,
+            nudge: growing.nudge,
         })
     };
     let cores = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);

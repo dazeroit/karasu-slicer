@@ -1907,6 +1907,7 @@ islands-skip-drain-hole = { $count } where a drain hole cuts the material away: 
 islands-skip-foot-in-hole = { $count } whose support's foot would stand where a drain hole cuts the model away
 islands-skip-collides = { $count } whose support would come closer to the model than the clearance
 islands-skip-pierces = { $count } whose tip would reach through a thin part of the model
+islands-skip-crowded = { $count } whose tip, along the surface, would come too close to a wall beside it
 islands-skip-unbuildable = { $count } whose support cannot be built there with the preset: too close to the plate (raise the Automatic tool's Lift) or a lighter preset
 islands-apply = { $count ->
     [one] Apply one support
@@ -1968,6 +1969,7 @@ auto-wide-closest = As close as
 auto-wide-closest-hint = The closest the tips stand under a wide underside, as a share of the spacing
 auto-passes = Closing check: at most
 auto-passes-hint = Where a support finds no way down, the next uncovered points are tried, pass after pass, up to this many times
+auto-clearance-hint = The least distance between the planned supports and the model, their contacts and the walls beside them included. Apply sets it on the model's supports
 auto-feet = Feet on the model
 auto-feet-hint = When no way down reaches the plate, the support's foot stands on the model below. It leaves a mark there; off, such a place is left unsupported and said
 auto-trees = Trees and braces
@@ -2018,6 +2020,7 @@ auto-left-drain-hole = A drain hole cuts the material away there: nothing to hol
 auto-left-foot-in-hole = Its support's foot would stand where a drain hole cuts the model away
 auto-left-collides = Its support would come closer to the model than the clearance
 auto-left-pierces = Its tip would reach through a thin part of the model
+auto-left-crowded = Its tip, along the surface, would come too close to a wall beside it
 auto-apply = { $count ->
     [one] Apply one support
    *[other] Apply { $count } supports

@@ -25,6 +25,7 @@ mod index;
 mod route;
 mod shapes;
 mod tip;
+mod walls;
 
 pub use bracing::{brace_mesh, plan_braces, BracePattern, BracePlan, PlannedBrace, Skipped};
 pub use build::{
@@ -43,6 +44,7 @@ pub use route::{
     MINI_BALL_MARGIN_MM, TILT_DIRECTIONS, TILT_STEP_DEG,
 };
 pub use tip::TipCone;
+pub use walls::WALL_BEYOND_MM;
 
 use crate::cancellation::Cancelled;
 use std::fmt;

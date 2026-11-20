@@ -485,17 +485,16 @@ must be byte-identical unless a format contains an explicitly controlled timesta
 Canonical ordering and stable tie-breakers are required. Parallel algorithms must merge results in a
 defined order and may not expose nondeterministic floating-point reduction order.
 
-**Known exception, open (owner, 2026-11-16; TD-157 item 6, issue #21):** the automatic support
-planners (`karasu_project::support_plan`) and parts of the core's supports call the platform's math
-library (`f64::hypot`, `sin_cos`, `cos`, `tan`, `acos`), whose last bit differs between Linux and
-Windows. On one platform they are exact and repeatable — the application's Generate and Apply and
-the command line's `--auto-supports` give the same document and print file — but Linux and Windows
-can plan a few supports differently for the same model (a trunk merged a 0.25 mm step apart, a
-tilted tip's axis in the last bit). A support document already made slices identically on both.
-Fixed operations (TD-061's degree trigonometry) would make the platforms agree, at the cost of
-changing plans made today; the owner left it open. The Orient tool's search
-(`karasu_project::orient`, TD-158) calls the same library (`sin_cos`, `atan2`, `asin`) and
-promises its candidates on each platform only.
+**Fixed operations for decisions that must agree everywhere (TD-061, TD-164):** the platform's
+math library (`f64::hypot`, `sin_cos`, `cos`, `tan`, `acos`) may differ in the last bit between
+Linux and Windows. Code whose decisions must agree on every platform uses
+`karasu_core::geometry`'s `sin_cos_degrees`, `tan_degrees`, `acos_degrees` and `plan_length`,
+built from addition, multiplication, division and square root only: the transforms of TD-061,
+the support primitives, and since TD-164 (issue #21) the support planners
+(`karasu_project::support_plan`) and the core's support routes, so Linux and Windows plan the
+same supports. **Known exception:** the Orient tool's search (`karasu_project::orient`, TD-158)
+calls the platform's library (`sin_cos`, `atan2`, `asin`) and promises its candidates on each
+platform only.
 
 Cancellation is cooperative at bounded intervals. A cancelled stage must not publish a complete
 artifact. Temporary output should be finalized atomically where platform APIs permit.

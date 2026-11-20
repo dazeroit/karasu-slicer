@@ -4,8 +4,8 @@
 //! state.
 use super::{
     plan::{
-        AutoSupports, Cover, Place, DENSITY_PCT, LIFT_MM, PASSES, SPACING_MM, WIDE_CLOSEST_PCT,
-        WIDE_FROM_MM2,
+        AutoSupports, Cover, Place, CLEARANCE_MM, DENSITY_PCT, LIFT_MM, PASSES, SPACING_MM,
+        WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
     },
     AutoUi, Stage,
 };
@@ -193,6 +193,14 @@ pub fn supports_fields(
             &mut values.passes,
             (PASSES, true),
             defaults.map(|d| d.passes),
+        );
+        // Kept by every part, the contacts from the walls beside them too (TD-164).
+        edited |= length_row(
+            ui,
+            (tr!("supports-clearance"), tr!("auto-clearance-hint")),
+            &mut values.clearance_mm,
+            (Unit::Millimetre, CLEARANCE_MM),
+            defaults.map(|d| d.clearance_mm),
         );
     }
     values.steep_spacing_mm = values.steep_spacing_mm.max(values.spacing_mm);

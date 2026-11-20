@@ -49,6 +49,7 @@ The document is JSON, and unknown fields are rejected:
   "preset": "medium",
   "defaults": { "contact_diameter_mm": 0.35 },
   "clearance_mm": 0.3,
+  "contact_clearance": true,
   "anchor_tolerance_mm": 0.05,
   "max_axis_deviation_deg": 60,
   "raft": { "thickness_mm": 1.0, "margin_mm": 1.0, "slope_deg": 60,
@@ -87,6 +88,9 @@ The document is JSON, and unknown fields are rejected:
       checked on the surface.
     - The summary reports the turn and where the model's bounding-box centre moved.
 - `preset` is one of `light`, `medium` (the default) and `heavy`.
+- **`contact_clearance`** (TD-164): the contacts keep `clearance_mm` from the walls beside them
+  (section 5). Written only when set; a document without it keeps the earlier rule. New
+  documents have it.
 - **Parameter resolution:** each support's parameters are the preset, then `defaults`, then its
   own `parameters`. Each support therefore owns a complete parameter set, and editing one support
   never changes another.
@@ -130,9 +134,9 @@ Hard ranges are errors. Soft ranges produce warnings.
 | Parameter | Hard range | Soft range | Light | Medium | Heavy |
 | --- | --- | --- | --- | --- | --- |
 | `contact_shape` | `cone`, `sphere` | – | cone | cone | cone |
-| `contact_diameter_mm` | 0.05–5 | ≥ 0.2 | 0.3 | 0.5 | 0.6 |
+| `contact_diameter_mm` | 0.05–5 | ≥ 0.2 | 0.22 | 0.32 | 0.43 |
 | `contact_fit_min_mm` | 0.05–5, or absent | ≥ 0.2 | absent | absent | absent |
-| `contact_sphere_diameter_mm` | 0.05–5 | – | 0.5 | 0.6 | 0.8 |
+| `contact_sphere_diameter_mm` | 0.05–5 | – | 0.25 | 0.35 | 0.45 |
 | `tip_body_diameter_mm` | 0.1–10 | – | 0.8 | 1.0 | 1.0 |
 | `tip_length_mm` | 0.2–30 | ≥ 1 | 2.0 | 2.5 | 2.5 |
 | `penetration_mm` | 0–5 | ≤ 1 | 0.1 | 0.1 | 0.1 |
@@ -154,7 +158,8 @@ Hard ranges are errors. Soft ranges produce warnings.
 - the contact diameter must not exceed the tip body diameter;
 - the foot contact diameter must not exceed the foot body diameter;
 - the cone diameter must not exceed the pad diameter;
-- the contact sphere diameter must be at least the contact diameter;
+- a ball contact's sphere diameter must be at least the contact diameter (TD-164: a cone contact's
+  ball is unused, so it is not compared);
 - the smallest fitted contact, `contact_fit_min_mm`, must not exceed the contact diameter;
 - the mini penetration must be less than half of the mini diameter (a ball's centre stays out of
   the surface). Zero is accepted: the ball then touches the surface.
@@ -164,6 +169,7 @@ Hard ranges are errors. Soft ranges produce warnings.
 | Setting | Range | Default |
 | --- | --- | --- |
 | `clearance_mm` | 0–5 | 0.3 |
+| `contact_clearance` (TD-164) | `true`, or absent (`false`) | `true` in new documents |
 | `anchor_tolerance_mm` | 0.001–1 | 0.05 |
 | `max_axis_deviation_deg` | 0–89 | 60 |
 | Raft `thickness_mm` | 0.2–5 | – |
@@ -180,16 +186,26 @@ Hard ranges are errors. Soft ranges produce warnings.
 | Brace `max_diameter_mm` (automatic only; absent: no limit) | 0.1–10 | – |
 
 Karasu chose these presets within the ranges observed in the references. They are not copies.
-TD-136 set the contacts, depths, tips and shafts from two test prints on the Photon P1
+TD-136 set the depths, tips and shafts from two test prints on the Photon P1
 (`docs/research/SUPPORT-PRESETS-RESEARCH.md`, E-SUP-02 and E-SUP-03): every contact sunk 0.1 mm,
-Medium's contact 0.5 mm, Heavy's 0.6 mm on a 1.0 mm tip, 2.5 mm long, and a 1.2 mm shaft. They
-are geometric parameters proven on flat test tiles of one resin, not general print settings.
+on a 1.0 mm tip, 2.5 mm long, and Heavy's 1.2 mm shaft. They are geometric parameters proven on
+flat test tiles of one resin, not general print settings. TD-164 (owner, 2026-11-20) set the
+contacts' widths at the surface to 0.25, 0.35 and 0.45 mm, karasu's own values from the support
+marks research (E-SUP-10): cones of 0.22, 0.32 and 0.43 mm, and balls of 0.25, 0.35 and 0.45 mm.
 The feet, pads, cones and mini supports keep their first values.
+
+**The contact's shape** (TD-164): the presets' contacts are cones, sunk 0.1 mm. A ball is as wide
+as the cone's mark and sunk as deep, so it meets the surface on a smaller circle (0.245, 0.316 and
+0.374 mm with the presets): the Supports panel's shape switch keeps the depth
+(`SupportParameters::with_contact_shape`: to a ball as wide as the cone's mark, the cone from its
+centre as wide; to the cone as wide as the ball, its narrow end `d = (D − body·p/L) / (1 − p/L)`),
+and the Islands and Automatic tools' ball switch takes the preset's ball, as deep (`as_ball`). A
+document stores what it is given.
 
 **The width at the surface** (`SupportParameters::surface_width_mm`, TD-136): a cone contact's
 diameter is its end's, `penetration_mm` inside the model; where it meets a level surface it is
-`d + (body - d) * min(penetration / tip_length, 1)` wide, the mark it leaves (Light 0.33, Medium
-0.52, Heavy 0.62 mm); a ball's is its footprint's. The support panel shows it beside the
+`d + (body - d) * min(penetration / tip_length, 1)` wide, the mark it leaves (Light 0.249, Medium
+0.347, Heavy 0.453 mm); a ball's is its footprint's. The support panel shows it beside the
 contact.
 
 ## 4. Geometry
@@ -351,6 +367,15 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
   - Exempt are the support's own contact part and the model-foot frustum, and every part of a
     mini support. Everything else is checked: joints (including `J`), shaft, base, braces and
     raft.
+  - **The walls beside a contact (TD-164):** in a document with `contact_clearance`, the contact
+    part (its cone, and its ball) keeps `clearance_mm` from every wall beside its contact, proven
+    as the other parts are. A triangle is a wall when it reaches more than 0.05 mm
+    (`WALL_BEYOND_MM`) beyond the contact's tangent plane on the support's side
+    (`max (v − P)·n`, with `n` the mean normal of the anchor), its normal turns from `n` by more
+    than 45°, and the part is in front of it (its axis capsule reaches the triangle's outward
+    side); a triangle with no normal beyond the plane counts as one. The surface the contact
+    holds, however it curves, is never its wall. A document without the field keeps the earlier
+    rule: the contact part is exempt. Model feet stay exempt.
   - **The reach (TD-124):** a contact's or model foot's cone must still not enter the model away
     from where it touches. From where its side rises `2τ` above the contact's tangent plane to its
     join, the cone must meet no surface triangle (a proof by separating axes, without
