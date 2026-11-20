@@ -82,6 +82,127 @@ pub struct ClosureReport {
     pub ambiguous_rims: usize,
 }
 
+/// One body of the sliced mesh whose material only its own group's cut removes (TD-166): one
+/// placed instance of a plate, with the faces and vertices it alone uses.
+///
+/// Faces in no listed group belong to group 0. A cut of several groups removes each group's
+/// rings from that group's material only, so a drain hole never cuts another model; the faces a
+/// cut leaves (the supports, TD-123) are never cut by any group.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FaceGroup {
+    /// The group, 1 or more.
+    pub group: usize,
+    /// The body's faces, as face indices of the sliced mesh.
+    pub faces: Range<usize>,
+    /// The body's vertices, as vertex indices of the sliced mesh: the closure chords of its open
+    /// sections (TD-054) follow its rims, whose vertices these are.
+    pub vertices: Range<usize>,
+}
+
+/// The cut groups of a kernel (TD-166), sorted for lookup by face and by vertex.
+#[derive(Debug, Default)]
+pub(crate) struct FaceGroups {
+    /// Face ranges and their groups, sorted and disjoint.
+    faces: Vec<(Range<usize>, usize)>,
+    /// Vertex ranges and their groups, sorted and disjoint.
+    vertices: Vec<(Range<usize>, usize)>,
+    /// Number of groups, group 0 included; zero without groups.
+    count: usize,
+}
+
+impl FaceGroups {
+    /// Sort and check `groups`.
+    ///
+    /// # Errors
+    /// [`LayerFailure::InvalidFaceGroups`] for a group 0, or for face or vertex ranges that
+    /// overlap.
+    pub(crate) fn new(groups: &[FaceGroup]) -> Result<Self, LayerFailure> {
+        if groups.is_empty() {
+            return Ok(Self::default());
+        }
+        if groups.iter().any(|g| g.group == 0) {
+            return Err(LayerFailure::InvalidFaceGroups);
+        }
+        let sorted = |ranges: Vec<(Range<usize>, usize)>| {
+            let mut ranges: Vec<_> = ranges
+                .into_iter()
+                .filter(|(r, _)| r.start < r.end)
+                .collect();
+            ranges.sort_unstable_by_key(|(r, g)| (r.start, r.end, *g));
+            if ranges.windows(2).any(|w| w[1].0.start < w[0].0.end) {
+                Err(LayerFailure::InvalidFaceGroups)
+            } else {
+                Ok(ranges)
+            }
+        };
+        Ok(Self {
+            faces: sorted(groups.iter().map(|g| (g.faces.clone(), g.group)).collect())?,
+            vertices: sorted(
+                groups
+                    .iter()
+                    .map(|g| (g.vertices.clone(), g.group))
+                    .collect(),
+            )?,
+            count: groups.iter().map(|g| g.group).max().map_or(0, |g| g + 1),
+        })
+    }
+
+    /// Number of groups, group 0 included; zero without groups.
+    pub(crate) const fn count(&self) -> usize {
+        self.count
+    }
+
+    fn lookup(ranges: &[(Range<usize>, usize)], index: usize) -> usize {
+        let at = ranges.partition_point(|(r, _)| r.end <= index);
+        ranges
+            .get(at)
+            .filter(|(r, _)| r.contains(&index))
+            .map_or(0, |&(_, group)| group)
+    }
+
+    /// The group of `face`.
+    fn of_face(&self, face: usize) -> usize {
+        Self::lookup(&self.faces, face)
+    }
+
+    /// The group of `vertex`.
+    fn of_vertex(&self, vertex: usize) -> usize {
+        Self::lookup(&self.vertices, vertex)
+    }
+}
+
+/// How a kernel's faces are told apart in its winding layers: the faces a cut leaves (TD-123)
+/// and the cut groups (TD-166).
+#[derive(Clone, Copy)]
+pub(crate) struct FaceSets<'a> {
+    /// Faces whose material a cut leaves: sorted, disjoint ranges.
+    pub(crate) kept: &'a [Range<usize>],
+    /// The cut groups.
+    pub(crate) groups: &'a FaceGroups,
+}
+
+/// One cut group's segments in a winding layer (TD-166), each in segment order.
+#[derive(Debug, Default, PartialEq)]
+pub struct GroupSegments {
+    model: Vec<[[f64; 2]; 2]>,
+    kept: Vec<[[f64; 2]; 2]>,
+}
+
+impl GroupSegments {
+    /// The segments of the group's faces that a cut does not leave, with the closure chords of
+    /// its sections: the group's models.
+    #[must_use]
+    pub fn model(&self) -> &[[[f64; 2]; 2]] {
+        &self.model
+    }
+
+    /// The segments of the group's faces a cut leaves (its supports, TD-123).
+    #[must_use]
+    pub fn kept(&self) -> &[[[f64; 2]; 2]] {
+        &self.kept
+    }
+}
+
 /// Section closure with the job's rim table.
 #[derive(Clone, Copy)]
 pub(crate) struct Closure<'a> {
@@ -100,6 +221,8 @@ pub struct WindingLayer {
     /// The other segments, closure chords included, in the same order: the model alone, for
     /// binary supports (TD-134). Empty when nothing is kept.
     model: Vec<[[f64; 2]; 2]>,
+    /// Each cut group's segments (TD-166), group 0 first. Empty without groups.
+    groups: Vec<GroupSegments>,
     closure: ClosureReport,
 }
 
@@ -136,6 +259,13 @@ impl WindingLayer {
     #[must_use]
     pub fn model_segments(&self) -> &[[[f64; 2]; 2]] {
         &self.model
+    }
+
+    /// Each cut group's segments (TD-166), group 0 first: every segment, closure chords
+    /// included, in exactly one group. Empty unless the kernel was given cut groups.
+    #[must_use]
+    pub fn groups(&self) -> &[GroupSegments] {
+        &self.groups
     }
 
     /// Chords added by section closure.
@@ -205,6 +335,10 @@ pub(crate) fn reflects(transform: SectionTransform<'_>) -> Result<bool, LayerFai
 /// A directed segment `[from, to]` in world XY (mm).
 type Segment = [[f64; 2]; 2];
 
+/// A section's directed segments, what closure added, and the source edge each closure chord
+/// starts on.
+type Sectioned = (Vec<Segment>, ClosureReport, Vec<[u32; 2]>);
+
 /// The local edge joining corner `a` to the next corner in winding order, and to the previous one.
 const fn corner_edges(lone: usize) -> [LocalEdge; 2] {
     match lone {
@@ -256,7 +390,8 @@ struct Endpoint {
     sign: i8,
 }
 
-/// Directed segments of a section on a vertex-avoiding plane, after the exact balance check.
+/// Directed segments of a section on a vertex-avoiding plane, after the exact balance check, and
+/// for each closure chord appended after them, the source edge its open chain ends on.
 ///
 /// `max_bytes` bounds the segment buffer plus the balance scratch.
 ///
@@ -270,7 +405,7 @@ pub(crate) fn segments(
     max_bytes: usize,
     closure: Option<Closure<'_>>,
     cancel: &mut Cancellation<'_>,
-) -> Result<(Vec<Segment>, ClosureReport), LayerFailure> {
+) -> Result<Sectioned, LayerFailure> {
     let events = section.events();
     let per_segment = size_of::<[[f64; 2]; 2]>() + 2 * size_of::<Endpoint>();
     let bytes = events
@@ -333,12 +468,13 @@ pub(crate) fn segments(
         start = end;
     }
     drop(ends);
+    let mut chord_edges = Vec::new();
     let report = match closure {
         None if open.is_empty() => ClosureReport::default(),
         None => return Err(unbalanced(open.len(), &open)),
-        Some(closure) => close(&mut segments, &open, closure, cancel)?,
+        Some(closure) => close(&mut segments, &mut chord_edges, &open, closure, cancel)?,
     };
-    Ok((segments, report))
+    Ok((segments, report, chord_edges))
 }
 
 fn unbalanced(crossings: usize, details: &[UnbalancedCrossing]) -> LayerFailure {
@@ -353,7 +489,8 @@ fn unbalanced(crossings: usize, details: &[UnbalancedCrossing]) -> LayerFailure 
 }
 
 /// Close the open section chains at holes by chords paired along each hole's rim
-/// (specification section 5.3), appending the chords to `segments`.
+/// (specification section 5.3), appending the chords to `segments` and the source edge each
+/// chord starts on to `chord_edges`.
 ///
 /// A crossing point on a boundary edge where one chain arrives (excess -1) is an *end*, one where a
 /// chain leaves (+1) a *start*. Along a rim they alternate: an upward boundary half-edge yields an
@@ -361,6 +498,7 @@ fn unbalanced(crossings: usize, details: &[UnbalancedCrossing]) -> LayerFailure 
 /// chord; on a loop with several pairs, the cyclic matching with the smaller total length wins.
 fn close(
     segments: &mut Vec<Segment>,
+    chord_edges: &mut Vec<[u32; 2]>,
     open: &[UnbalancedCrossing],
     closure: Closure<'_>,
     cancel: &mut Cancellation<'_>,
@@ -445,7 +583,11 @@ fn close(
             segments
                 .try_reserve(1)
                 .map_err(|_| LayerFailure::Allocation)?;
+            chord_edges
+                .try_reserve(1)
+                .map_err(|_| LayerFailure::Allocation)?;
             segments.push([from, to]);
+            chord_edges.push(group[a].edge);
             report.chords += 1;
             report.longest_mm = report.longest_mm.max(length);
         }
@@ -458,39 +600,37 @@ fn chord(a: [f64; 2], b: [f64; 2]) -> f64 {
     (b[0] - a[0]).hypot(b[1] - a[1])
 }
 
-/// Assemble a winding layer from a section at its vertex-avoiding plane. The segments of faces in
-/// `kept` (sorted, disjoint face ranges) are also listed apart (TD-123).
+/// Assemble a winding layer from a section at its vertex-avoiding plane. The segments of the
+/// faces a cut leaves (`faces.kept`, sorted disjoint face ranges) are also listed apart (TD-123),
+/// and with cut groups, every segment is also listed in its group (TD-166).
 pub(crate) fn layer(
     plane: LayerPlane,
     section: &MeshSection,
     transform: SectionTransform<'_>,
     max_bytes: usize,
     closure: Option<Closure<'_>>,
-    kept: &[Range<usize>],
+    faces: FaceSets<'_>,
     cancel: &mut Cancellation<'_>,
 ) -> Result<WindingLayer, LayerFailure> {
     let reflect = reflects(transform)?;
-    let (segments, closure) = segments(section, reflect, max_bytes, closure, cancel)?;
+    let (segments, closure, chord_edges) = segments(section, reflect, max_bytes, closure, cancel)?;
+    let kept = faces.kept;
+    let is_kept = |face: usize| {
+        let at = kept.partition_point(|r| r.end <= face);
+        kept.get(at).is_some_and(|r| r.contains(&face))
+    };
     // Before closure chords, the segments follow the section's events one for one.
+    let events = section.events();
     let mut kept_segments = Vec::new();
     let mut model_segments = Vec::new();
     if !kept.is_empty() {
-        let is_kept = |face: usize| {
-            let at = kept.partition_point(|r| r.end <= face);
-            kept.get(at).is_some_and(|r| r.contains(&face))
-        };
-        let count = section
-            .events()
-            .iter()
-            .filter(|e| is_kept(e.source_face))
-            .count();
+        let count = events.iter().filter(|e| is_kept(e.source_face)).count();
         kept_segments
             .try_reserve_exact(count)
             .map_err(|_| LayerFailure::Allocation)?;
         model_segments
             .try_reserve_exact(segments.len() - count)
             .map_err(|_| LayerFailure::Allocation)?;
-        let events = section.events();
         for (i, segment) in segments.iter().enumerate() {
             cancel.poll(Checkpoint::LayerOutput, i)?;
             // Past the events come the closure chords, which close the model's sections.
@@ -501,12 +641,60 @@ pub(crate) fn layer(
             }
         }
     }
+    let groups = if faces.groups.count() == 0 {
+        Vec::new()
+    } else {
+        // Each segment's group, and whether its face is kept. A chord closes a rim of one body,
+        // so the vertex its chain ends on gives its group.
+        let membership = |i: usize| {
+            if let Some(e) = events.get(i) {
+                (faces.groups.of_face(e.source_face), is_kept(e.source_face))
+            } else {
+                let edge = chord_edges[i - events.len()];
+                (faces.groups.of_vertex(edge[0] as usize), false)
+            }
+        };
+        let mut counts = vec![[0usize; 2]; faces.groups.count()];
+        for i in 0..segments.len() {
+            cancel.poll(Checkpoint::LayerOutput, i)?;
+            let (group, kept) = membership(i);
+            counts[group][usize::from(kept)] += 1;
+        }
+        let mut groups = Vec::new();
+        groups
+            .try_reserve_exact(counts.len())
+            .map_err(|_| LayerFailure::Allocation)?;
+        for [model, kept] in counts {
+            let mut group = GroupSegments::default();
+            group
+                .model
+                .try_reserve_exact(model)
+                .map_err(|_| LayerFailure::Allocation)?;
+            group
+                .kept
+                .try_reserve_exact(kept)
+                .map_err(|_| LayerFailure::Allocation)?;
+            groups.push(group);
+        }
+        for (i, segment) in segments.iter().enumerate() {
+            cancel.poll(Checkpoint::LayerOutput, i)?;
+            let (group, kept) = membership(i);
+            let group = &mut groups[group];
+            if kept {
+                group.kept.push(*segment);
+            } else {
+                group.model.push(*segment);
+            }
+        }
+        groups
+    };
     Ok(WindingLayer {
         plane,
         sampled_z_mm: section.plane_z(),
         segments,
         kept: kept_segments,
         model: model_segments,
+        groups,
         closure,
     })
 }
@@ -582,7 +770,10 @@ mod tests {
             SectionTransform::Identity,
             1 << 20,
             None,
-            &[],
+            FaceSets {
+                kept: &[],
+                groups: &FaceGroups::default(),
+            },
             &mut Cancellation::never(),
         )
         .unwrap();
@@ -608,7 +799,10 @@ mod tests {
                 SectionTransform::Identity,
                 1 << 20,
                 None,
-                kept,
+                FaceSets {
+                    kept,
+                    groups: &FaceGroups::default(),
+                },
                 &mut Cancellation::never(),
             )
             .unwrap()
@@ -623,6 +817,89 @@ mod tests {
         assert_eq!(doubled_area(all.model_segments()), 12.0);
         assert_eq!(layer(&[]).model_segments(), &[] as &[[[f64; 2]; 2]]);
         assert_eq!(layer(&[]).kept_segments(), &[] as &[[[f64; 2]; 2]]);
+    }
+
+    #[test]
+    fn every_segment_is_listed_in_its_cut_group() {
+        // TD-166: a 2 x 3 box, a 1 x 1 box in group 1 whose first faces are kept, and a 1 x 2
+        // box in group 2.
+        let (mut points, mut triangles) = cube([0., 0., 0.], [2., 3., 1.]);
+        for (min, max) in [([5., 0., 0.], [6., 1., 1.]), ([8., 0., 0.], [9., 2., 1.])] {
+            let (more, faces) = cube(min, max);
+            let base = u32::try_from(points.len()).unwrap();
+            points.extend(more);
+            triangles.extend(faces.iter().map(|t| t.map(|v| v + base)));
+        }
+        let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+        let section = section(&mesh, 0.5);
+        let groups = FaceGroups::new(&[
+            FaceGroup {
+                group: 2,
+                faces: 24..36,
+                vertices: 16..24,
+            },
+            FaceGroup {
+                group: 1,
+                faces: 12..24,
+                vertices: 8..16,
+            },
+        ])
+        .unwrap();
+        let kept: Vec<Range<usize>> = std::iter::once(12..24).collect();
+        let layer = super::layer(
+            plane(),
+            &section,
+            SectionTransform::Identity,
+            1 << 20,
+            None,
+            FaceSets {
+                kept: &kept,
+                groups: &groups,
+            },
+            &mut Cancellation::never(),
+        )
+        .unwrap();
+        let groups = layer.groups();
+        assert_eq!(groups.len(), 3);
+        assert_eq!(doubled_area(groups[0].model()), 12.0);
+        assert_eq!(groups[0].kept(), &[] as &[[[f64; 2]; 2]]);
+        assert_eq!(groups[1].model(), &[] as &[[[f64; 2]; 2]]);
+        assert_eq!(doubled_area(groups[1].kept()), 2.0);
+        assert_eq!(doubled_area(groups[2].model()), 4.0);
+        let listed: usize = groups
+            .iter()
+            .map(|g| g.model().len() + g.kept().len())
+            .sum();
+        assert_eq!(listed, layer.segments().len());
+    }
+
+    #[test]
+    fn cut_groups_are_checked() {
+        let group = |group, faces: Range<usize>, vertices: Range<usize>| FaceGroup {
+            group,
+            faces,
+            vertices,
+        };
+        assert_eq!(FaceGroups::new(&[]).unwrap().count(), 0);
+        assert_eq!(FaceGroups::new(&[group(3, 0..2, 0..4)]).unwrap().count(), 4);
+        assert!(matches!(
+            FaceGroups::new(&[group(0, 0..2, 0..4)]),
+            Err(LayerFailure::InvalidFaceGroups)
+        ));
+        assert!(matches!(
+            FaceGroups::new(&[group(1, 0..2, 0..4), group(2, 1..3, 4..8)]),
+            Err(LayerFailure::InvalidFaceGroups)
+        ));
+        assert!(matches!(
+            FaceGroups::new(&[group(1, 0..2, 0..4), group(2, 2..3, 3..8)]),
+            Err(LayerFailure::InvalidFaceGroups)
+        ));
+        let groups = FaceGroups::new(&[group(2, 4..6, 8..9), group(1, 0..2, 0..4)]).unwrap();
+        assert_eq!(
+            [0, 1, 2, 3, 4, 5, 6].map(|f| groups.of_face(f)),
+            [1, 1, 0, 0, 2, 2, 0]
+        );
+        assert_eq!([3, 4, 8, 9].map(|v| groups.of_vertex(v)), [1, 0, 2, 0]);
     }
 
     #[test]
@@ -644,7 +921,10 @@ mod tests {
             transform,
             1 << 20,
             None,
-            &[],
+            FaceSets {
+                kept: &[],
+                groups: &FaceGroups::default(),
+            },
             &mut Cancellation::never(),
         )
         .unwrap();
@@ -700,7 +980,7 @@ mod tests {
         triangles.extend(faces.iter().map(|f| f.map(|v| v + 8)));
         points.extend(more);
         let mesh = TriangleMesh::try_new(points, triangles).unwrap();
-        let (segments, _) = segments(
+        let (segments, _, _) = segments(
             &section(&mesh, 0.5),
             false,
             1 << 20,

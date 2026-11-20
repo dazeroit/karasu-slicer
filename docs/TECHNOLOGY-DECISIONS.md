@@ -6986,8 +6986,9 @@ owner's approval of the design. Not implemented.
 
 ## TD-166 — Each drilled model cuts only its own material on a plate
 
-**Status:** Proposed on 2026-11-20 at the owner's request (issue #52). It still needs the
-owner's approval of the design. Not implemented.
+**Status:** Proposed on 2026-11-20 at the owner's request (issue #52), accepted by the owner
+the same day ("procedi con la issue #52"), and implemented the same day (see "As implemented"
+below).
 
 **Context:**
 - **The owner's test (2026-11-20, observed in the application):**
@@ -7105,6 +7106,77 @@ owner's approval of the design. Not implemented.
 7. **The model export** of the owner's plate succeeds.
 8. **Measured** (release build): a plate of 20 drilled copies whose cutters reach each other,
    against the same plate spaced apart, in one group.
+
+**As implemented (2026-11-20, issue #52):**
+- **Core, the layers (`karasu_core::slicing::winding`):**
+  - `FaceGroup` names one body of the sliced mesh (its face and vertex ranges) in a cut group
+    from 1; faces in no group are in group 0.
+  - A layer's kernel takes the groups (`with_face_groups`, checked:
+    `LayerFailure::InvalidFaceGroups`), and each winding layer lists every segment in its group
+    as well (`WindingLayer::groups`), models and supports apart.
+  - **Closure chords** (TD-054) carry the source edge their chain ends on, so a chord joins the
+    group of the body whose rim it closes.
+- **Core, the raster:**
+  - `LayerCut::groups` and `LayerCut::group_rings` (defaults: no groups, one cut) let a cut name
+    its groups.
+  - `rasterize_grouped_winding_layer_with_cancellation` samples each group's models (and, with
+    anti-aliased supports, their supports) under the rule, minus that group's rings less the
+    supports.
+  - The renderer takes a list of groups: per sub-row, each group's spans minus its own cut, the
+    groups united before the sub-rows are counted into gray levels. One group runs the same
+    steps as before.
+  - The parallel stream builds the kernel with the cut's groups. With strict layers it refuses
+    them (`LayerFailure::FaceGroupsNeedWinding`).
+- **The plate (`karasu_project::pipeline::plate`):**
+  - **Footprints** are the sliced surface alone.
+  - **Each hole's box** is the cylinder's exact box, grown by the cutters' 1 µm building
+    tolerance (`DRAIN_DISTANCE_ERROR_MM`).
+  - **Reaches and groups:**
+    - `Layout::group_cutters` finds the cutters whose box meets another instance's footprint,
+      touching included.
+    - Group 0 keeps every other instance. Each reaching instance, in order, takes the lowest
+      group from 1 that holds none it reaches or that reaches it.
+  - **The mesh and the cut:** `Layout::united` returns the groups' face and vertex ranges, and
+    `PlateCut` gives each group its rings.
+  - **The refusal is gone.** Strict layers refuse a reach, naming the hole and the instance it
+    reaches.
+  - **The summary** says `Drain holes reaching other models` only when there are any.
+- **Unchanged:**
+  - a plate with no reach is one group and runs the same code as before;
+  - the model export (TD-139), which drills each object with the exact kernel, is no longer
+    refused;
+  - the application's own footprints, which never counted cutters.
+- **Changed outputs:** a plate document whose arranged copies have holes reaching beyond
+  their model packs them by the smaller footprints, and its summary gives the smaller
+  footprints and fewer overlapping pairs.
+- **Measured** (Linux, release, Anycubic Photon Mono 4, 16 threads):
+  - **Twenty 12 x 12 x 20 mm boxes,** each with a 3 mm hole through its side reaching 3 mm
+    beyond it, 400 layers:
+    - **6 mm apart (no reach):** 0.16 to 0.17 s on main and on this change, with outputs
+      identical byte for byte;
+    - **1 mm apart:** 16 cutters reaching a neighbour, 0.18 to 0.19 s here, where main refuses
+      the plate. The sampled volume equals the spaced plate's, so no box lost material to
+      another's hole.
+  - **Twenty copies of a 204,160-triangle sphere,** each drilled the same way, 240 layers, about
+    615 MB peak in every case:
+    - main: 1.60 to 1.65 s, 6 mm apart;
+    - this change: 1.53 to 1.54 s, 6 mm apart;
+    - this change, 1 mm apart: 1.56 s, with 15 reaches.
+- **Tests:**
+  - **Groups in the layers:** every segment in its group, supports apart; the groups checked.
+  - **Groups in the raster:**
+    - a group's cut leaving another group's model whole;
+    - cuts that reach no other group giving one cut's images, anti-aliased or with binary
+      supports;
+    - overlapping groups giving their union's gray levels;
+    - closure chords in their body's group; checked to fail when a chord is put in group 0;
+    - strict layers refused.
+  - **The plate:**
+    - mutual reaches in groups apart, reaches into plain models sharing group 1, chains, and
+      touching;
+    - the strict refusal's words.
+  - **The command line:** a drilled box beside a plain one, both whole but for the hole, with
+    the summary line, and the strict refusal.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 

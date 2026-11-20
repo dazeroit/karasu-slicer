@@ -9,15 +9,17 @@
 //!
 //! **Slicing:** all instances are concatenated into one world mesh and sliced under the positive
 //! winding rule, so overlapping instances print as their union. Drain cutters are moved with
-//! their instance; footprints that carry drain holes may not overlap any other, which keeps the
-//! cut rings disjoint.
+//! their instance, and each cuts only its own instance's material (TD-166): an instance whose
+//! cutters reach another one's footprint is sliced in a cut group of its own, apart from every
+//! instance it reaches. Strict layers cannot keep groups apart and refuse such a plate.
 use super::{
-    drain_cylinders, model_label, placed_mesh,
+    model_label, placed_mesh,
     summary::{
         write_diagnosis, write_model, write_output, write_preparation, write_settings,
         write_source, write_subject, write_totals, write_transform,
     },
     BuiltinExporter, HoleCuts, PreparedObject, PrinterProfile, QuotedPath, Totals, TriangleMesh,
+    DRAIN_DISTANCE_ERROR_MM,
 };
 use crate::request::{
     Coordinates, DrainHole, Input, ModelSource, ObjectSpec, PlateSpec, Pose, Simplify,
@@ -31,7 +33,7 @@ use karasu_core::{
     },
     preparation::sampled::HoleSurface,
     raster::LayerCut,
-    slicing::schedule::LayerPlane,
+    slicing::{schedule::LayerPlane, winding::FaceGroup},
 };
 use std::{
     fmt::{self, Write},
@@ -207,7 +209,24 @@ struct Instance {
     copy: u32,
     /// Rigid XY move from the design placement, in mm.
     offset: [f64; 2],
+    /// Its cut group (TD-166): 0, unless its drain cutters reach another instance.
+    group: usize,
 }
+
+/// A drain cutter that reaches another instance's footprint (TD-166).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Reach {
+    /// The instance whose cutter it is.
+    from: usize,
+    /// Its drain hole, 1-based.
+    hole: usize,
+    /// The instance it reaches.
+    to: usize,
+}
+
+/// The plate's world mesh, its supports' faces and its instances in cut groups 1 and above
+/// (see [`Layout::united`]).
+type United = (TriangleMesh, Vec<Range<usize>>, Vec<FaceGroup>);
 
 /// Where every instance goes, and what the plate holds.
 pub(super) struct Layout {
@@ -217,31 +236,28 @@ pub(super) struct Layout {
     instances: Vec<Instance>,
     /// Pairs of instances whose footprints overlap (united when sliced).
     overlaps: Vec<(usize, usize)>,
+    /// Drain cutters that reach another instance, in instance and hole order (TD-166).
+    reaches: Vec<Reach>,
+    /// Drain cutters' XY boxes of each object at its design placement, with their 1-based hole
+    /// numbers.
+    cutters: Vec<Vec<(usize, Rect)>>,
     spacing_mm: f64,
     /// Highest point of every object.
     pub(super) top_z: f64,
 }
 
-/// The XY rectangle of everything an object prints at its design placement: the sliced surface
-/// (with supports and raft) and its drain-hole cutters.
+/// The XY rectangle of everything an object prints at its design placement: the sliced surface,
+/// with supports and raft. Drain cutters are not part of it: each cuts only its own object
+/// (TD-166), and [`cutter_boxes`] bounds them.
 fn footprint(object: &PreparedObject) -> Result<Rect, String> {
     let surface = world_surface(object)?;
     let mut rect = Rect {
         min: [f64::INFINITY; 2],
         max: [f64::NEG_INFINITY; 2],
     };
-    let mut include = |x: f64, y: f64, radius: f64| {
-        rect.min = [rect.min[0].min(x - radius), rect.min[1].min(y - radius)];
-        rect.max = [rect.max[0].max(x + radius), rect.max[1].max(y + radius)];
-    };
     for p in surface.vertices() {
-        include(p.x, p.y, 0.);
-    }
-    // Drain cylinders as built: surface holes are oriented while draining.
-    for cylinder in drain_cylinders(object.holes.as_ref()) {
-        for [x, y, _] in [cylinder.start_mm, cylinder.end_mm] {
-            include(x, y, cylinder.radius_mm);
-        }
+        rect.min = [rect.min[0].min(p.x), rect.min[1].min(p.y)];
+        rect.max = [rect.max[0].max(p.x), rect.max[1].max(p.y)];
     }
     if rect.min[0] > rect.max[0] {
         return Err(format!(
@@ -250,6 +266,40 @@ fn footprint(object: &PreparedObject) -> Result<Rect, String> {
         ));
     }
     Ok(rect)
+}
+
+/// The XY box of each drain cutter of `object` at its design placement, with its 1-based hole
+/// number (TD-166).
+///
+/// A cylinder with axis from `p` to `q`, unit direction `a` and radius `r` spans
+/// `min(p_k, q_k) - r·√(1 - a_k²)` to `max(p_k, q_k) + r·√(1 - a_k²)` along axis `k`: its end
+/// discs' extent. The polygonal cylinder as built lies within [`DRAIN_DISTANCE_ERROR_MM`] of it,
+/// so each box grows by that much, and its rings never leave it.
+fn cutter_boxes(object: &PreparedObject) -> Vec<(usize, Rect)> {
+    let Some(holes) = &object.holes else {
+        return Vec::new();
+    };
+    holes
+        .specs
+        .iter()
+        .enumerate()
+        .filter_map(|(index, spec)| {
+            let a = spec.unit_direction().ok()?;
+            let p = spec.entry_mm;
+            let q: [f64; 3] = std::array::from_fn(|k| p[k] + a[k] * spec.length_mm);
+            let reach = |k: usize| {
+                spec.diameter_mm / 2.0 * (1.0 - a[k] * a[k]).max(0.0).sqrt()
+                    + DRAIN_DISTANCE_ERROR_MM
+            };
+            Some((
+                index + 1,
+                Rect {
+                    min: [p[0].min(q[0]) - reach(0), p[1].min(q[1]) - reach(1)],
+                    max: [p[0].max(q[0]) + reach(0), p[1].max(q[1]) + reach(1)],
+                },
+            ))
+        })
+        .collect()
 }
 
 /// The sliced surface in world coordinates at the design placement.
@@ -290,6 +340,7 @@ impl Layout {
                     object: index,
                     copy,
                     offset: [0.; 2],
+                    group: 0,
                 });
             }
         }
@@ -309,6 +360,8 @@ impl Layout {
             design,
             instances,
             overlaps: Vec::new(),
+            reaches: Vec::new(),
+            cutters: objects.iter().map(cutter_boxes).collect(),
             spacing_mm,
             top_z: objects
                 .iter()
@@ -342,22 +395,93 @@ impl Layout {
             }
         }
         layout.overlaps = overlapping_pairs(&layout.footprints());
-        if let Some(&(a, b)) = layout.overlaps.iter().find(|&&(a, b)| {
-            [a, b].iter().any(|&k| {
-                !objects[layout.instances[k].object]
-                    .args
-                    .drain_holes
-                    .is_empty()
-            })
-        }) {
-            return Err(format!(
-                "the footprints of {} and {} overlap, and drain holes would cut both; move them \
-                 apart",
-                layout.label(a),
-                layout.label(b)
-            ));
-        }
+        layout.group_cutters();
         Ok(layout)
+    }
+
+    /// Find the drain cutters that reach another instance's footprint, and give each instance
+    /// its cut group (TD-166).
+    ///
+    /// Group 0 holds every instance but those whose cutters reach another; their cutters cut
+    /// only their own material. Each of the others takes, in instance order, the lowest group
+    /// from 1 that holds no instance it reaches or that reaches it, so no group holds a cutter
+    /// and an instance it reaches. Touching counts as reaching.
+    fn group_cutters(&mut self) {
+        let footprints = self.footprints();
+        let meets = |a: &Rect, b: &Rect| {
+            a.min[0] <= b.max[0]
+                && b.min[0] <= a.max[0]
+                && a.min[1] <= b.max[1]
+                && b.min[1] <= a.max[1]
+        };
+        let mut reaches = Vec::new();
+        for (from, instance) in self.instances.iter().enumerate() {
+            let [dx, dy] = instance.offset;
+            let boxes: Vec<(usize, Rect)> = self.cutters[instance.object]
+                .iter()
+                .map(|&(hole, r)| {
+                    let rect = Rect {
+                        min: [r.min[0] + dx, r.min[1] + dy],
+                        max: [r.max[0] + dx, r.max[1] + dy],
+                    };
+                    (hole, rect)
+                })
+                .collect();
+            let Some(all) = boxes.iter().map(|&(_, r)| r).reduce(|a, b| Rect {
+                min: [a.min[0].min(b.min[0]), a.min[1].min(b.min[1])],
+                max: [a.max[0].max(b.max[0]), a.max[1].max(b.max[1])],
+            }) else {
+                continue;
+            };
+            for &(hole, rect) in &boxes {
+                for (to, footprint) in footprints.iter().enumerate() {
+                    if to != from && meets(&all, footprint) && meets(&rect, footprint) {
+                        reaches.push(Reach { from, hole, to });
+                    }
+                }
+            }
+        }
+        let mut neighbours = vec![Vec::new(); self.instances.len()];
+        for reach in &reaches {
+            neighbours[reach.from].push(reach.to);
+            neighbours[reach.to].push(reach.from);
+        }
+        let mut reaching = vec![false; self.instances.len()];
+        for reach in &reaches {
+            reaching[reach.from] = true;
+        }
+        for index in 0..self.instances.len() {
+            if !reaching[index] {
+                continue;
+            }
+            let taken: Vec<usize> = neighbours[index]
+                .iter()
+                .filter(|&&other| reaching[other])
+                .map(|&other| self.instances[other].group)
+                .collect();
+            // Among one more group than it has neighbours, one is always free.
+            let free = taken.len() + 1;
+            self.instances[index].group = (1..=free).find(|g| !taken.contains(g)).unwrap_or(free);
+        }
+        self.reaches = reaches;
+    }
+
+    /// Refuse drain cutters that reach another instance, for strict layers: they cannot keep a
+    /// cut to its own instance (TD-166).
+    ///
+    /// # Errors
+    /// The first such cutter, named with the instance it reaches.
+    pub(super) fn refuse_reaches(&self) -> Result<(), String> {
+        match self.reaches.first() {
+            None => Ok(()),
+            Some(reach) => Err(format!(
+                "drain hole {} of {} reaches {}, and strict layers cannot keep a drain hole to \
+                 its own model; slice with union layers or move them apart",
+                reach.hole,
+                self.label(reach.from),
+                self.label(reach.to)
+            )),
+        }
     }
 
     /// Each instance: its object, its 1-based copy number, and its rigid XY move from the
@@ -390,25 +514,32 @@ impl Layout {
         )
     }
 
-    /// Every instance's sliced surface, moved into place, as one world mesh.
-    pub(super) fn united(
-        &self,
-        objects: &[PreparedObject],
-    ) -> Result<(TriangleMesh, Vec<Range<usize>>), String> {
+    /// Every instance's sliced surface, moved into place, as one world mesh; the faces of each
+    /// instance's supports, which the drain cutters leave (TD-123); and the instances in cut
+    /// groups 1 and above, whose cutters cut only their own material (TD-166).
+    pub(super) fn united(&self, objects: &[PreparedObject]) -> Result<United, String> {
         let surfaces = objects
             .iter()
             .map(|o| world_surface(o).map(Some))
             .collect::<Result<Vec<_>, _>>()?;
-        let (mesh, bases) = self.concatenate_at(&surfaces)?;
-        // Each instance's supports, which the drain cutters leave (TD-123).
-        let kept = bases
-            .into_iter()
-            .filter_map(|(object, base)| {
-                let faces = objects[object].kept_faces()?;
-                Some(base + faces.start..base + faces.end)
+        let (mesh, ranges) = self.concatenate_at(&surfaces)?;
+        let kept = ranges
+            .iter()
+            .filter_map(|(instance, faces, _)| {
+                let kept = objects[self.instances[*instance].object].kept_faces()?;
+                Some(faces.start + kept.start..faces.start + kept.end)
             })
             .collect();
-        Ok((mesh, kept))
+        let groups = ranges
+            .into_iter()
+            .filter(|(instance, _, _)| self.instances[*instance].group > 0)
+            .map(|(instance, faces, vertices)| FaceGroup {
+                group: self.instances[instance].group,
+                faces,
+                vertices,
+            })
+            .collect();
+        Ok((mesh, kept, groups))
     }
 
     /// Every hollowed instance's cavity, moved into place (TD-095), or `None` when no object is
@@ -441,18 +572,24 @@ impl Layout {
         self.concatenate_at(meshes).map(|(mesh, _)| mesh)
     }
 
-    /// [`Self::concatenate`], with the object and first face of each instance placed.
+    /// [`Self::concatenate`], with each instance placed and the ranges of its faces and
+    /// vertices in the mesh.
+    #[allow(clippy::type_complexity)] // A mesh and, per instance, two index ranges.
     fn concatenate_at(
         &self,
         meshes: &[Option<Surface<'_>>],
-    ) -> Result<(TriangleMesh, Vec<(usize, usize)>), String> {
+    ) -> Result<(TriangleMesh, Vec<(usize, Range<usize>, Range<usize>)>), String> {
         let (mut vertices, mut triangles) = (Vec::new(), Vec::new());
         let mut bases = Vec::new();
-        for instance in &self.instances {
+        for (index, instance) in self.instances.iter().enumerate() {
             let Some(mesh) = &meshes[instance.object] else {
                 continue;
             };
-            bases.push((instance.object, triangles.len()));
+            bases.push((
+                index,
+                triangles.len()..triangles.len() + mesh.triangles().len(),
+                vertices.len()..vertices.len() + mesh.vertices().len(),
+            ));
             let [dx, dy] = instance.offset;
             let base = u32::try_from(vertices.len())
                 .ok()
@@ -472,31 +609,65 @@ impl Layout {
         Ok((mesh, bases))
     }
 
-    /// The drain cutters of every instance, moved into place.
-    pub(super) fn cut<'a>(&self, objects: &'a [PreparedObject]) -> Option<PlateCut<'a>> {
+    /// The drain cutters of every instance, moved into place, each in its instance's cut group:
+    /// `groups` are [`Self::united`]'s (TD-166).
+    pub(super) fn cut<'a>(
+        &self,
+        objects: &'a [PreparedObject],
+        groups: Vec<FaceGroup>,
+    ) -> Option<PlateCut<'a>> {
         let cuts: Vec<_> = self
             .instances
             .iter()
-            .filter_map(|i| objects[i.object].cut().map(|cut| (cut, i.offset)))
+            .filter_map(|i| objects[i.object].cut().map(|cut| (cut, i.offset, i.group)))
             .collect();
-        (!cuts.is_empty()).then_some(PlateCut { cuts })
+        let count = groups.iter().map(|g| g.group + 1).max().unwrap_or(1);
+        (!cuts.is_empty()).then_some(PlateCut {
+            cuts,
+            groups,
+            count,
+        })
     }
 }
 
-/// Drain cutters of several instances, removed as the union of their rings (TD-089).
+/// Drain cutters of several instances, removed as the union of their rings (TD-089), each
+/// from its own cut group's material (TD-166).
 pub(super) struct PlateCut<'a> {
-    cuts: Vec<(&'a HoleCuts, [f64; 2])>,
+    /// Each instance's cutters, its rigid XY move and its cut group.
+    cuts: Vec<(&'a HoleCuts, [f64; 2], usize)>,
+    /// The instances in cut groups 1 and above, in the united mesh.
+    groups: Vec<FaceGroup>,
+    /// Number of cut groups, group 0 included.
+    count: usize,
 }
 
-impl LayerCut for PlateCut<'_> {
-    fn rings(&self, plane: LayerPlane) -> Vec<Vec<[f64; 2]>> {
+impl PlateCut<'_> {
+    /// The rings of the cutters of group `group`, or of every group, moved into place.
+    fn moved_rings(&self, plane: LayerPlane, group: Option<usize>) -> Vec<Vec<[f64; 2]>> {
         self.cuts
             .iter()
-            .flat_map(|&(cut, [dx, dy])| {
+            .filter(|&&(_, _, g)| group.is_none_or(|group| g == group))
+            .flat_map(|&(cut, [dx, dy], _)| {
                 cut.rings(plane)
                     .into_iter()
                     .map(move |ring| ring.into_iter().map(|[x, y]| [x + dx, y + dy]).collect())
             })
+            .collect()
+    }
+}
+
+impl LayerCut for PlateCut<'_> {
+    fn rings(&self, plane: LayerPlane) -> Vec<Vec<[f64; 2]>> {
+        self.moved_rings(plane, None)
+    }
+
+    fn groups(&self) -> &[FaceGroup] {
+        &self.groups
+    }
+
+    fn group_rings(&self, plane: LayerPlane) -> Vec<Vec<Vec<[f64; 2]>>> {
+        (0..self.count)
+            .map(|group| self.moved_rings(plane, Some(group)))
             .collect()
     }
 }
@@ -566,7 +737,7 @@ pub(super) fn write_summary(
         )?;
     }
     if layout.overlaps.is_empty() {
-        writeln!(out, "Overlapping footprints: none")
+        writeln!(out, "Overlapping footprints: none")?;
     } else {
         let listed: Vec<String> = layout
             .overlaps
@@ -584,6 +755,165 @@ pub(super) fn write_summary(
             } else {
                 ""
             }
-        )
+        )?;
+    }
+    write_reaches(out, layout)
+}
+
+/// The drain cutters that reach other instances, said only when there are any, so other
+/// summaries are unchanged (TD-166).
+fn write_reaches(out: &mut impl Write, layout: &Layout) -> fmt::Result {
+    if !layout.reaches.is_empty() {
+        let listed: Vec<String> = layout
+            .reaches
+            .iter()
+            .take(MAX_LISTED)
+            .map(|r| {
+                format!(
+                    "hole {} of {} reaches {}",
+                    r.hole,
+                    layout.label(r.from),
+                    layout.label(r.to)
+                )
+            })
+            .collect();
+        writeln!(
+            out,
+            "Drain holes reaching other models: {}, each cutting only its own model: {}{}",
+            layout.reaches.len(),
+            listed.join("; "),
+            if layout.reaches.len() > MAX_LISTED {
+                "; ..."
+            } else {
+                ""
+            }
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Fixed 10 x 10 mm objects at `corners`, with cutter boxes `[min x, min y, max x, max y]`
+    /// relative to their corners, and their cutters grouped.
+    fn layout(objects: &[([f64; 2], &[[f64; 4]])]) -> Layout {
+        let mut layout = Layout {
+            names: (1..=objects.len()).map(|k| format!("o{k}")).collect(),
+            design: objects
+                .iter()
+                .map(|&(c, _)| Rect {
+                    min: c,
+                    max: [c[0] + 10.0, c[1] + 10.0],
+                })
+                .collect(),
+            instances: (0..objects.len())
+                .map(|object| Instance {
+                    object,
+                    copy: 1,
+                    offset: [0.0; 2],
+                    group: 0,
+                })
+                .collect(),
+            overlaps: Vec::new(),
+            reaches: Vec::new(),
+            cutters: objects
+                .iter()
+                .map(|&(c, boxes)| {
+                    (1..)
+                        .zip(boxes)
+                        .map(|(hole, b)| {
+                            let rect = Rect {
+                                min: [c[0] + b[0], c[1] + b[1]],
+                                max: [c[0] + b[2], c[1] + b[3]],
+                            };
+                            (hole, rect)
+                        })
+                        .collect()
+                })
+                .collect(),
+            spacing_mm: 2.0,
+            top_z: 1.0,
+        };
+        layout.group_cutters();
+        layout
+    }
+
+    fn groups(layout: &Layout) -> Vec<usize> {
+        layout.instances.iter().map(|i| i.group).collect()
+    }
+
+    fn reaches(layout: &Layout) -> Vec<(usize, usize, usize)> {
+        layout
+            .reaches
+            .iter()
+            .map(|r| (r.from, r.hole, r.to))
+            .collect()
+    }
+
+    /// A cutter through the right side of its box, reaching 3 mm beyond it.
+    const RIGHT: [f64; 4] = [8.0, 4.0, 13.0, 6.0];
+    /// A cutter through the left side of its box, reaching 3 mm beyond it.
+    const LEFT: [f64; 4] = [-3.0, 4.0, 2.0, 6.0];
+    /// A cutter inside its box.
+    const INSIDE: [f64; 4] = [4.0, 4.0, 6.0, 6.0];
+
+    #[test]
+    fn cutters_that_reach_each_other_are_grouped_apart() {
+        // TD-166: four boxes in a row with 2 mm gaps. The first two reach each other, the third
+        // is drilled within itself, the fourth is plain.
+        let layout = layout(&[
+            ([0.0, 0.0], &[INSIDE, RIGHT]),
+            ([12.0, 0.0], &[LEFT]),
+            ([24.0, 0.0], &[INSIDE]),
+            ([36.0, 0.0], &[]),
+        ]);
+        assert_eq!(reaches(&layout), [(0, 2, 1), (1, 1, 0)]);
+        assert_eq!(groups(&layout), [1, 2, 0, 0]);
+    }
+
+    #[test]
+    fn cutters_that_reach_plain_models_share_a_group() {
+        // The first reaches the plain second, the third the plain fourth: both cutters can be
+        // in group 1, as neither reaches the other's box.
+        let layout = layout(&[
+            ([0.0, 0.0], &[RIGHT]),
+            ([12.0, 0.0], &[]),
+            ([24.0, 0.0], &[RIGHT]),
+            ([36.0, 0.0], &[]),
+        ]);
+        assert_eq!(reaches(&layout), [(0, 1, 1), (2, 1, 3)]);
+        assert_eq!(groups(&layout), [1, 0, 1, 0]);
+        // A chain: the first reaches the second, which reaches the plain third.
+        let chain = layout_chain();
+        assert_eq!(groups(&chain), [1, 2, 0]);
+    }
+
+    fn layout_chain() -> Layout {
+        layout(&[
+            ([0.0, 0.0], &[RIGHT]),
+            ([12.0, 0.0], &[RIGHT]),
+            ([24.0, 0.0], &[]),
+        ])
+    }
+
+    #[test]
+    fn a_cutter_that_touches_another_box_reaches_it() {
+        // Its box ends exactly where the next box starts.
+        let touching = layout(&[([0.0, 0.0], &[[8.0, 4.0, 12.0, 6.0]]), ([12.0, 0.0], &[])]);
+        assert_eq!(groups(&touching), [1, 0]);
+        let short = layout(&[([0.0, 0.0], &[[8.0, 4.0, 11.9, 6.0]]), ([12.0, 0.0], &[])]);
+        assert_eq!(reaches(&short), []);
+        assert_eq!(groups(&short), [0, 0]);
+    }
+
+    #[test]
+    fn strict_layers_refuse_the_first_reach() {
+        assert_eq!(
+            layout_chain().refuse_reaches().unwrap_err(),
+            r#"drain hole 1 of object 1 ("o1") copy 1 reaches object 2 ("o2") copy 1, and strict layers cannot keep a drain hole to its own model; slice with union layers or move them apart"#
+        );
+        assert!(layout(&[([0.0, 0.0], &[INSIDE])]).refuse_reaches().is_ok());
     }
 }

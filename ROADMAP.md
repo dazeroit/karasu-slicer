@@ -1458,10 +1458,10 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        each model's convex footprint with no-fit polygons, turning models more ways with "Turn
        about Z". The overlap checks of the status bar and the slice follow the outlines. It
        waits for the owner's approval.
-     - **Each drilled model cuts only its own material (owner, 2026-11-20, TD-166, proposed,
-       issue #52):** a plate is sliced in groups, so a drain hole never cuts another model, as
-       the viewport shows. The slice no longer refuses a plate whose cutters reach another
-       model. It waits for the owner's approval.
+     - **Each drilled model cuts only its own material (owner, 2026-11-20, TD-166, implemented
+       the same day, issue #52):** a plate is sliced in cut groups, so a drain hole never cuts
+       another model, as the viewport shows. The slice no longer refuses a plate whose cutters
+       reach another model; strict layers still do.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

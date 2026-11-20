@@ -516,8 +516,10 @@ pub(super) fn render(
     cancel: &mut Cancellation<'_>,
 ) -> Result<RasterImage, RasterError> {
     render_difference(
-        edges,
-        &[],
+        &[Group {
+            body: edges,
+            cut: &[],
+        }],
         &[],
         Fill::Parity,
         plane,
@@ -529,22 +531,45 @@ pub(super) fn render(
     )
 }
 
-/// Rasterize the material of `body` under `fill` minus the even-odd material of `cut`, except
-/// where `kept` has material (TD-123).
+/// One cut group's boundary edges (TD-166): its body, and the cut that removes only its
+/// material.
+#[derive(Clone, Copy)]
+pub(super) struct Group<'e> {
+    /// The group's body.
+    pub(super) body: &'e [Edge],
+    /// The group's cut.
+    pub(super) cut: &'e [Edge],
+}
+
+/// A group's scanlines and its spans on the current sub-row.
+struct GroupRows<'e> {
+    body_lines: Scanline<'e>,
+    cut_lines: Scanline<'e>,
+    body_spans: Vec<(u32, u32)>,
+    cut_spans: Vec<(u32, u32)>,
+    /// The cut without what it leaves: at most one span more than the cut's per kept span.
+    leaving: Vec<(u32, u32)>,
+    /// The body without the cut.
+    part: Vec<(u32, u32)>,
+}
+
+/// Rasterize the material of each group's `body` under `fill` minus the even-odd material of
+/// its own `cut`, except where `kept` has material (TD-123), the groups united (TD-166).
 ///
-/// Each sample point is covered exactly when it is inside `body` and either outside `cut` or
-/// where the winding number of `kept` is positive, which equals sampling the polygonal difference
-/// `body - (cut - kept)`; no polygon is constructed. `kept` is a closed body inside `body` (the
-/// supports): their material is never cut. Empty `cut` and `kept` give the plain mask.
+/// Each sample point is covered exactly when, for some group, it is inside that group's `body`
+/// and either outside that group's `cut` or where the winding number of `kept` is positive. For
+/// one group this equals sampling the polygonal difference `body - (cut - kept)`; no polygon is
+/// constructed. `kept` is a closed body inside the bodies (the supports): their material is never
+/// cut. Empty cuts and `kept` give the plain mask. The groups are united per sample, before the
+/// samples are counted into gray levels.
 ///
-/// With [`KeptSampling::Binary`] (TD-134), `body` must hold the layer's model alone, without the
-/// kept bodies' segments: each sample is covered when it
-/// is inside `body` and outside `cut`, or when its pixel's centre-most sample (column and
-/// sub-row `n / 2`) has a positive winding number of `kept`, which makes the whole pixel full.
+/// With [`KeptSampling::Binary`] (TD-134), each `body` must hold its models alone, without the
+/// kept bodies' segments: each sample is covered when it is inside a group's `body` and outside
+/// that group's `cut`, or when its pixel's centre-most sample (column and sub-row `n / 2`) has a
+/// positive winding number of `kept`, which makes the whole pixel full.
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)] // One atomic layer pipeline; phase helpers own bounded scratch.
 pub(super) fn render_difference(
-    body: &[Edge],
-    cut: &[Edge],
+    groups: &[Group<'_>],
     kept: &[Edge],
     fill: Fill,
     plane: LayerPlane,
@@ -559,9 +584,16 @@ pub(super) fn render_difference(
         limit: limits.max_work,
         cancel,
     };
+    let total = |edges: fn(&Group<'_>) -> usize| {
+        groups
+            .iter()
+            .try_fold(0usize, |n, g| n.checked_add(edges(g)))
+            .ok_or(RasterError::SizeOverflow)
+    };
+    let body = total(|g| g.body.len())?;
+    let cut = total(|g| g.cut.len())?;
     work.charge(
-        body.len()
-            .checked_add(cut.len())
+        body.checked_add(cut)
             .and_then(|n| n.checked_add(kept.len()))
             .and_then(|n| n.checked_mul(3))
             .ok_or(RasterError::SizeOverflow)?,
@@ -570,8 +602,19 @@ pub(super) fn render_difference(
     let w = usize::try_from(width).map_err(|_| RasterError::SizeOverflow)?;
     let h = usize::try_from(height).map_err(|_| RasterError::SizeOverflow)?;
     let n = u32::from(config.samples_per_axis);
-    let mut body_lines = Scanline::new(body, n, width, &mut work)?;
-    let mut cut_lines = Scanline::new(cut, n, width, &mut work)?;
+    let mut rows = Vec::new();
+    rows.try_reserve_exact(groups.len())
+        .map_err(|_| RasterError::Allocation)?;
+    for group in groups {
+        rows.push(GroupRows {
+            body_lines: Scanline::new(group.body, n, width, &mut work)?,
+            cut_lines: Scanline::new(group.cut, n, width, &mut work)?,
+            body_spans: Vec::new(),
+            cut_spans: Vec::new(),
+            leaving: Vec::new(),
+            part: Vec::new(),
+        });
+    }
     let mut kept_lines = Scanline::new(kept, n, width, &mut work)?;
     // Binary kept bodies (TD-134): their own scanline at each row's centre-most sub-row.
     let binary = config.kept == KeptSampling::Binary && n > 1 && !kept.is_empty();
@@ -579,8 +622,7 @@ pub(super) fn render_difference(
     let centre = n / 2;
     let mut centre_spans = allocated::<(u32, u32)>(kept.len() / 2 + 1, &mut work)?;
     let mut whole = allocated::<(u32, u32)>(kept.len() / 2 + 1, &mut work)?;
-    let mut with_whole =
-        allocated::<(u32, u32)>(body.len() / 2 + cut.len() / 2 + kept.len() + 1, &mut work)?;
+    let mut with_whole = allocated::<(u32, u32)>(body / 2 + cut / 2 + kept.len() + 1, &mut work)?;
     let mut centre_range = WindingRange {
         min: 0,
         max: 0,
@@ -589,25 +631,32 @@ pub(super) fn render_difference(
     work.cancel.check(Checkpoint::RasterRows)?;
     let max_spans = limits.max_payload_bytes.saturating_sub(bytes) / SpanMaskBuilder::SPAN_BYTES;
     let mut mask = SpanMaskBuilder::new(width, height, max_spans)?;
-    let mut body_spans = allocated::<(u32, u32)>(body.len() / 2 + 1, &mut work)?;
-    let mut cut_spans = allocated::<(u32, u32)>(cut.len() / 2 + 1, &mut work)?;
+    for (rows, group) in rows.iter_mut().zip(groups) {
+        let (body, cut) = (group.body.len(), group.cut.len());
+        rows.body_spans = allocated::<(u32, u32)>(body / 2 + 1, &mut work)?;
+        rows.cut_spans = allocated::<(u32, u32)>(cut / 2 + 1, &mut work)?;
+        rows.leaving = allocated::<(u32, u32)>(cut / 2 + kept.len() / 2 + 1, &mut work)?;
+        rows.part = allocated::<(u32, u32)>(body / 2 + cut / 2 + kept.len() / 2 + 1, &mut work)?;
+    }
     let mut kept_spans = allocated::<(u32, u32)>(kept.len() / 2 + 1, &mut work)?;
     let mut kept_range = WindingRange {
         min: 0,
         max: 0,
         negative_samples: 0,
     };
-    // The cut without what it leaves: at most one span more than the cut's per kept span.
-    let mut leaving = allocated::<(u32, u32)>(cut.len() / 2 + kept.len() / 2 + 1, &mut work)?;
-    let mut kept_body = allocated::<(u32, u32)>(
-        body.len() / 2 + cut.len() / 2 + kept.len() / 2 + 1,
-        &mut work,
-    )?;
+    // Several groups: their parts united, alternating between two buffers.
+    let several = groups.len() > 1;
+    let united_capacity = if several {
+        body / 2 + cut / 2 + kept.len() / 2 + 1
+    } else {
+        0
+    };
+    let mut united = allocated::<(u32, u32)>(united_capacity, &mut work)?;
+    let mut uniting = allocated::<(u32, u32)>(united_capacity, &mut work)?;
     // Every sub-row opens and closes each covered span once: at most `body + cut + kept + 2`
     // events.
     let row_events = body
-        .len()
-        .checked_add(cut.len())
+        .checked_add(cut)
         .and_then(|v| v.checked_add(kept.len()))
         .and_then(|v| v.checked_add(2))
         .and_then(|v| v.checked_mul(usize::from(config.samples_per_axis)))
@@ -654,48 +703,70 @@ pub(super) fn render_difference(
         }
         for sub in 0..n {
             let sy = f64::from(y) + (f64::from(sub) + 0.5) / f64::from(n);
-            let crossings = body_lines.crossings(sy, &mut work)?;
-            match fill {
-                Fill::Parity => spans(crossings, &mut body_spans),
-                Fill::Winding(rule) => {
-                    let negative =
-                        winding_spans(crossings, rule, orientation, &mut body_spans, &mut range)?;
-                    if let Some(sample) = negative {
-                        let pixel = [sample / n, y];
-                        if rule == WindingRule::Positive {
-                            return Err(RasterError::NegativeWinding {
-                                layer: plane.index,
-                                pixel,
-                            });
+            // The kept bodies' spans on this sub-row, once some group's cut needs them.
+            let mut kept_ready = false;
+            for rows in &mut rows {
+                let crossings = rows.body_lines.crossings(sy, &mut work)?;
+                match fill {
+                    Fill::Parity => spans(crossings, &mut rows.body_spans),
+                    Fill::Winding(rule) => {
+                        let negative = winding_spans(
+                            crossings,
+                            rule,
+                            orientation,
+                            &mut rows.body_spans,
+                            &mut range,
+                        )?;
+                        if let Some(sample) = negative {
+                            let pixel = [sample / n, y];
+                            if rule == WindingRule::Positive {
+                                return Err(RasterError::NegativeWinding {
+                                    layer: plane.index,
+                                    pixel,
+                                });
+                            }
+                            first_negative.get_or_insert(pixel);
                         }
-                        first_negative.get_or_insert(pixel);
                     }
                 }
+                let crossings = rows.cut_lines.crossings(sy, &mut work)?;
+                union_spans(crossings, &mut rows.cut_spans);
+                if !binary && !rows.cut_spans.is_empty() && !kept.is_empty() {
+                    // The material the cut leaves: positive winding of the kept bodies alone,
+                    // which are closed and outward; a negative number there is outside them.
+                    if !kept_ready {
+                        let crossings = kept_lines.crossings(sy, &mut work)?;
+                        winding_spans(
+                            crossings,
+                            WindingRule::Positive,
+                            orientation,
+                            &mut kept_spans,
+                            &mut kept_range,
+                        )?;
+                        kept_ready = true;
+                    }
+                    work.charge(rows.cut_spans.len() + kept_spans.len())?;
+                    subtract(&rows.cut_spans, &kept_spans, &mut rows.leaving);
+                    std::mem::swap(&mut rows.cut_spans, &mut rows.leaving);
+                }
+                work.cancel.check(Checkpoint::RasterRows)?;
+                work.charge(rows.body_spans.len() + rows.cut_spans.len())?;
+                if rows.cut_spans.is_empty() {
+                    std::mem::swap(&mut rows.part, &mut rows.body_spans);
+                } else {
+                    subtract(&rows.body_spans, &rows.cut_spans, &mut rows.part);
+                }
             }
-            let crossings = cut_lines.crossings(sy, &mut work)?;
-            union_spans(crossings, &mut cut_spans);
-            if !binary && !cut_spans.is_empty() && !kept.is_empty() {
-                // The material the cut leaves: positive winding of the kept bodies alone, which
-                // are closed and outward; a negative number there is outside them.
-                let crossings = kept_lines.crossings(sy, &mut work)?;
-                winding_spans(
-                    crossings,
-                    WindingRule::Positive,
-                    orientation,
-                    &mut kept_spans,
-                    &mut kept_range,
-                )?;
-                work.charge(cut_spans.len() + kept_spans.len())?;
-                subtract(&cut_spans, &kept_spans, &mut leaving);
-                std::mem::swap(&mut cut_spans, &mut leaving);
-            }
-            work.cancel.check(Checkpoint::RasterRows)?;
-            work.charge(body_spans.len() + cut_spans.len())?;
-            let mut covered = if cut_spans.is_empty() {
-                &body_spans
+            let mut covered: &Vec<(u32, u32)> = if let [only] = rows.as_slice() {
+                &only.part
             } else {
-                subtract(&body_spans, &cut_spans, &mut kept_body);
-                &kept_body
+                united.clear();
+                for rows in &rows {
+                    work.charge(united.len() + rows.part.len())?;
+                    unite(&united, &rows.part, &mut uniting);
+                    std::mem::swap(&mut united, &mut uniting);
+                }
+                &united
             };
             if !whole.is_empty() {
                 work.charge(covered.len() + whole.len())?;
@@ -708,6 +779,12 @@ pub(super) fn render_difference(
                 // marks an opening, and closings sort first at equal positions.
                 events.push(left << 1 | 1);
                 events.push(right << 1);
+            }
+            // A body whose spans became its part is restored for the next sub-row's reuse.
+            for rows in &mut rows {
+                if rows.cut_spans.is_empty() {
+                    std::mem::swap(&mut rows.part, &mut rows.body_spans);
+                }
             }
         }
         work.sort(events.len())?;
@@ -985,8 +1062,10 @@ mod tests {
             let cut = rectangle(1.0, 0.5, 3.25, 1.5).to_vec();
             let bytes = preflight(p, c, l, body.len() + cut.len()).unwrap();
             let image = render_difference(
-                &body,
-                &cut,
+                &[Group {
+                    body: &body,
+                    cut: &cut,
+                }],
                 &[],
                 Fill::Parity,
                 plane(),
@@ -1024,8 +1103,10 @@ mod tests {
             // An empty cut reproduces the plain render exactly.
             let plain = draw(&body, c);
             let same = render_difference(
-                &body,
-                &[],
+                &[Group {
+                    body: &body,
+                    cut: &[],
+                }],
                 &[],
                 Fill::Parity,
                 plane(),
@@ -1160,8 +1241,10 @@ mod tests {
             c.minimum_gray = [0, 1, 77, 200, 255][case % 7 % 5];
             let bytes = preflight(p, c, l, body.len() + cut.len()).unwrap();
             let image = render_difference(
-                &body,
-                &cut,
+                &[Group {
+                    body: &body,
+                    cut: &cut,
+                }],
                 &[],
                 Fill::Parity,
                 plane(),
@@ -1202,8 +1285,10 @@ mod tests {
             }
             let bytes = preflight(p, c, l, body.len() + kept.len()).unwrap();
             let image = render_difference(
-                &body,
-                &[],
+                &[Group {
+                    body: &body,
+                    cut: &[],
+                }],
                 &kept,
                 Fill::Winding(WindingRule::NonZero),
                 plane(),
@@ -1248,8 +1333,10 @@ mod tests {
                 .collect();
             let bytes = preflight(p, c, l, all.len()).unwrap();
             let gray = render_difference(
-                &all,
-                &[],
+                &[Group {
+                    body: &all,
+                    cut: &[],
+                }],
                 &[],
                 Fill::Winding(WindingRule::NonZero),
                 plane(),
@@ -1279,8 +1366,10 @@ mod tests {
         cut.extend(rectangle(6., 6., 7., 7.));
         let bytes = preflight(p, c, l, body.len() + cut.len()).unwrap();
         let image = render_difference(
-            &body,
-            &cut,
+            &[Group {
+                body: &body,
+                cut: &cut,
+            }],
             &[],
             Fill::Parity,
             plane(),

@@ -1148,8 +1148,9 @@ impl Workspace {
 
     /// The pairs of objects on the plate shown, in increasing order, whose footprints (supports
     /// and raft included) overlap as rectangles: the test a slice applies, which prints them
-    /// joined, or refuses them with drain holes (TD-065). The status bar warns of them
-    /// (TD-163). Worked out from the placements when the plate changes, never per frame.
+    /// joined (TD-065); drain holes still cut only their own model (TD-166). The status bar
+    /// warns of them (TD-163). Worked out from the placements when the plate changes, never
+    /// per frame.
     pub fn overlapping(&mut self) -> Vec<(usize, usize)> {
         let revision = self
             .project

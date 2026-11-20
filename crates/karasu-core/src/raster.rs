@@ -3,7 +3,7 @@ use crate::cancellation::{Cancellation, Cancelled, Checkpoint};
 use crate::slicing::{
     engine::RegionLayer,
     schedule::LayerPlane,
-    winding::{ClosureReport, WindingLayer, WindingRule},
+    winding::{ClosureReport, FaceGroup, WindingLayer, WindingRule},
 };
 use mask::SpanMask;
 use std::{error::Error, fmt};
@@ -475,9 +475,28 @@ pub fn rasterize_layer_with_cancellation(
 /// Implementors return the cut rings for a plane; the cut is their union, so rings may overlap
 /// (TD-089: drain holes may). Used by drained models whose cutters are evaluated analytically
 /// instead of being sliced.
+///
+/// **Groups (TD-166).** A cut over a plate of several models may tell bodies of the sliced mesh
+/// apart ([`Self::groups`]), so that each group's rings remove the material of that group's
+/// faces alone: a model's drain holes then never cut another model. Without groups, the
+/// default, every ring removes all material. Winding layers only.
 pub trait LayerCut {
-    /// Closed rings, each listed once without repeating its first vertex.
+    /// Closed rings, each listed once without repeating its first vertex: every group's.
     fn rings(&self, plane: LayerPlane) -> Vec<Vec<[f64; 2]>>;
+
+    /// The bodies of the sliced mesh in cut groups 1 and above, every other face being in
+    /// group 0 (TD-166). Empty, the default, for one cut that removes all material. Read once,
+    /// when the layers' kernel is built.
+    fn groups(&self) -> &[FaceGroup] {
+        &[]
+    }
+
+    /// The rings of each cut group at `plane`, group 0 first: one list per group, `1 +` the
+    /// largest group of [`Self::groups`] in all. Their union is [`Self::rings`]. Called only
+    /// when [`Self::groups`] is not empty.
+    fn group_rings(&self, plane: LayerPlane) -> Vec<Vec<Vec<[f64; 2]>>> {
+        vec![self.rings(plane)]
+    }
 }
 
 /// Rasterize the material of `body` minus the union of the `cut` rings (world rings, mm), without
@@ -509,8 +528,10 @@ pub fn rasterize_layer_minus_rings_with_cancellation(
     let body_edges = input::edges(body, profile, config, limits, body_count, cancel)?;
     let cut_edges = input::ring_edges(cut, profile, cut_count, cancel)?;
     render::render_difference(
-        &body_edges,
-        &cut_edges,
+        &[render::Group {
+            body: &body_edges,
+            cut: &cut_edges,
+        }],
         &[],
         render::Fill::Parity,
         body.plane(),
@@ -541,8 +562,10 @@ pub fn rasterize_rings_with_cancellation(
     let bytes = render::preflight(profile, config, limits, count)?;
     let edges = input::ring_edges(rings, profile, count, cancel)?;
     render::render_difference(
-        &edges,
-        &[],
+        &[render::Group {
+            body: &edges,
+            cut: &[],
+        }],
         &[],
         render::Fill::Winding(WindingRule::NonZero),
         plane,
@@ -613,8 +636,108 @@ pub fn rasterize_winding_layer_with_cancellation(
     let cut_edges = input::ring_edges(cut, profile, cut_count, cancel)?;
     let kept_edges = input::segment_edges(kept, profile, config, kept.len(), cancel)?;
     let mut image = render::render_difference(
-        &body_edges,
-        &cut_edges,
+        &[render::Group {
+            body: &body_edges,
+            cut: &cut_edges,
+        }],
+        &kept_edges,
+        render::Fill::Winding(rule),
+        layer.plane(),
+        profile,
+        config,
+        limits,
+        bytes,
+        cancel,
+    )?;
+    image.closure = Some(layer.closure());
+    Ok(image)
+}
+
+/// Render one winding layer of several cut groups (TD-166) under `rule`: each group's material
+/// minus its own cut, `cuts` holding each group's rings (world rings, mm), group 0 first.
+///
+/// Each sample is covered exactly when, for some group, its winding number with respect to that
+/// group's segments satisfies `rule` and it lies outside that group's cut, or when it lies inside
+/// the material the cut leaves (the supports, TD-123). The groups are united per sample before
+/// the gray levels are formed, so a plate of several groups is sampled as one body, and each
+/// group's holes cut only its own models. With one group this is
+/// [`rasterize_winding_layer_with_cancellation`]. [`KeptSampling::Binary`] applies as there.
+/// # Errors
+/// The failures of [`rasterize_winding_layer_with_cancellation`];
+/// [`RasterError::InvalidGeometry`] when the layer has no groups or `cuts` does not give one
+/// list per group.
+pub fn rasterize_grouped_winding_layer_with_cancellation(
+    layer: &WindingLayer,
+    rule: WindingRule,
+    cuts: &[Vec<Vec<[f64; 2]>>],
+    profile: LcdProfile,
+    config: RasterConfig,
+    limits: RasterLimits,
+    cancel: &mut Cancellation<'_>,
+) -> Result<RasterImage, RasterError> {
+    cancel.check(Checkpoint::RasterStart)?;
+    config.validate()?;
+    let groups = layer.groups();
+    if groups.is_empty() || cuts.len() != groups.len() {
+        return Err(RasterError::InvalidGeometry);
+    }
+    // Every segment is within the limits; the groups list each of them once.
+    input::winding_edge_count(layer, limits)?;
+    let binary = config.kept == KeptSampling::Binary
+        && config.samples_per_axis > 1
+        && !layer.kept_segments().is_empty();
+    let mut count = 0usize;
+    let mut cut_counts = Vec::new();
+    cut_counts
+        .try_reserve_exact(cuts.len())
+        .map_err(|_| RasterError::Allocation)?;
+    for (group, cut) in groups.iter().zip(cuts) {
+        let cut_count = input::ring_edge_count(cut, limits)?;
+        cut_counts.push(cut_count);
+        let body_count = group.model().len() + if binary { 0 } else { group.kept().len() };
+        count = count
+            .checked_add(body_count)
+            .and_then(|n| n.checked_add(cut_count))
+            .ok_or(RasterError::SizeOverflow)?;
+    }
+    // The material the cut leaves matters only where there is a cut, or binary supports.
+    let any_cut = cut_counts.iter().any(|&n| n > 0);
+    let kept = if any_cut || binary {
+        layer.kept_segments()
+    } else {
+        &[][..]
+    };
+    let count = count
+        .checked_add(kept.len())
+        .ok_or(RasterError::SizeOverflow)?;
+    let bytes = render::preflight(profile, config, limits, count)?;
+    let mut edges = Vec::new();
+    edges
+        .try_reserve_exact(groups.len())
+        .map_err(|_| RasterError::Allocation)?;
+    for ((group, cut), &cut_count) in groups.iter().zip(cuts).zip(&cut_counts) {
+        // Binary supports (TD-134): the models alone, the supports sampled whole below.
+        let reserved = group.model().len() + if binary { 0 } else { group.kept().len() };
+        let mut body = input::segment_edges(group.model(), profile, config, reserved, cancel)?;
+        if !binary {
+            body.extend(input::segment_edges(
+                group.kept(),
+                profile,
+                config,
+                group.kept().len(),
+                cancel,
+            )?);
+        }
+        let cut = input::ring_edges(cut, profile, cut_count, cancel)?;
+        edges.push((body, cut));
+    }
+    let kept_edges = input::segment_edges(kept, profile, config, kept.len(), cancel)?;
+    let groups: Vec<render::Group<'_>> = edges
+        .iter()
+        .map(|(body, cut)| render::Group { body, cut })
+        .collect();
+    let mut image = render::render_difference(
+        &groups,
         &kept_edges,
         render::Fill::Winding(rule),
         layer.plane(),

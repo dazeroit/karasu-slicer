@@ -2264,8 +2264,8 @@ impl MainWindow {
             let text = tr!("status-outside", count = outside);
             statuses.push(Status::new(text, theme::WARNING.color()));
         }
-        // Models whose footprints overlap print joined, or not at all with drain holes: a model
-        // moved where there was no room lands over others (TD-163).
+        // Models whose footprints overlap print joined: a model moved where there was no room
+        // lands over others (TD-163).
         let overlapping: std::collections::BTreeSet<usize> = self
             .workspace
             .overlapping()
