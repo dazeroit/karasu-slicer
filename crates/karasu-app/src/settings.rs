@@ -499,6 +499,8 @@ pub struct ToolSettings {
     pub island_sphere_contact: bool,
     /// Braces: each click adds a brace from the shaft clicked before (owner, 2026-10-29).
     pub braces_chain: bool,
+    /// Braces: two clicks brace a pair of supports along their height (TD-168).
+    pub braces_pair: bool,
     /// Braces: a brace's second end takes its first end's height.
     pub braces_level: bool,
     /// Braces: the list window is open.
@@ -805,6 +807,7 @@ impl Default for ToolSettings {
             island_contact_fit_min_mm: None,
             island_sphere_contact: false,
             braces_chain: false,
+            braces_pair: false,
             braces_level: false,
             braces_list_open: true,
             brace_auto_diameter: crate::supports_ui::braces::DEFAULT_BRACES.auto_diameter,

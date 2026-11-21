@@ -18,7 +18,9 @@ pub const STEP_MM: std::ops::RangeInclusive<f64> = 0.5..=100.0;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Pattern {
-    /// A level brace at each height.
+    /// A level brace at each height. Kept, no longer offered (TD-168, owner 2026-11-21): a level
+    /// brace prints as a bridge in mid-air, where a diagonal grows on the shaft below it. Settings
+    /// that hold it read as [`Pattern::Zigzag`].
     Horizontal,
     /// One diagonal per step, alternating sides.
     #[default]
@@ -28,8 +30,8 @@ pub enum Pattern {
 }
 
 impl Pattern {
-    /// The patterns, in the panel's order.
-    pub const ALL: [Self; 3] = [Self::Horizontal, Self::Zigzag, Self::Cross];
+    /// The patterns offered, in the panel's order (TD-168: no level braces).
+    pub const OFFERED: [Self; 2] = [Self::Zigzag, Self::Cross];
 
     /// The core's pattern.
     #[must_use]
@@ -79,7 +81,8 @@ impl Default for NewBraces {
 }
 
 impl NewBraces {
-    /// These values if every one is in its range, else the built-in ones.
+    /// These values if every one is in its range, else the built-in ones; a pattern no longer
+    /// offered is Zigzag (TD-168).
     #[must_use]
     pub fn valid(self) -> Self {
         if DIAMETER_MM.contains(&self.diameter_mm)
@@ -87,9 +90,26 @@ impl NewBraces {
             && LOWEST_MM.contains(&self.lowest_mm)
             && STEP_MM.contains(&self.step_mm)
         {
-            self
+            Self {
+                pattern: if Pattern::OFFERED.contains(&self.pattern) {
+                    self.pattern
+                } else {
+                    Pattern::Zigzag
+                },
+                ..self
+            }
         } else {
             DEFAULT_BRACES
+        }
+    }
+
+    /// The braces these values plan between the supports `pair`, along every level both reach
+    /// (TD-168): the user's chosen pair, whatever their distance.
+    #[must_use]
+    pub fn pair_plan(&self, pair: [u64; 2]) -> BracePlan {
+        BracePlan {
+            pair: Some(pair),
+            ..self.plan()
         }
     }
 
@@ -103,6 +123,7 @@ impl NewBraces {
             pattern: self.pattern.core(),
             diameter_mm: self.diameter(),
             max_diameter_mm: self.largest(),
+            pair: None,
         }
     }
 
@@ -147,6 +168,20 @@ mod tests {
             ..DEFAULT_BRACES
         };
         assert_eq!(wrong.valid(), DEFAULT_BRACES);
+        // Level braces are no longer offered (TD-168): settings holding them read as Zigzag.
+        let level = NewBraces {
+            pattern: Pattern::Horizontal,
+            step_mm: 4.0,
+            ..DEFAULT_BRACES
+        };
+        assert_eq!(
+            level.valid(),
+            NewBraces {
+                pattern: Pattern::Zigzag,
+                ..level
+            }
+        );
+        assert_eq!(Pattern::OFFERED, [Pattern::Zigzag, Pattern::Cross]);
         // The built-in values make a brace the document accepts.
         let mut document = SupportDocument::new(Preset::Medium);
         for id in [1, 2] {

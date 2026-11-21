@@ -7,6 +7,12 @@
 //! the second end takes the first one's height. Brace heights are world values (the support
 //! document keeps them so), so a brace stays where it was put when its model moves.
 //!
+//! **Along a pair** (TD-168, issue #31): a click on a shaft, then on another, braces the two
+//! supports along every level both reach, as the automatic braces would with the panel's values
+//! (lowest brace, step, pattern, diameter), whatever their distance and the shafts between them.
+//! The pair is planned on a thread of its own; its kept braces are added as one undoable step,
+//! and a notification says how many, and how many were skipped and why.
+//!
 //! **Automatic** (the tool strip's Automatic braces): the braces the panel's values would add
 //! between neighbouring supports are planned on a thread of their own and shown, those kept and
 //! those skipped, until Apply adds the kept ones as one undoable step, or Discard; see
@@ -91,6 +97,9 @@ pub struct Bracing {
     pub chain: bool,
     /// A brace's second end takes its first end's height (kept with the settings).
     pub level: bool,
+    /// Two clicks brace a pair of supports along their height (TD-168; kept with the
+    /// settings); over `chain`.
+    pub pair: bool,
     /// The list window is open (kept with the settings).
     pub list_open: bool,
     /// What new braces are made with.
@@ -114,6 +123,21 @@ pub struct Bracing {
     reveal: bool,
     /// The automatic braces being planned and shown, while that mode is on.
     auto: Option<auto::Auto>,
+    /// A pair chosen to brace along its height, on model `.0`, waiting to be planned.
+    pending_pair: Option<(usize, [u64; 2])>,
+    /// The chosen pair's braces being planned.
+    pair_job: Option<auto::PairJob>,
+}
+
+/// How clicks place braces: one brace per two clicks, a chain, or a pair along its height.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlaceMode {
+    /// Two clicks, one brace.
+    Single,
+    /// Each click joins the support clicked before.
+    Chain,
+    /// Two clicks, the pair braced along its height (TD-168).
+    Pair,
 }
 
 impl Bracing {
@@ -170,14 +194,24 @@ impl SupportsUi {
         self.forget_brace_placing();
     }
 
-    /// Place braces in a chain or one by one, and level or as clicked; placing starts.
-    pub fn set_brace_options(&mut self, chain: Option<bool>, level: Option<bool>) {
+    /// Place braces one by one, in a chain or along a pair, and level or as clicked; placing
+    /// starts.
+    pub fn set_brace_options(&mut self, mode: Option<PlaceMode>, level: Option<bool>) {
         let b = &mut self.bracing;
-        b.chain = chain.unwrap_or(b.chain);
+        if let Some(mode) = mode {
+            b.chain = mode == PlaceMode::Chain;
+            b.pair = mode == PlaceMode::Pair;
+        }
         b.level = level.unwrap_or(b.level);
         b.placing = true;
         b.auto = None;
         self.forget_brace_placing();
+    }
+
+    /// Whether a chosen pair's braces are being planned (TD-168).
+    #[must_use]
+    pub fn pair_planning(&self) -> bool {
+        self.bracing.pending_pair.is_some() || self.bracing.pair_job.is_some()
     }
 
     /// Whether the automatic braces show.
@@ -348,6 +382,11 @@ impl SupportsUi {
         }
         let hovered = ray.and_then(|r| self.shaft_under(r, index));
         self.bracing.hovered = hovered;
+        // Along a pair, the braces are planned once both are chosen: no bar follows the pointer.
+        if self.bracing.pair {
+            self.show_bar(None, self.bracing.new.diameter_mm);
+            return;
+        }
         let new = self.bracing.new;
         let bar = self
             .bracing
@@ -394,6 +433,13 @@ impl SupportsUi {
             return true;
         };
         if from.0 == support {
+            return true;
+        }
+        if self.bracing.pair {
+            // Planned with the panel's values on a thread; added when done (TD-168).
+            self.bracing.pending_pair = Some((index, [from.0, support]));
+            self.bracing.first = None;
+            self.bracing.preview = None;
             return true;
         }
         let to = (support, if self.bracing.level { from.1 } else { z });
@@ -695,7 +741,7 @@ mod tests {
         assert_eq!(ui.bracing.selected, Some((0, braces[0].id)));
         assert!(ui.bracing.first.is_none());
         // Level and in a chain: the next click goes on from the end just added.
-        ui.set_brace_options(Some(true), Some(true));
+        ui.set_brace_options(Some(PlaceMode::Chain), Some(true));
         assert!(ui.brace_click(&mut workspace, &across(cx - 4.0, cy, 7.0), 0));
         assert!(ui.brace_click(&mut workspace, &across(cx + 4.0, cy, 8.0), 0));
         let braces = workspace.supports(0).unwrap().braces.clone();
@@ -724,6 +770,53 @@ mod tests {
         assert_eq!(workspace.supports(0).unwrap().braces.len(), 1);
         workspace.undo();
         assert_eq!(workspace.supports(0).unwrap().braces.len(), 2);
+        let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn a_pair_clicked_is_braced_along_its_height_as_one_step() {
+        // TD-168: two clicks, then the pair's braces with the panel's values, planned on a thread.
+        let (mut workspace, preparation, directory, mut ui, [cx, cy]) = two_supports();
+        ui.bracing.new.lowest_mm = 3.0;
+        ui.bracing.new.step_mm = 2.0;
+        ui.set_brace_options(Some(PlaceMode::Pair), None);
+        assert!(ui.brace_placing() && ui.bracing.pair && !ui.bracing.chain);
+        assert!(ui.brace_click(&mut workspace, &across(cx - 4.0, cy, 5.0), 0));
+        // No bar follows the pointer: the braces are planned once both are chosen.
+        ui.brace_hover(Some(&across(cx + 4.0, cy, 6.0)), 0);
+        assert!(ui.bracing.preview.is_none());
+        let revision = workspace.revision();
+        assert!(ui.brace_click(&mut workspace, &across(cx + 4.0, cy, 9.0), 0));
+        assert!(ui.pair_planning() && ui.bracing.first.is_none());
+        let started = std::time::Instant::now();
+        loop {
+            ui.poll(&workspace, &preparation, Some(0));
+            if !ui.finish_pair(&mut workspace) {
+                break;
+            }
+            assert!(
+                started.elapsed() < std::time::Duration::from_secs(60),
+                "no plan"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        // The shafts reach from about 2 mm to above 12 mm: levels 3 to 11 mm, a rising diagonal
+        // between each two (Zigzag), whatever heights were clicked.
+        let braces = workspace.supports(0).unwrap().braces.clone();
+        assert!(braces.len() >= 3, "{braces:?}");
+        assert!(braces.iter().all(|b| b.from.1 < b.to.1), "{braces:?}");
+        assert_ne!(workspace.revision(), revision);
+        let said = ui.take_messages();
+        assert!(
+            said.iter()
+                .any(|m| m.level == crate::messages::Level::Success),
+            "{said:?}"
+        );
+        // Built, they have no error; one Undo takes them all back.
+        built(&mut ui, &workspace, &preparation);
+        assert!(!ui.scene(0).unwrap().has_errors());
+        workspace.undo();
+        assert_eq!(workspace.supports(0).unwrap().braces.len(), 0);
         let _ = std::fs::remove_dir_all(directory);
     }
 

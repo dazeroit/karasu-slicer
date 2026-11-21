@@ -1521,6 +1521,7 @@ fn mini_supports_stand_on_the_model_or_a_shaft_with_a_ball_at_each_end() {
             pattern: BracePattern::Horizontal,
             diameter_mm: None,
             max_diameter_mm: None,
+            pair: None,
         },
         &mut Cancellation::never(),
     )

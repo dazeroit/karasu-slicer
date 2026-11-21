@@ -1736,7 +1736,7 @@ braces-auto = Automatic braces
 braces-distance = Maximum distance
 braces-distance-hint = Supports farther apart than this, seen from above, are not joined
 braces-lowest = Lowest brace
-braces-lowest-hint = Height of the lowest braces above the plate, or above the raft when there is one
+braces-lowest-hint = Height of the lowest braces above the plate, or above the raft when there is one; set lower than the supports' shafts start, above their bases, the braces start where they can
 braces-step = Step
 braces-step-hint = Height between a pair's braces; they stop below the lower tip
 braces-pattern = Pattern
@@ -1755,6 +1755,7 @@ braces-height-second = Height on the second support
 braces-height-hint = Where the brace meets the support's shaft, in mm above the plate
 braces-place-single = One by one: two clicks, one brace
 braces-place-chain = Chain: each click joins the previous support
+braces-place-pair = Along a pair: two clicks brace two supports along their height
 braces-place-as-clicked = As clicked: each end where its support is clicked
 braces-place-level = Level: the second end at the first one's height
 braces-placing = Click a support where a brace starts; Escape stops
@@ -1763,6 +1764,15 @@ braces-placing-second = Click another support where the brace ends; Escape takes
 braces-placing-second-hint = The brace is added at once, as one step that Undo takes back
 braces-placing-chain = Click the next support; Escape ends the chain
 braces-placing-chain-hint = Each click adds a brace from the support clicked before
+braces-placing-pair = Click the other support of the pair; Escape takes the first back
+braces-placing-pair-hint = The pair is braced along the height both supports reach, with the automatic braces' values: lowest brace, step, pattern and diameter
+braces-pair-planning = Bracing the pair…
+braces-pair-added = { $count ->
+    [one] 1 brace added between #{ $from } and #{ $to }
+   *[other] { $count } braces added between #{ $from } and #{ $to }
+}
+braces-pair-none = No brace fits between #{ $from } and #{ $to }
+braces-pair-failed = The braces between #{ $from } and #{ $to } cannot be planned
 braces-need-supports = Braces join two supports: add supports first
 braces-none = No braces yet
 braces-state = { $count ->

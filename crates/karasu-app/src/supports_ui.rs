@@ -887,8 +887,13 @@ impl SupportsUi {
     ) -> bool {
         let routing = self.poll_route(workspace, preparation, selected);
         let planning = self.poll_auto(workspace, preparation, selected);
+        let pairing = self.poll_pair(workspace, preparation);
         let merging = self.poll_merging(workspace, preparation);
-        self.poll_builds(workspace, preparation, selected) || routing || planning || merging
+        self.poll_builds(workspace, preparation, selected)
+            || routing
+            || planning
+            || pairing
+            || merging
     }
 
     /// Keep every object's builds current: see [`Self::poll`].

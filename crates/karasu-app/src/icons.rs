@@ -93,6 +93,8 @@ pub enum Icon {
     Braces,
     BracesChain,
     BracesAuto,
+    /// Braces along a chosen pair's height (TD-168).
+    BracesPair,
     /// The Islands tool and its markers, and the local minima (owner, 2026-10-29).
     Islands,
     Minima,
@@ -136,7 +138,7 @@ pub enum Icon {
 
 impl Icon {
     /// Every icon.
-    pub const ALL: [Self; 61] = [
+    pub const ALL: [Self; 62] = [
         Self::Select,
         Self::Transform,
         Self::Repair,
@@ -173,6 +175,7 @@ impl Icon {
         Self::Braces,
         Self::BracesChain,
         Self::BracesAuto,
+        Self::BracesPair,
         Self::Islands,
         Self::Minima,
         Self::SupportIslands,
@@ -239,6 +242,7 @@ impl Icon {
             Self::Braces => include_bytes!("../../../assets/ui/icons/braces.png"),
             Self::BracesChain => include_bytes!("../../../assets/ui/icons/braces-chain.png"),
             Self::BracesAuto => include_bytes!("../../../assets/ui/icons/braces-auto.png"),
+            Self::BracesPair => include_bytes!("../../../assets/ui/icons/braces-pair.png"),
             Self::Islands => include_bytes!("../../../assets/ui/icons/islands.png"),
             Self::SuctionCups => include_bytes!("../../../assets/ui/icons/suction-cups.png"),
             Self::Blockers => include_bytes!("../../../assets/ui/icons/blockers.png"),

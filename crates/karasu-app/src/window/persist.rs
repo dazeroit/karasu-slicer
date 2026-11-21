@@ -253,6 +253,7 @@ impl MainWindow {
         self.hollowing.blockers.list_open = tools.blockers_list_open;
         self.apply_island_tools(tools);
         self.supports.bracing.chain = tools.braces_chain;
+        self.supports.bracing.pair = tools.braces_pair;
         self.supports.bracing.level = tools.braces_level;
         self.supports.bracing.list_open = tools.braces_list_open;
         self.apply_support_presets(tools);
@@ -344,6 +345,7 @@ impl MainWindow {
         tools.auto_left_shown = self.auto.show_left;
         tools.auto_list_open = self.auto.list_open;
         tools.braces_chain = self.supports.bracing.chain;
+        tools.braces_pair = self.supports.bracing.pair;
         tools.braces_level = self.supports.bracing.level;
         tools.braces_list_open = self.supports.bracing.list_open;
         tools.support_presets.clone_from(&self.supports.presets);

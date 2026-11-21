@@ -327,7 +327,9 @@ model import → optional topology gate → explicit placement → uniform layer
       `branches`, `braces`,
       `passes`, `clearance_mm`, …), with optionally `support_presets`, `auto_preset`,
       `auto_cavity_preset`, the `brace_*` values and `overhang_angle_deg`. An unknown key, a
-      value out of its range or a preset name that names none is refused.
+      value out of its range or a preset name that names none is refused, and so is
+      `"brace_pattern": "horizontal"`, no longer offered (TD-168); the application's
+      `settings.json` holding it reads as `"zigzag"`, as the application reads it.
     The value options given beside it win over it.
   - **Given supports:** supports given with `--supports` (world coordinates at the job's
     placement, which `--auto-supports` lifts) are kept exactly as given, and the plan holds what
@@ -335,7 +337,7 @@ model import → optional topology gate → explicit placement → uniform layer
     Generate replaces them.
   - `--auto-braces` adds the Braces tool's automatic braces (its values: from `--auto-settings`,
     otherwise its defaults): to the automatic supports, or with `--supports` alone to the given
-    ones.
+    ones. Neighbours are found level by level, among the shafts at each level (TD-168).
   - `--write-supports <file.json>` writes the job's support document as `karasu-supports` JSON,
     in world coordinates at the job's placement: what `--supports` reads, so slicing it with the
     same options and `--lift` gives identical bytes. With `--supports` alone it is the document

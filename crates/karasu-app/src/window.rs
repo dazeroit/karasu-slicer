@@ -724,6 +724,10 @@ impl MainWindow {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
         self.islands.finish_here(&mut self.workspace, islands);
+        // A pair of supports braced along its height (TD-168): added once planned.
+        if self.supports.finish_pair(&mut self.workspace) {
+            ctx.request_repaint_after(Duration::from_millis(50));
+        }
         if self.hollowing.cups.poll() {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
@@ -3394,7 +3398,9 @@ impl MainWindow {
         vec![
             Item::button(
                 Action::Place,
-                if b.chain {
+                if b.pair {
+                    Icon::BracesPair
+                } else if b.chain {
                     Icon::BracesChain
                 } else {
                     Icon::Braces
@@ -3403,8 +3409,9 @@ impl MainWindow {
                 self.enabled(Action::Place),
             )
             .with_options(vec![
-                (tr!("braces-place-single"), !b.chain),
-                (tr!("braces-place-chain"), b.chain),
+                (tr!("braces-place-single"), !b.chain && !b.pair),
+                (tr!("braces-place-chain"), b.chain && !b.pair),
+                (tr!("braces-place-pair"), b.pair),
                 (tr!("braces-place-as-clicked"), !b.level),
                 (tr!("braces-place-level"), b.level),
             ]),
@@ -3657,11 +3664,14 @@ impl MainWindow {
                 if self.workflow.tool() == Some(Tool::Braces) =>
             {
                 if self.enabled(Action::Place) {
-                    let (chain, level) = match index {
-                        0 | 1 => (Some(index == 1), None),
-                        _ => (None, Some(index == 3)),
+                    use crate::supports_ui::braces::PlaceMode;
+                    let (mode, level) = match index {
+                        0 => (Some(PlaceMode::Single), None),
+                        1 => (Some(PlaceMode::Chain), None),
+                        2 => (Some(PlaceMode::Pair), None),
+                        _ => (None, Some(index == 4)),
                     };
-                    self.supports.set_brace_options(chain, level);
+                    self.supports.set_brace_options(mode, level);
                 }
             }
             // Choosing how supports are placed starts placing them that way.

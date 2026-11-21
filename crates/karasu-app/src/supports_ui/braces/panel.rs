@@ -125,15 +125,21 @@ pub fn brace_fields(ui: &mut egui::Ui, new: &mut NewBraces, defaults: Option<&Ne
             });
         }
         ui.label(tr!("braces-pattern"));
-        let labels = Pattern::ALL.map(Pattern::label);
-        let place = |pattern: Pattern| Pattern::ALL.iter().position(|&p| p == pattern).unwrap_or(1);
+        // Zigzag and Cross: level braces are no longer offered (TD-168).
+        let labels = Pattern::OFFERED.map(Pattern::label);
+        let place = |pattern: Pattern| {
+            Pattern::OFFERED
+                .iter()
+                .position(|&p| p == pattern)
+                .unwrap_or(0)
+        };
         let mut chosen = place(new.pattern);
         let default = defaults.map(|d| DefaultValue::new(place(d.pattern), d.pattern.label()));
         if default_choice(ui, &mut chosen, &labels, default.as_ref())
             .on_hover_text(tr!("braces-pattern-hint"))
             .changed()
         {
-            new.pattern = Pattern::ALL[chosen];
+            new.pattern = Pattern::OFFERED[chosen];
             edited = true;
         }
         edited
@@ -429,17 +435,30 @@ impl SupportsUi {
         if let Some(outcome) = self.auto_outcome(Some(index)) {
             return auto_state(outcome);
         }
+        if self.pair_planning() {
+            return (
+                tr!("braces-pair-planning"),
+                theme::ACCENT.color(),
+                Some(Icon::Info),
+                None,
+            );
+        }
         if self.bracing.placing {
-            let (text, hint) = match (self.bracing.first.is_some(), self.bracing.chain) {
-                (false, _) => (tr!("braces-placing"), tr!("braces-placing-hint")),
-                (true, true) => (
+            let first = self.bracing.first.is_some();
+            let (text, hint) = if first && self.bracing.pair {
+                (tr!("braces-placing-pair"), tr!("braces-placing-pair-hint"))
+            } else if !first {
+                (tr!("braces-placing"), tr!("braces-placing-hint"))
+            } else if self.bracing.chain {
+                (
                     tr!("braces-placing-chain"),
                     tr!("braces-placing-chain-hint"),
-                ),
-                (true, false) => (
+                )
+            } else {
+                (
                     tr!("braces-placing-second"),
                     tr!("braces-placing-second-hint"),
-                ),
+                )
             };
             return (text, theme::ACCENT.color(), Some(Icon::Info), Some(hint));
         }
