@@ -1,7 +1,8 @@
 //! The automatic braces (owner mockup, 2026-10-29): planned for the selected model on a thread
 //! of their own whenever its supports, its placement, its preparation or the panel's values
 //! change, the previous plan stopped; shown, those kept and those skipped, until Apply adds the
-//! kept ones as one undoable step, or Discard.
+//! kept ones as one undoable step, or Discard. A pair chosen by two clicks (TD-168) is planned
+//! the same way, and its kept braces are added as soon as they are planned.
 use super::super::{centre, support_draw, translation, Input, SupportsUi};
 use crate::{
     appearance::Appearance,
@@ -57,6 +58,12 @@ struct Planned {
     kept: Option<(TriangleMesh, [f64; 3])>,
     skipped: Option<(TriangleMesh, [f64; 3])>,
     uploaded: bool,
+}
+
+/// A chosen pair's braces being planned (TD-168).
+pub(in crate::supports_ui) struct PairJob {
+    job: Job,
+    pair: [u64; 2],
 }
 
 /// The automatic braces' state, while that mode is on.
@@ -170,6 +177,109 @@ impl Auto {
 }
 
 impl SupportsUi {
+    /// Start planning the pair the user chose, once its model's supports are built (TD-168).
+    /// Returns whether a pair is waiting or planned.
+    pub(in crate::supports_ui) fn poll_pair(
+        &mut self,
+        workspace: &Workspace,
+        preparation: &PreparationUi,
+    ) -> bool {
+        if let Some((index, pair)) = self.bracing.pending_pair {
+            if let Some((input, shared)) = Self::input(workspace, preparation, index) {
+                self.bracing.pending_pair = None;
+                let key = Key {
+                    object: index,
+                    input,
+                    plan: self.bracing.new.pair_plan(pair),
+                };
+                self.bracing.pair_job =
+                    start(workspace, key, shared).map(|job| PairJob { job, pair });
+            } else if workspace.supports(index).is_none() {
+                self.bracing.pending_pair = None;
+            }
+        }
+        self.bracing.pending_pair.is_some() || self.bracing.pair_job.is_some()
+    }
+
+    /// Add a chosen pair's kept braces, once planned, to its model as one undoable step, and
+    /// say how many and how many were skipped (TD-168). A model whose supports changed meanwhile
+    /// gets none. Returns whether a pair is still being planned.
+    pub fn finish_pair(&mut self, workspace: &mut Workspace) -> bool {
+        let Some(pair_job) = &self.bracing.pair_job else {
+            return self.bracing.pending_pair.is_some();
+        };
+        let result = match pair_job.job.receiver.try_recv() {
+            Ok(result) => result,
+            Err(mpsc::TryRecvError::Empty) => return true,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                self.bracing.pair_job = None;
+                return false;
+            }
+        };
+        let Some(PairJob { job, pair }) = self.bracing.pair_job.take() else {
+            return false;
+        };
+        let [a, b] = pair;
+        let braces = match result {
+            Ok(braces) => braces,
+            Err(reason) => {
+                self.outbox.push(
+                    Message::new(Level::Warning, tr!("braces-pair-failed", from = a, to = b))
+                        .detail(reason),
+                );
+                return false;
+            }
+        };
+        let index = job.key.object;
+        let Some(mut document) = workspace
+            .supports(index)
+            .filter(|d| **d == job.key.input.document)
+            .cloned()
+        else {
+            return false;
+        };
+        let mut skipped = [0_usize; 3];
+        for p in &braces {
+            match p.skipped {
+                Some(Skipped::Model) => skipped[0] += 1,
+                Some(Skipped::DrainHole) => skipped[1] += 1,
+                Some(Skipped::Joined) => skipped[2] += 1,
+                None => {}
+            }
+        }
+        let kept: Vec<_> = braces
+            .iter()
+            .filter(|p| p.skipped.is_none())
+            .map(|p| p.brace)
+            .collect();
+        let count = kept.len();
+        let why: Vec<String> = [
+            (skipped[0], tr!("braces-skipped-model", count = skipped[0])),
+            (skipped[1], tr!("braces-skipped-hole", count = skipped[1])),
+            (skipped[2], tr!("braces-skipped-joined", count = skipped[2])),
+        ]
+        .into_iter()
+        .filter(|(n, _)| *n > 0)
+        .map(|(_, line)| line)
+        .collect();
+        let message = if count == 0 {
+            Message::new(Level::Warning, tr!("braces-pair-none", from = a, to = b))
+        } else {
+            document.braces.extend(kept);
+            workspace.set_supports(index, Some(document), None);
+            Message::new(
+                Level::Success,
+                tr!("braces-pair-added", count = count, from = a, to = b),
+            )
+        };
+        self.outbox.push(if why.is_empty() {
+            message
+        } else {
+            message.detail(why.join("\n"))
+        });
+        false
+    }
+
     /// Keep the automatic braces of model `selected` current: take a finished plan, stop an
     /// outdated one, start the next. Returns whether a repaint is needed soon.
     pub(in crate::supports_ui) fn poll_auto(
@@ -350,7 +460,7 @@ mod tests {
         assert!(ui.auto_bracing());
         ui.bracing.new.lowest_mm = 3.0;
         ui.bracing.new.step_mm = 2.0;
-        ui.bracing.new.pattern = super::super::Pattern::Horizontal;
+        ui.bracing.new.pattern = super::super::Pattern::Zigzag;
         let started = Instant::now();
         while ui.poll_auto(&workspace, &preparation, Some(0)) {
             assert!(started.elapsed() < Duration::from_secs(60), "no plan");
@@ -359,8 +469,9 @@ mod tests {
         let Some(Outcome::Ready { kept, skipped }) = ui.auto_outcome(Some(0)) else {
             panic!("no plan");
         };
-        // The shafts reach from about 2 mm to above 12 mm: levels 3, 5, 7, 9 and 11 mm.
-        assert!(kept >= 4, "{kept} {skipped:?}");
+        // The shafts reach from about 2 mm to above 12 mm: levels 3, 5, 7, 9 and 11 mm, a diagonal
+        // between each two.
+        assert!(kept >= 3, "{kept} {skipped:?}");
         assert_eq!(skipped, [0, 0, 0]);
         assert_eq!(
             ui.brace_draws(&crate::appearance::Appearance::default())

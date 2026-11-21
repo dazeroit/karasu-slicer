@@ -1480,6 +1480,13 @@ on the owner's points. Last native Windows validation: 907f450 (2026-11-11).
        0.5 mm, 263 of 307 islands held where they start (282 with TD-164, which has no length
        limit; 277 with no minimum); the crevice islands only a lower mini support fits are left
        and listed (issue #57). Native Windows validation and a test print are still to come.
+     - **Braces level by level, along a chosen pair, no level braces offered (owner, 2026-11-21,
+       TD-168, implemented the same day, issue #31):** automatic braces find neighbours among
+       the shafts at each level, so branches and supports on the model part trunks only where
+       they reach; on HillGiant Zigzag braces 81 of 119 supports on the plate instead of 64. A
+       new placing way braces two clicked supports along their height with the automatic
+       values. Level braces are no longer offered, not even as a fallback: a pair sharing one
+       level gets none. Native Windows validation and a test print are still to come.
      - **Printer thumbnails, deferred (owner, 2026-11-10):** a picture on each printer's card in
        the catalog and the library. Never the manufacturers' photos (proprietary assets). The
        options studied: a schematic drawn from the profile's own data (the plate to scale, the

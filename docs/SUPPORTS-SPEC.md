@@ -276,25 +276,32 @@ the tip length.
   own takes no `max_diameter_mm`; a document written before TD-136 has none, and its automatic
   braces build as they did.
 - **Planned braces** (`plan_braces`, the Braces tool's automatic braces): braces a document
-  could add between neighbouring supports, from a plan (maximum distance in plan, lowest
-  height above the floor, step, pattern and diameter, or none for automatic braces). Nothing is
-  added: the caller adds the kept ones. Each planned brace reports its diameter as built; an
-  automatic plan keeps clear of the shafts' end joints by the wider shaft's diameter, at most
-  the plan's largest.
-  - **Neighbours** (owner, 2026-10-29: a brace joins two supports next to each other, never
-    past a third): each built support stands at the plan position of its path's lowest point.
-    Two supports no farther apart than the distance are a pair only when no third support is
-    nearer to both than they are to each other (the relative neighbourhood graph): in a row,
-    A–B and B–C, never A–C; on a grid, the cells' sides, no diagonal; in a triangle, its two
-    shorter sides. Such pairs never cross in plan; as a guard for exact ties, pairs are also
-    taken nearest first, ties by their IDs, and kept only when their plan segment crosses no
-    pair kept before (a support lying on it counts as crossing). A grid of cells the distance's
-    size finds the near supports and kept pairs.
+  could add between neighbouring supports, or between the plan's chosen pair, from a plan
+  (maximum distance in plan, lowest height above the floor, step, pattern and diameter, or none
+  for automatic braces). Nothing is added: the caller adds the kept ones. Each planned brace
+  reports its diameter as built; an automatic plan keeps clear of each shaft's end joints by its
+  widest diameter, at most the plan's largest.
   - **Levels:** the floor plus the lowest height, then every step above it, the same for every
-    pair. A pair takes the levels from a brace's diameter above the higher shaft bottom to a
-    diameter below the lower tip join. Horizontal: a level brace per level. Zigzag: one
-    diagonal per step between consecutive levels, rising from the first support of the pair
-    (the lower ID) on even steps and from the second on odd ones. Cross: both diagonals.
+    pair; asked lower than any shaft can be braced, they start where the lowest one can (for a
+    chosen pair, where both can). A shaft is at a level when the level lies a brace's diameter
+    above its bottom and below its top (its tip's join): a trunk, a branch above its junction, a
+    support on the model above its foot.
+  - **Neighbours, level by level** (owner, 2026-10-29: a brace joins two supports next to each
+    other, never past a third; TD-168): at each level, each shaft at it stands at its plan
+    position there. Two shafts no farther apart than the distance are a pair only when no third
+    shaft at that level is nearer to both than they are to each other (the relative
+    neighbourhood graph): in a row, A–B and B–C, never A–C; on a grid, the cells' sides, no
+    diagonal; in a triangle, its two shorter sides. Such pairs never cross in plan; as a guard
+    for exact ties, pairs are also taken nearest first, ties by their IDs, and kept only when
+    their plan segment crosses no pair kept before (a shaft lying on it counts as crossing). A
+    branch and the support it stands on are never a pair, nor two shafts touching there. A grid
+    of cells the distance's size finds the near shafts and kept pairs.
+  - **A chosen pair** (`pair`, TD-168): the two supports are a pair at every level both reach,
+    whatever their distance and the shafts between them.
+  - **Patterns:** Zigzag, one diagonal from a level to the next on a pair that is a pair at
+    both, rising from the first support of the pair (the lower ID) on even levels and from the
+    second on odd ones; Cross, both diagonals. Horizontal, a level brace per level, is kept but
+    no longer offered (TD-168).
   - **Skipped, never dropped:** a brace whose cylinder or end spheres are not proven the
     document's clearance from the model, or that enters a drain hole's channel through the
     model (TD-123), or on a pair the document
@@ -485,6 +492,7 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
   findings; a row braced between next supports only, a triangle along its two shorter sides,
   a grid along its cells' sides; the patterns' counts; braces too close to the
   model, across a drain hole or on a pair already braced, skipped with their reason; a plan out
-  of range refused;
+  of range refused; a support on the model parting two trunks only where its shaft is, and a
+  chosen pair braced along its height (TD-168);
   - previews include supports;
   - Linux and Windows outputs are byte-identical.

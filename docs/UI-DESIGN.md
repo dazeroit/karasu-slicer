@@ -1037,6 +1037,9 @@ heights are world values, so it stays where it was put when the model moves).
   it. In a chain each click adds a brace from the shaft clicked before; level, the second end
   takes the first one's height. While the second end is sought, the brace a click would add
   follows the pointer in green. Escape takes the first end back (ends a chain), then stops.
+  Along a pair (TD-168): the second click braces the two supports along their height with the
+  automatic braces' values, planned on a thread, added as one undoable step with a
+  notification; no bar follows the pointer.
 - **Automatic braces** (the strip's G): the braces the panel's values would add between
   neighbouring supports are planned on a thread of their own, again whenever a value, the
   supports or the model change, and shown in green; those that would touch the model or cross
@@ -1047,7 +1050,7 @@ heights are world values, so it stays where it was put when the model moves).
   as the thinner of its two shafts where it meets them, up to the "Largest diameter" typed
   (1.0 mm by default, owner 2026-11-06, TD-136), following them when they change; off, the
   "Diameter" typed), Automatic braces (maximum distance, lowest brace, step, pattern:
-  Horizontal, Zigzag or Cross), then the selected brace (the supports it joins, its automatic
+  Zigzag or Cross; level braces are no longer offered, TD-168), then the selected brace (the supports it joins, its automatic
   diameter or its own, its largest typed and the one worked out ("As built") shown while automatic, and its height on each, which
   change it alone, and its findings). The new values' defaults are set in Settings › Supports ›
   New braces (automatic, else 0.8 mm; 25 mm, 6 mm, 6 mm, Zigzag, until changed there).

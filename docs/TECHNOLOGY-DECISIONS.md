@@ -7701,6 +7701,101 @@ These rows have no minimum height. With one (the defaults otherwise):
 4. **Still to come:** native Windows validation, and a test print of mini branches (2 per
    trunk) and of 10 mm mini supports.
 
+## TD-168 — Braces: neighbours level by level, a chosen pair along its height, no level braces offered
+
+**Status:** Accepted on 2026-11-21 (owner, issue #31) and implemented the same day. Native
+Windows validation and a test print are still to come.
+
+**Context** (issue #31, measured 2026-11-17 on a 436-support HillGiant project):
+- **Automatic braces leave pairs with room between them unbraced.** `plan_braces` looked for
+  neighbours among every support but the mini ones, each at the plan position of its shaft's
+  lowest point. A branch or a support standing on the model counted as the third support of the
+  rule "never past a third" (owner, 2026-10-29) at every height, though its shaft does not
+  reach there. Zigzag braced 64 of the 132 supports on the plate.
+- **Zigzag and Cross need two common levels.** A pair whose common span holds one level gets
+  no brace; Horizontal would give it one.
+- **Wanted:** a placing mode that braces a pair the user clicks along its height, with the
+  automatic braces' values.
+
+**Decision** (owner, 2026-11-21):
+1. **Neighbours level by level.**
+   - A shaft is at a level when the level lies a brace's diameter above its bottom and below
+     its top (its tip's join): a trunk on the plate, a branch above its junction, a support on
+     the model above its foot.
+   - At each level, the rule "never past a third" is applied among the shafts at that level,
+     each at its plan position there.
+   - A diagonal joins a pair from one level to the next when it is a pair at both.
+   - A branch and the support it stands on are never a pair, nor two shafts touching at that
+     level.
+2. **No level braces, not even as a fallback.**
+   - The Horizontal pattern stays in the code but is no longer offered: the panels, Settings and
+     the Automatic tool show only Zigzag and Cross.
+   - **Why:** a level brace prints as a bridge in mid-air, its first layer a strip with nothing
+     under it, where a diagonal grows layer by layer on the shaft below it.
+   - A pair at one level only takes no brace (issue #31's option B, rejected).
+   - **Settings** that hold Horizontal read as Zigzag. The command line's own `--auto-settings`
+     object refuses `"brace_pattern": "horizontal"` with why.
+   - **Braces placed by hand** keep the "Level" option: a level brace by hand is the user's
+     choice.
+   - **Braces already in a document** stay as they are.
+3. **Along a pair** (the strip's Place, a third way beside One by one and Chain):
+   - a click on a shaft, then on another, braces the two supports along every level both
+     reach, as the automatic braces would, with the panel's values (lowest brace, step,
+     pattern, diameter);
+   - no maximum distance, and no shaft between them counts: the user chose the pair;
+   - planned on a thread of its own (`BracePlan::pair`); its kept braces are added as one
+     undoable step, and a notification says how many, and why any were skipped (the model, a
+     drain hole, already braced there);
+   - kept with the settings (`braces_pair`), like the other placing options.
+
+**As implemented:**
+- **Core** (`karasu_core::supports::bracing`): the levels are planned first, then each level's
+  pairs (the relative neighbourhood graph, nearest first, no crossing), then the braces level
+  after level: the plan's order is the levels', and still deterministic. `BracePlan::pair`
+  restricts a plan to two supports.
+- **Values** (`support_plan::braces`): `Pattern::OFFERED` (Zigzag, Cross) replaces the panel's
+  list; `NewBraces::valid` turns Horizontal to Zigzag; `NewBraces::pair_plan`.
+- **The application:** the strip's Place options "One by one", "Chain" and "Along a pair",
+  with its own icon; while the first support is chosen no bar follows the pointer; the footer
+  says what the next click does, then "Bracing the pair…".
+
+**Measured** on HillGiant (turned 80° about X, Photon P1, Medium, the Automatic tool's supports,
+the Braces tool's defaults: 25 mm, lowest 6 mm, step 6 mm):
+
+| Pattern | Plan | Braces | Pairs | Supports on the plate braced | Branches braced |
+| --- | --- | --- | --- | --- | --- |
+| Zigzag | before | 164 | 58 | 64 of 119 | 2 of 171 |
+| Zigzag | level by level | 245 | 100 | 81 of 119 | 11 of 171 |
+| Cross | before | 328 | 58 | 64 of 119 | 2 of 171 |
+| Cross | level by level | 491 | 101 | 81 of 119 | 12 of 171 |
+
+- **Not braced:** of the 38 supports on the plate still without a brace, 36 are too short for
+  two levels (their tips below about 16.5 mm). Only a level brace could join them, and none is
+  offered (point 2).
+- **The lowest brace asked below the shafts** (owner, 2026-11-21, after a build): with "Lowest
+  brace" at 1 mm the braces started at 7 mm. A brace meets a shaft only a brace's diameter
+  above its base's cone (2.5 mm for Medium on the plate), so the level at 1 mm was skipped and
+  the first brace stood a step higher; it was so before this TD too. The levels now start where
+  the lowest shaft can be braced, or for a chosen pair where both can: at 1 mm asked, HillGiant's
+  braces start at 2.5 mm (288 braces instead of 229). Asked at or above it, nothing changes.
+- **Time:** about 7.3 s against 7.2 s for planning and slicing.
+
+**Validation:**
+- **Core tests:**
+  - a support on the model between two trunks parts them only where its shaft is: level braces
+    and a Zigzag diagonal below it, its own pairs above;
+  - a chosen pair braced along its height whatever lies between and whatever its distance,
+    alternating sides, Cross with both diagonals;
+  - the existing tests of the neighbours, patterns, skips and diameters pass.
+- **Values:** Horizontal read as Zigzag, from the values and from the application's
+  settings; the command line's own object refused.
+- **The application:**
+  - a pair clicked is braced along its height, as one step, with a notification, and built
+    without an error;
+  - the automatic braces' test now plans Zigzag.
+- **Still to come:** native Windows validation; a test print of braces level by level and along
+  a chosen pair.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

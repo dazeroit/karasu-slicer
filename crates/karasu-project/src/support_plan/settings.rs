@@ -265,6 +265,13 @@ impl AutoSettings {
             ));
         }
         let braces = tools.braces();
+        if !Pattern::OFFERED.contains(&braces.pattern) {
+            return Err(
+                "brace_pattern \"horizontal\" is no longer offered: level braces print as \
+                 bridges in mid-air; use \"zigzag\" or \"cross\""
+                    .to_owned(),
+            );
+        }
         if braces.valid() != braces {
             return Err(format!(
                 "a brace value is out of its range: brace_diameter_mm {}, brace_distance_mm {}, \
@@ -408,6 +415,7 @@ mod tests {
                 "auto_preset": "Fine",
                 "support_presets": [preset],
                 "brace_diameter_mm": 0.8,
+                "brace_pattern": "horizontal",
                 "unknown_tool_value": 1
             }
         });
@@ -418,6 +426,8 @@ mod tests {
         assert!((read.values.density_pct - 150.0).abs() < 1e-12);
         assert_eq!(read.values.mine, Some(0));
         assert!((read.braces.diameter_mm - 1.0).abs() < 1e-12);
+        // Level braces, no longer offered, read as Zigzag (TD-168).
+        assert_eq!(read.braces.pattern, Pattern::Zigzag);
         assert!((read.angle_deg - 30.0).abs() < 1e-12);
         // Values the application would refuse are its built-in ones.
         let refused = serde_json::json!({
@@ -491,6 +501,7 @@ mod tests {
                 "overhang_angle_deg must be",
             ),
             (br#"{"weight": "feather"}"#, "invalid value"),
+            (br#"{"brace_pattern": "horizontal"}"#, "no longer offered"),
             (br"[1]", "expected a JSON object"),
         ] {
             let error = AutoSettings::from_json(refused).unwrap_err();

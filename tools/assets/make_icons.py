@@ -194,6 +194,13 @@ ICONS = {
         line((5, 3), (5, 21)), line((19, 3), (19, 21)),
         [(5, 6), (19, 10), (5, 14), (19, 18)],
     ],
+    # A pair braced along its height (TD-168): two shafts, each marked where it is clicked, and
+    # the zigzag between them.
+    'braces-pair': [
+        line((5, 8), (5, 21)), line((19, 8), (19, 21)),
+        arc((5, 4.5), 2, 0, 360), arc((19, 4.5), 2, 0, 360),
+        [(5, 10), (19, 14), (5, 18)],
+    ],
     # The Islands tool (owner, 2026-10-29): a blob in mid-air over a wavy floor; local minima, a
     # diamond over the plate.
     'islands': [
