@@ -4,8 +4,8 @@
 use super::{
     holder,
     plan::{
-        IslandSupports, Skip, BRANCH_MM, JOIN_MM, LEVELS, MERGE_MM, PER_GROUP, PER_TRUNK,
-        SKIP_UNDER_MM2,
+        IslandSupports, Skip, BRANCH_MM, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES,
+        MINI_MAX_LENGTH_MM, MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
     },
     Island, IslandsUi, ANGLE_DEG, HIDE_UNDER_MM2,
 };
@@ -41,6 +41,8 @@ pub(crate) fn reason(skip: Skip) -> String {
         Skip::Collides => tr!("auto-left-collides"),
         Skip::Pierces => tr!("auto-left-pierces"),
         Skip::Crowded => tr!("auto-left-crowded"),
+        Skip::MiniTooLong => tr!("auto-left-mini-too-long"),
+        Skip::MiniTooShort => tr!("auto-left-mini-too-short"),
     }
 }
 
@@ -243,7 +245,18 @@ pub fn island_fields(
         ),
         defaults.map(|d| switch_default(d.foot_on_model)).as_ref(),
     );
-    edited |= default_switch(
+    edited |= mini_fields(ui, values, defaults);
+    edited
+}
+
+/// The mini supports' switch and, with it on, their branches and length (TD-167), in `ui`; with
+/// `defaults`, each field's reset button. Returns whether any changed.
+fn mini_fields(
+    ui: &mut egui::Ui,
+    values: &mut IslandSupports,
+    defaults: Option<&IslandSupports>,
+) -> bool {
+    let mut edited = default_switch(
         ui,
         &mut values.minis,
         (
@@ -252,6 +265,28 @@ pub fn island_fields(
         ),
         defaults.map(|d| switch_default(d.minis)).as_ref(),
     );
+    let on = values.minis;
+    crate::widgets::depends(ui, on, |ui| {
+        edited |= count_row(
+            ui,
+            (
+                tr!("supports-mini-branches"),
+                tr!("supports-mini-branches-hint"),
+            ),
+            &mut values.mini_branches,
+            (MINI_BRANCHES, true),
+            defaults.map(|d| d.mini_branches),
+        );
+        edited |= crate::auto_ui::panel::mini_size_rows(
+            ui,
+            (
+                &mut values.mini_min_height_mm,
+                &mut values.mini_max_length_mm,
+            ),
+            (MINI_MIN_HEIGHT_MM, MINI_MAX_LENGTH_MM),
+            defaults.map(|d| (d.mini_min_height_mm, d.mini_max_length_mm)),
+        );
+    });
     edited
 }
 
@@ -685,6 +720,20 @@ impl IslandsUi {
             (
                 Skip::Crowded,
                 tr!("islands-skip-crowded", count = count(Skip::Crowded)),
+            ),
+            (
+                Skip::MiniTooLong,
+                tr!(
+                    "islands-skip-mini-too-long",
+                    count = count(Skip::MiniTooLong)
+                ),
+            ),
+            (
+                Skip::MiniTooShort,
+                tr!(
+                    "islands-skip-mini-too-short",
+                    count = count(Skip::MiniTooShort)
+                ),
             ),
         ]
         .into_iter()

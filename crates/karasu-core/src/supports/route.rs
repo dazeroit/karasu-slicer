@@ -654,6 +654,13 @@ pub struct MiniQuery {
     /// balls, and a fan of directions is tried (TD-126). By hand, straight down only, touching
     /// allowed.
     pub clear: bool,
+    /// The longest its rod may be, between its balls' centres, in mm (TD-167): a foot farther
+    /// away is no foot in that direction. `None`: no limit, as by hand.
+    pub max_length_mm: Option<f64>,
+    /// The least height its rod may rise, from its foot's ball's centre to its tip's, in mm
+    /// (TD-167, owner 2026-11-20): a foot nearer below is no foot in that direction. `None`: no
+    /// limit, as by hand.
+    pub min_height_mm: Option<f64>,
 }
 
 /// How far from a mini support's ball centres its rod may touch the model, beyond its radius, in
@@ -663,8 +670,10 @@ pub const MINI_BALL_MARGIN_MM: f64 = 0.1;
 /// Where a mini support with `query`'s tip stands on the model: the point and the outward normal
 /// of the first surface straight below its tip's ball, if that surface faces up and the rod
 /// between them (the ball centres, as the build places them along the normals) is at most 45°
-/// from vertical. The rod may touch the model on its way (owner, 2026-10-30). `None` without
-/// one: a mini support then has nowhere to stand.
+/// from vertical, and within `query`'s maximum length and minimum height when it has them
+/// (TD-167). The rod
+/// may touch the model on its way (owner, 2026-10-30). `None` without one: a mini support then
+/// has nowhere to stand.
 #[must_use]
 pub fn find_mini_foot(
     mesh: &TriangleMesh,
@@ -679,7 +688,12 @@ pub fn find_mini_foot(
     // A foot met going down from the top's ball along `down`: its point, its mean normal and
     // its ball's centre, when it faces up and the rod is at most 45° from vertical.
     let foot_along = |down: V| -> Option<(V, V, V)> {
-        let reach = (top[2] - query.floor_mm) / -down[2];
+        let mut reach = (top[2] - query.floor_mm) / -down[2];
+        if let Some(longest) = query.max_length_mm {
+            // The foot's ball sits `out` off the surface: a surface a little farther may still
+            // give a rod within the limit.
+            reach = reach.min(longest + out.abs());
+        }
         let (point, facet) = grid.first_hit(mesh, top, add(top, scale(down, reach)))?;
         let facing = grid.surface_normal(mesh, point, unit(facet)?, r);
         if facing[2] <= 0.0 {
@@ -688,7 +702,12 @@ pub fn find_mini_foot(
         let foot = add(point, scale(facing, out));
         let rise = top[2] - foot[2];
         let aside = plan_length(top[0] - foot[0], top[1] - foot[1]);
-        (rise > 0.0 && aside <= rise * tan_degrees(MAX_SLANT_DEG)).then_some((point, facing, foot))
+        let within = query
+            .max_length_mm
+            .is_none_or(|longest| length(sub(foot, top)) <= longest)
+            && query.min_height_mm.is_none_or(|lowest| rise >= lowest);
+        (rise > 0.0 && aside <= rise * tan_degrees(MAX_SLANT_DEG) && within)
+            .then_some((point, facing, foot))
     };
     if !query.clear {
         return foot_along([0.0, 0.0, -1.0]).map(|(point, facing, _)| (point, facing));

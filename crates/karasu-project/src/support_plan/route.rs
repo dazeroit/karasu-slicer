@@ -270,21 +270,32 @@ pub fn contact_clearance(document: Option<&karasu_core::supports::SupportDocumen
     })
 }
 
+/// How long and how high a mini support the tools place may be (TD-167), in mm: its rod at most
+/// `max_length_mm` long between its balls' centres (or its ball and its junction), rising at
+/// least `min_height_mm` from the lower to the higher.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MiniLimits {
+    /// The longest its rod may be.
+    pub max_length_mm: f64,
+    /// The least height its rod may rise.
+    pub min_height_mm: f64,
+}
+
 /// The clearance of a new document, in mm (the core's default).
 const DEFAULT_CLEARANCE_MM: f64 = 0.3;
 
 /// The mini support of `parameters` with its tip at `tip` (outward `normal`) on `surface`, in
 /// world coordinates, standing on the model (see [`find_mini_foot`]): straight below its tip,
-/// or, when `clear` (the Islands and Automatic tools, TD-126), where its rod keeps off the model.
-/// `None` when it finds nowhere to stand. `document` gives the floor, the plate without one.
+/// or, when `clear` (the Islands and Automatic tools, TD-126), where its rod keeps off the model,
+/// within `limits` when given (the tools, TD-167). `None` when it finds nowhere to stand.
+/// `document` gives the floor, the plate without one.
 #[must_use]
 pub fn mini_routed(
     surface: &RouteSurface,
     parameters: &SupportParameters,
     document: Option<&karasu_core::supports::SupportDocument>,
-    tip: [f64; 3],
-    normal: [f64; 3],
-    clear: bool,
+    (tip, normal): ([f64; 3], [f64; 3]),
+    (clear, limits): (bool, Option<MiniLimits>),
 ) -> Option<Routed> {
     let mesh = surface.mesh()?;
     let query = MiniQuery {
@@ -296,6 +307,8 @@ pub fn mini_routed(
             .and_then(|d| d.raft)
             .map_or(0.0, |r| r.thickness_mm),
         clear,
+        max_length_mm: limits.map(|l| l.max_length_mm),
+        min_height_mm: limits.map(|l| l.min_height_mm),
     };
     let (point_mm, foot_normal) = find_mini_foot(mesh, &surface.grid, &query)?;
     Some(Routed {

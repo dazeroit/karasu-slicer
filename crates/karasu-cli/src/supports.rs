@@ -9,9 +9,9 @@ use karasu_project::{
     pipeline::{Observer, PipelineCache},
     request::SliceRequest,
     support_plan::{
-        auto::{Cover, Place, CLEARANCE_MM, DENSITY_PCT},
+        auto::{Cover, Place, CLEARANCE_MM, DENSITY_PCT, MINI_DENSITY_PCT},
         generate::{generate, given, Generated, Run},
-        islands::Skip,
+        islands::{Planned, Skip, MINI_BRANCHES, MINI_MAX_LENGTH_MM, MINI_MIN_HEIGHT_MM},
         settings::AutoSettings,
         values::Weight,
     },
@@ -68,6 +68,14 @@ pub(super) struct AutoArgs {
     pub(super) minis: Option<bool>,
     /// `--auto-clearance`, in mm: the clearance the plan keeps, the contacts' too (TD-164).
     pub(super) clearance_mm: Option<f64>,
+    /// `--auto-mini-density`, in percent (TD-167).
+    pub(super) mini_density_pct: Option<f64>,
+    /// `--auto-mini-branches`: the branches a mini support carries at most (TD-167).
+    pub(super) mini_branches: Option<u32>,
+    /// `--auto-mini-max-length`, in mm (TD-167).
+    pub(super) mini_max_length_mm: Option<f64>,
+    /// `--auto-mini-min-height`, in mm (TD-167).
+    pub(super) mini_min_height_mm: Option<f64>,
     /// `--lift`: the model rests there instead of at the plan's lift.
     pub(super) lift_mm: Option<f64>,
     /// `--overhang-angle`: the critical angle, in degrees.
@@ -87,6 +95,10 @@ pub(super) struct SupportOptions {
     place: Option<Place>,
     minis: Option<bool>,
     clearance_mm: Option<f64>,
+    mini_density_pct: Option<f64>,
+    mini_branches: Option<u32>,
+    mini_max_length_mm: Option<f64>,
+    mini_min_height_mm: Option<f64>,
     settings: Option<PathBuf>,
     braces: bool,
     write: Option<PathBuf>,
@@ -144,18 +156,7 @@ impl SupportOptions {
                 set(&mut self.weight, name, weight)?;
             }
             "--auto-density" => {
-                let value = text_value(name, arguments.next())?;
-                let density = value
-                    .parse::<f64>()
-                    .ok()
-                    .filter(|v| DENSITY_PCT.contains(v))
-                    .ok_or_else(|| {
-                        format!(
-                            "{name} takes a density from {} to {} percent, not {value:?}",
-                            DENSITY_PCT.start(),
-                            DENSITY_PCT.end()
-                        )
-                    })?;
+                let density = ranged(name, arguments, DENSITY_PCT, ("a density", " percent"))?;
                 set(&mut self.density_pct, name, density)?;
             }
             "--auto-cover" => {
@@ -191,18 +192,7 @@ impl SupportOptions {
                 set(&mut self.minis, name, minis)?;
             }
             "--auto-clearance" => {
-                let value = text_value(name, arguments.next())?;
-                let clearance = value
-                    .parse::<f64>()
-                    .ok()
-                    .filter(|v| CLEARANCE_MM.contains(v))
-                    .ok_or_else(|| {
-                        format!(
-                            "{name} takes a clearance from {} to {} mm, not {value:?}",
-                            CLEARANCE_MM.start(),
-                            CLEARANCE_MM.end()
-                        )
-                    })?;
+                let clearance = ranged(name, arguments, CLEARANCE_MM, ("a clearance", " mm"))?;
                 set(&mut self.clearance_mm, name, clearance)?;
             }
             "--auto-settings" => {
@@ -214,6 +204,45 @@ impl SupportOptions {
             }
             "--write-supports" => {
                 set(&mut self.write, name, path_value(name, arguments.next())?)?;
+            }
+            _ => return self.apply_minis(name, arguments),
+        }
+        Ok(true)
+    }
+
+    /// Consume `name` and its value if it is one of the mini supports' options (TD-167).
+    fn apply_minis(
+        &mut self,
+        name: &str,
+        arguments: &mut impl Iterator<Item = OsString>,
+    ) -> Result<bool, String> {
+        match name {
+            "--auto-mini-density" => {
+                let density = ranged(name, arguments, MINI_DENSITY_PCT, ("a density", " percent"))?;
+                set(&mut self.mini_density_pct, name, density)?;
+            }
+            "--auto-mini-branches" => {
+                let value = text_value(name, arguments.next())?;
+                let branches = value
+                    .parse::<u32>()
+                    .ok()
+                    .filter(|&n| MINI_BRANCHES.contains(&f64::from(n)))
+                    .ok_or_else(|| {
+                        format!(
+                            "{name} takes a whole number of branches from {} to {}, not {value:?}",
+                            MINI_BRANCHES.start(),
+                            MINI_BRANCHES.end()
+                        )
+                    })?;
+                set(&mut self.mini_branches, name, branches)?;
+            }
+            "--auto-mini-max-length" => {
+                let longest = ranged(name, arguments, MINI_MAX_LENGTH_MM, ("a length", " mm"))?;
+                set(&mut self.mini_max_length_mm, name, longest)?;
+            }
+            "--auto-mini-min-height" => {
+                let lowest = ranged(name, arguments, MINI_MIN_HEIGHT_MM, ("a height", " mm"))?;
+                set(&mut self.mini_min_height_mm, name, lowest)?;
             }
             _ => return Ok(false),
         }
@@ -230,6 +259,10 @@ impl SupportOptions {
             ("--auto-place", self.place.is_some()),
             ("--auto-minis", self.minis.is_some()),
             ("--auto-clearance", self.clearance_mm.is_some()),
+            ("--auto-mini-density", self.mini_density_pct.is_some()),
+            ("--auto-mini-branches", self.mini_branches.is_some()),
+            ("--auto-mini-max-length", self.mini_max_length_mm.is_some()),
+            ("--auto-mini-min-height", self.mini_min_height_mm.is_some()),
         ];
         if !self.automatic {
             if let Some((name, _)) = values.iter().find(|(_, given)| *given) {
@@ -287,6 +320,10 @@ impl SupportOptions {
                 place: self.place,
                 minis: self.minis,
                 clearance_mm: self.clearance_mm,
+                mini_density_pct: self.mini_density_pct,
+                mini_branches: self.mini_branches,
+                mini_max_length_mm: self.mini_max_length_mm,
+                mini_min_height_mm: self.mini_min_height_mm,
                 ..AutoArgs::default()
             }),
             braces: self.braces,
@@ -333,35 +370,7 @@ pub(super) fn prepare(
     };
     if let Some(auto) = &job.automatic {
         let mut settings = settings;
-        let values = &mut settings.values;
-        if let Some(weight) = auto.weight {
-            values.weight = weight;
-            values.mine = None;
-        }
-        if let Some(density) = auto.density_pct {
-            values.density_pct = density;
-        }
-        if let Some(cover) = auto.cover {
-            values.cover = cover;
-        }
-        if let Some(place) = auto.place {
-            values.place = place;
-        }
-        if let Some(minis) = auto.minis {
-            values.minis = minis;
-        }
-        if let Some(clearance) = auto.clearance_mm {
-            values.clearance_mm = clearance;
-        }
-        if let Some(lift) = auto.lift_mm {
-            values.lift_mm = lift;
-        }
-        if job.braces {
-            values.braces = true;
-        }
-        if let Some(angle) = auto.angle_deg {
-            settings.angle_deg = angle;
-        }
+        given_values(&mut settings, auto, job.braces)?;
         let generated = generate(request, &settings, run).map_err(failed)?;
         let lines = automatic_lines(&generated, &settings);
         let mut request = generated.request.clone();
@@ -391,6 +400,67 @@ pub(super) fn prepare(
     Ok((given.request, lines, Some(given.document)))
 }
 
+/// `settings` with the values `auto` gives beside them (and the braces when `braces`), which win
+/// over the set's; refused when the mini supports' minimum height then exceeds their maximum
+/// length.
+fn given_values(
+    settings: &mut AutoSettings,
+    auto: &AutoArgs,
+    braces: bool,
+) -> Result<(), SliceFailure> {
+    let values = &mut settings.values;
+    if let Some(weight) = auto.weight {
+        values.weight = weight;
+        values.mine = None;
+    }
+    if let Some(density) = auto.density_pct {
+        values.density_pct = density;
+    }
+    if let Some(cover) = auto.cover {
+        values.cover = cover;
+    }
+    if let Some(place) = auto.place {
+        values.place = place;
+    }
+    if let Some(minis) = auto.minis {
+        values.minis = minis;
+    }
+    if let Some(clearance) = auto.clearance_mm {
+        values.clearance_mm = clearance;
+    }
+    if let Some(density) = auto.mini_density_pct {
+        values.mini_density_pct = density;
+    }
+    if let Some(branches) = auto.mini_branches {
+        values.mini_branches = branches;
+    }
+    if let Some(longest) = auto.mini_max_length_mm {
+        values.mini_max_length_mm = longest;
+    }
+    if let Some(lowest) = auto.mini_min_height_mm {
+        values.mini_min_height_mm = lowest;
+    }
+    // The values given must agree with each other and with the set's, as the panel keeps
+    // them.
+    if values.mini_min_height_mm > values.mini_max_length_mm {
+        return Err(SliceFailure::Error(format!(
+            "the mini supports' minimum height ({} mm) must be at most their maximum length \
+             ({} mm)",
+            values.mini_min_height_mm, values.mini_max_length_mm
+        )));
+    }
+    if let Some(lift) = auto.lift_mm {
+        values.lift_mm = lift;
+    }
+    if braces {
+        values.braces = true;
+    }
+    if let Some(angle) = auto.angle_deg {
+        settings.angle_deg = angle;
+    }
+    Ok(())
+}
+
 /// The value set `--auto-settings` names.
 fn read_settings(path: &Path) -> Result<AutoSettings, SliceFailure> {
     let mut bytes = Vec::new();
@@ -417,16 +487,32 @@ fn automatic_lines(generated: &Generated, settings: &AutoSettings) -> String {
     let outcome = &generated.outcome;
     let values = &generated.values;
     let supports = &outcome.plan.supports;
-    let minis = supports
+    let mini = |p: &&Planned| p.routed.support.kind == SupportKind::Mini;
+    let minis = supports.iter().filter(mini).count();
+    let mini_branches = supports
         .iter()
-        .filter(|p| p.routed.support.kind == SupportKind::Mini)
+        .filter(mini)
+        .filter(|p| p.joins.is_some())
         .count();
     let mut text = format!(
-        "Automatic supports: {} (mini {minis}, branches {}), braces {}\n",
+        "Automatic supports: {} (mini {minis}, mini branches {mini_branches}, branches {}), \
+         braces {}\n",
         supports.len(),
         outcome.plan.branches,
         outcome.braces.len()
     );
+    // The mini supports' values with them on (TD-167).
+    let minis_values = if values.minis {
+        format!(
+            "on (density {}%, {} branches, at least {} mm high, at most {} mm long)",
+            values.mini_density_pct,
+            values.mini_branches,
+            values.mini_min_height_mm,
+            values.mini_max_length_mm
+        )
+    } else {
+        "off".to_owned()
+    };
     let preset = values
         .mine
         .and_then(|k| settings.presets.get(k))
@@ -448,7 +534,7 @@ fn automatic_lines(generated: &Generated, settings: &AutoSettings) -> String {
             Place::Outside => "outside",
             Place::Cavity => "cavity only",
         },
-        on_off(values.minis),
+        minis_values,
         on_off(values.branches),
         values.clearance_mm,
         generated.lift_mm,
@@ -504,6 +590,28 @@ fn weight_name(weight: Weight) -> &'static str {
     }
 }
 
+/// Option `name`'s value, the next of `arguments`, as a number within `range`; refused with
+/// `what` it takes and its `unit` otherwise.
+fn ranged(
+    name: &str,
+    arguments: &mut impl Iterator<Item = OsString>,
+    range: std::ops::RangeInclusive<f64>,
+    (what, unit): (&str, &str),
+) -> Result<f64, String> {
+    let value = text_value(name, arguments.next())?;
+    value
+        .parse::<f64>()
+        .ok()
+        .filter(|v| range.contains(v))
+        .ok_or_else(|| {
+            format!(
+                "{name} takes {what} from {} to {}{unit}, not {value:?}",
+                range.start(),
+                range.end()
+            )
+        })
+}
+
 fn on_off(on: bool) -> &'static str {
     if on {
         "on"
@@ -528,6 +636,12 @@ fn why(skip: Skip) -> &'static str {
         Skip::Pierces => "its tip would reach through a thin part of the model",
         Skip::Crowded => {
             "its tip, along the surface, would come too close to the model beside it (a wall)"
+        }
+        Skip::MiniTooLong => {
+            "no support fits, and a mini support would be longer than the maximum length"
+        }
+        Skip::MiniTooShort => {
+            "no support fits, and a mini support would be lower than the minimum height"
         }
     }
 }
@@ -615,6 +729,57 @@ mod tests {
             assert!(options.apply(&name, &mut arguments)?, "{name}");
         }
         options.check(context)
+    }
+
+    #[test]
+    fn the_mini_supports_values_are_read_and_checked() {
+        // TD-167.
+        let job = parsed(
+            &[
+                "--auto-supports",
+                "--auto-mini-density",
+                "50",
+                "--auto-mini-branches",
+                "0",
+                "--auto-mini-max-length",
+                "12.5",
+                "--auto-mini-min-height",
+                "1.5",
+            ],
+            &context(),
+        )
+        .unwrap();
+        let auto = job.automatic.unwrap();
+        assert_eq!(auto.mini_density_pct, Some(50.0));
+        assert_eq!(auto.mini_branches, Some(0));
+        assert_eq!(auto.mini_max_length_mm, Some(12.5));
+        assert_eq!(auto.mini_min_height_mm, Some(1.5));
+        for (values, says) in [
+            (
+                &["--auto-supports", "--auto-mini-density", "10"][..],
+                "from 25 to 100 percent",
+            ),
+            (
+                &["--auto-supports", "--auto-mini-branches", "1.5"],
+                "from 0 to 4",
+            ),
+            (
+                &["--auto-supports", "--auto-mini-branches", "5"],
+                "from 0 to 4",
+            ),
+            (
+                &["--auto-supports", "--auto-mini-max-length", "0.5"],
+                "from 1 to 50 mm",
+            ),
+            (
+                &["--auto-supports", "--auto-mini-min-height", "11"],
+                "from 0 to 10 mm",
+            ),
+            (&["--auto-mini-branches", "2"], "only with --auto-supports"),
+        ] {
+            let error = parsed(values, &context()).unwrap_err();
+            assert!(error.contains(says), "{error}");
+        }
     }
 
     #[test]

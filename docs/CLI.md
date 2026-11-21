@@ -303,9 +303,15 @@ model import → optional topology gate → explicit placement → uniform layer
   - **Values**, each only with `--auto-supports`: `--support-weight light|medium|heavy`,
     `--auto-density <pct>` (50 to 200: tips per area against the spacing's), `--auto-cover
     all|islands`, `--auto-place everywhere|outside|cavity` (a model that is not hollowed has no
-    cavity and is planned everywhere), `--auto-minis on|off` and `--auto-clearance <mm>` (0 to
+    cavity and is planned everywhere), `--auto-minis on|off`, `--auto-clearance <mm>` (0 to
     5, 0.3 by default: the least distance every planned part keeps from the model, the contacts
-    from the walls beside them included, written to the document with that rule; TD-164).
+    from the walls beside them included, written to the document with that rule; TD-164), and
+    the mini supports' values (TD-167): `--auto-mini-density <pct>` (25 to 100, 100 by default:
+    their tips per area against the spacing's; islands keep theirs), `--auto-mini-branches <n>`
+    (0 to 4, 2 by default: the mini supports one may carry), `--auto-mini-max-length <mm>`
+    (1 to 50, 10 by default: the longest a mini support may be) and `--auto-mini-min-height
+    <mm>` (0 to 10, 0.5 by default, at most the maximum length: the least height a mini support
+    may rise; a pair out of order is refused).
     `--overhang-angle <deg>` is the critical angle, as for `--unsupported`.
   - `--auto-settings <file.json>` reads the whole value set, with `--auto-supports` or
     `--auto-braces`:
@@ -317,7 +323,9 @@ model import → optional topology gate → explicit placement → uniform layer
       (on Linux and Windows alike since TD-164);
     - or an object of the command line's own: the `auto_supports` fields at the top level
       (`cover`, `place`, `lift_mm`, `weight`, `spacing_mm`, `density_pct`, `minis`,
-      `branches`, `braces`, `passes`, …), with optionally `support_presets`, `auto_preset`,
+      `mini_density_pct`, `mini_branches`, `mini_max_length_mm`, `mini_min_height_mm`,
+      `branches`, `braces`,
+      `passes`, `clearance_mm`, …), with optionally `support_presets`, `auto_preset`,
       `auto_cavity_preset`, the `brace_*` values and `overhang_angle_deg`. An unknown key, a
       value out of its range or a preset name that names none is refused.
     The value options given beside it win over it.
@@ -333,8 +341,8 @@ model import → optional topology gate → explicit placement → uniform layer
     same options and `--lift` gives identical bytes. With `--supports` alone it is the document
     read, as the job builds it. It is written after the print file, whole or not at all, and
     never over an existing file (refused before any work).
-  - **Summary:** `Automatic supports` (planned, mini, branches, braces), `Automatic supports
-    values`, `Automatic supports held` (islands, overhang points covered, the closing check),
+  - **Summary:** `Automatic supports` (planned, mini, mini branches, branches, braces),
+    `Automatic supports values` (the mini supports' values with them on), `Automatic supports held` (islands, overhang points covered, the closing check),
     `Automatic supports kept` (with `--supports`), `Automatic supports left unsupported` and up
     to 20 `Left unsupported` places with why; `Automatic braces` with `--supports` alone. The
     log records them.

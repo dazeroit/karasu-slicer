@@ -188,6 +188,7 @@ impl SupportsUi {
             document,
             surface: self.current_route(workspace, index),
             keep_normal: false,
+            limits: None,
         })
     }
 

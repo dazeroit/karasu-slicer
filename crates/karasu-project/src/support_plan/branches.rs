@@ -10,8 +10,11 @@
 //!
 //! The planners keep a branch's tip along the surface's normal (TD-164,
 //! [`Junction::keep_normal`]): the slanted part starts at the tip's join along the normal, and
-//! the junction is lowered until that part is at most 45° from vertical.
-use super::route::{contact_clearance, widest, RouteSurface};
+//! the junction is lowered until that part is at most 45° from vertical. A mini branch the
+//! planners place on another mini support (TD-167) keeps its ball along the normal the same way:
+//! its rod runs from the ball's centre to the junction, within 45° of vertical, clear of the model
+//! as the tools' mini supports are (TD-126), within the maximum length and the minimum height.
+use super::route::{contact_clearance, widest, MiniLimits, RouteSurface};
 use karasu_core::{
     geometry::{plan_length, sin_cos_degrees},
     supports::{
@@ -83,9 +86,12 @@ pub struct Junction<'a> {
     pub document: Option<&'a SupportDocument>,
     /// The model's surface for routes, if gridded.
     pub surface: Option<&'a RouteSurface>,
-    /// A standard branch's tip stays along the surface's normal (the planners, TD-164), rather
-    /// than pointing at the junction.
+    /// A branch's tip stays along the surface's normal (the planners, TD-164), rather than
+    /// pointing at the junction; a mini branch's rod then keeps off the model (TD-167).
     pub keep_normal: bool,
+    /// How long and how high a mini branch's rod may be, from its ball's centre to the junction
+    /// (TD-167); `None`, no limit.
+    pub limits: Option<MiniLimits>,
 }
 
 /// Where a branch joins its trunk: the highest point of the trunk's shaft, clear of its ends,
@@ -129,6 +135,9 @@ pub fn junction_on(j: &Junction<'_>) -> Option<[f64; 3]> {
     // A standard tip keeps the clearance from the walls beside its contact, when the document
     // asks (TD-164).
     let walls = contact_clearance(j.document).filter(|_| j.kind == SupportKind::Standard);
+    if j.keep_normal && j.kind == SupportKind::Mini {
+        return mini_junction(j, normal, [bottom, high - FROM_ENDS * j.trunk_mm], surface);
+    }
     if j.keep_normal && j.kind == SupportKind::Standard {
         // The tip along the normal, or no junction: it is never tilted (TD-164).
         let axis = unit(normal)?;
@@ -181,6 +190,46 @@ pub fn junction_on(j: &Junction<'_>) -> Option<[f64; 3]> {
                 if rise > 0.0 && across <= rise * SLANT && clear {
                     return Some(at);
                 }
+            }
+        }
+        z -= STEP_MM;
+    }
+    None
+}
+
+/// Where a planned mini branch joins its trunk (TD-167): its ball along the surface's mean
+/// `normal`, its rod from the ball's centre to the highest point of the trunk's shaft between
+/// `low` and `high` that is at most 45° from vertical, within the limits and, with the surface,
+/// clear of the model away from its ends as the tools' mini supports are (TD-126).
+fn mini_junction(
+    j: &Junction<'_>,
+    normal: [f64; 3],
+    [low, high]: [f64; 2],
+    surface: Option<(&RouteSurface, &karasu_core::mesh::TriangleMesh)>,
+) -> Option<[f64; 3]> {
+    let r = j.parameters.mini_diameter_mm / 2.0;
+    let axis = unit(normal)?;
+    let top = add(j.tip, scale(axis, r - j.parameters.mini_penetration_mm));
+    let longest = j.limits.map_or(f64::INFINITY, |l| l.max_length_mm);
+    let lowest = j.limits.map_or(0.0, |l| l.min_height_mm);
+    let mut z = high.min(top[2] - lowest);
+    while z >= low {
+        let rise = top[2] - z;
+        // Lower, the rod is only longer.
+        if rise > longest {
+            return None;
+        }
+        if let Some(at) = j.scene.shaft_point(j.parent, z) {
+            let rise = top[2] - at[2];
+            let across = plan_length(top[0] - at[0], top[1] - at[1]);
+            let rod = sub(at, top);
+            if rise > 0.0
+                && across <= rise * SLANT
+                && dot(rod, rod).sqrt() <= longest
+                && surface
+                    .is_none_or(|(r_surface, mesh)| r_surface.grid().rod_clear(mesh, &[top, at], r))
+            {
+                return Some(at);
             }
         }
         z -= STEP_MM;

@@ -22,7 +22,8 @@ use karasu_core::{
 };
 pub use karasu_project::support_plan::islands::{
     add_planned, alone, plan, IslandSupports, Outcome, Skip, Tip, BRANCH_MM, CONTACT_MIN_MM,
-    DEFAULT_ISLAND_SUPPORTS, JOIN_MM, LEVELS, MERGE_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
+    DEFAULT_ISLAND_SUPPORTS, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
+    MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
 };
 #[cfg(test)]
 pub use karasu_project::support_plan::islands::{start_tips, START_MM};

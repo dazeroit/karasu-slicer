@@ -20,12 +20,13 @@
 //! A field left out takes the application's default either way.
 use super::{
     auto::{
-        AutoSupports, DEFAULT_AUTO_SUPPORTS, DENSITY_PCT, LIFT_MM, PASSES, SPACING_MM,
-        WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
+        AutoSupports, CLEARANCE_MM, DEFAULT_AUTO_SUPPORTS, DENSITY_PCT, LIFT_MM, MINI_DENSITY_PCT,
+        PASSES, SPACING_MM, WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
     },
     braces::{NewBraces, Pattern, DEFAULT_BRACES, DIAMETER_MM, DISTANCE_MM, LOWEST_MM, STEP_MM},
     islands::{
-        BRANCH_MM, CONTACT_MIN_MM, JOIN_MM, LEVELS, MERGE_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
+        BRANCH_MM, CONTACT_MIN_MM, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
+        MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
     },
     values::{SupportPreset, Weight},
 };
@@ -310,7 +311,7 @@ fn range(range: &RangeInclusive<f64>) -> String {
 /// The first of `values` out of its range, said with its range; `None` when every value is in
 /// its range (then [`AutoSupports::valid`] keeps them).
 fn out_of_range(values: &AutoSupports) -> Option<String> {
-    let checks: [(&str, f64, &RangeInclusive<f64>); 16] = [
+    let checks: [(&str, f64, &RangeInclusive<f64>); 21] = [
         ("spacing_mm", values.spacing_mm, &SPACING_MM),
         ("steep_spacing_mm", values.steep_spacing_mm, &SPACING_MM),
         ("lift_mm", values.lift_mm, &LIFT_MM),
@@ -334,6 +335,27 @@ fn out_of_range(values: &AutoSupports) -> Option<String> {
         ("merge_mm", values.merge_mm, &MERGE_MM),
         ("per_group", f64::from(values.per_group), &PER_GROUP),
         ("levels", f64::from(values.levels), &LEVELS),
+        ("clearance_mm", values.clearance_mm, &CLEARANCE_MM),
+        (
+            "mini_density_pct",
+            values.mini_density_pct,
+            &MINI_DENSITY_PCT,
+        ),
+        (
+            "mini_branches",
+            f64::from(values.mini_branches),
+            &MINI_BRANCHES,
+        ),
+        (
+            "mini_max_length_mm",
+            values.mini_max_length_mm,
+            &MINI_MAX_LENGTH_MM,
+        ),
+        (
+            "mini_min_height_mm",
+            values.mini_min_height_mm,
+            &MINI_MIN_HEIGHT_MM,
+        ),
         (
             "contact_fit_min_mm",
             values.contact_fit_min_mm.unwrap_or(*CONTACT_MIN_MM.start()),
@@ -344,6 +366,12 @@ fn out_of_range(values: &AutoSupports) -> Option<String> {
         if !allowed.contains(&value) {
             return Some(format!("{key} must be {}, not {value}", range(allowed)));
         }
+    }
+    if values.mini_min_height_mm > values.mini_max_length_mm {
+        return Some(format!(
+            "mini_min_height_mm ({}) must be at most mini_max_length_mm ({})",
+            values.mini_min_height_mm, values.mini_max_length_mm
+        ));
     }
     if values.steep_spacing_mm < values.spacing_mm {
         return Some(format!(
@@ -428,6 +456,30 @@ mod tests {
             (
                 br#"{"spacing_mm": 6, "steep_spacing_mm": 5}"#,
                 "at least spacing_mm",
+            ),
+            (
+                br#"{"mini_density_pct": 10}"#,
+                "mini_density_pct must be from 25 to 100",
+            ),
+            (
+                br#"{"mini_branches": 5}"#,
+                "mini_branches must be from 0 to 4",
+            ),
+            (
+                br#"{"mini_max_length_mm": 60}"#,
+                "mini_max_length_mm must be from 1 to 50",
+            ),
+            (
+                br#"{"clearance_mm": 6}"#,
+                "clearance_mm must be from 0 to 5",
+            ),
+            (
+                br#"{"mini_min_height_mm": 11}"#,
+                "mini_min_height_mm must be from 0 to 10",
+            ),
+            (
+                br#"{"mini_min_height_mm": 4, "mini_max_length_mm": 3}"#,
+                "at most mini_max_length_mm",
             ),
             (br#"{"auto_preset": "Fine"}"#, "support_presets lacks"),
             (

@@ -4,8 +4,8 @@
 //! state.
 use super::{
     plan::{
-        AutoSupports, Cover, Place, CLEARANCE_MM, DENSITY_PCT, LIFT_MM, PASSES, SPACING_MM,
-        WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
+        AutoSupports, Cover, Place, CLEARANCE_MM, DENSITY_PCT, LIFT_MM, MINI_DENSITY_PCT, PASSES,
+        SPACING_MM, WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
     },
     AutoUi, Stage,
 };
@@ -15,7 +15,10 @@ use crate::{
     icons::{Icon, Icons},
     islands_ui::{
         panel::{count_row, preset_row, reason},
-        plan::{BRANCH_MM, JOIN_MM, LEVELS, MERGE_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2},
+        plan::{
+            BRANCH_MM, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
+            MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
+        },
         ANGLE_DEG,
     },
     list_window::{self, Event, Row, Spec},
@@ -214,7 +217,18 @@ pub fn supports_fields(
         (tr!("auto-feet"), tr!("auto-feet-hint")),
         defaults.map(|d| switch_default(d.feet_on_model)).as_ref(),
     );
-    edited |= default_switch(
+    edited |= mini_fields(ui, values, defaults);
+    edited
+}
+
+/// The mini supports' switch and, with it on, their own density, branches and length (TD-167),
+/// in `ui`; with `defaults`, each field's reset button. Returns whether any changed.
+fn mini_fields(
+    ui: &mut egui::Ui,
+    values: &mut AutoSupports,
+    defaults: Option<&AutoSupports>,
+) -> bool {
+    let mut edited = default_switch(
         ui,
         &mut values.minis,
         (
@@ -223,6 +237,71 @@ pub fn supports_fields(
         ),
         defaults.map(|d| switch_default(d.minis)).as_ref(),
     );
+    let on = values.minis;
+    crate::widgets::depends(ui, on, |ui| {
+        edited |= density_row(
+            ui,
+            (tr!("auto-mini-density"), tr!("auto-mini-density-hint")),
+            &mut values.mini_density_pct,
+            (MINI_DENSITY_PCT, defaults.map(|d| d.mini_density_pct)),
+        );
+        edited |= count_row(
+            ui,
+            (
+                tr!("supports-mini-branches"),
+                tr!("supports-mini-branches-hint"),
+            ),
+            &mut values.mini_branches,
+            (MINI_BRANCHES, true),
+            defaults.map(|d| d.mini_branches),
+        );
+        edited |= mini_size_rows(
+            ui,
+            (
+                &mut values.mini_min_height_mm,
+                &mut values.mini_max_length_mm,
+            ),
+            (MINI_MIN_HEIGHT_MM, MINI_MAX_LENGTH_MM),
+            defaults.map(|d| (d.mini_min_height_mm, d.mini_max_length_mm)),
+        );
+    });
+    edited
+}
+
+/// A mini support's minimum height and maximum length (TD-167), in `ui`: the height within its
+/// range and no more than the length, the length within its own; with `defaults`, each field's
+/// reset button. Shared by the Islands and Automatic panels. Returns whether either changed.
+pub(crate) fn mini_size_rows(
+    ui: &mut egui::Ui,
+    (lowest, longest): (&mut f64, &mut f64),
+    (heights, lengths): (std::ops::RangeInclusive<f64>, std::ops::RangeInclusive<f64>),
+    defaults: Option<(f64, f64)>,
+) -> bool {
+    let mut edited = length_row(
+        ui,
+        (
+            tr!("supports-mini-min-height"),
+            tr!("supports-mini-min-height-hint"),
+        ),
+        lowest,
+        (
+            Unit::Millimetre,
+            *heights.start()..=heights.end().min(*longest),
+        ),
+        defaults.map(|d| d.0),
+    );
+    edited |= length_row(
+        ui,
+        (
+            tr!("supports-mini-max-length"),
+            tr!("supports-mini-max-length-hint"),
+        ),
+        longest,
+        (Unit::Millimetre, lengths),
+        defaults.map(|d| d.1),
+    );
+    // A shorter maximum brings the minimum down with it.
+    *lowest = lowest.min(*longest);
     edited
 }
 
@@ -237,7 +316,7 @@ fn density_fields(
         ui,
         (tr!("auto-density"), tr!("auto-density-hint")),
         &mut values.density_pct,
-        defaults.map(|d| d.density_pct),
+        (DENSITY_PCT, defaults.map(|d| d.density_pct)),
     );
     let scale = values.density_scale();
     ui.add(
@@ -286,29 +365,29 @@ fn density_fields(
     edited
 }
 
-/// A density's row in `ui`, `label` and `hint` its own: its field, with the app's slider under
-/// it (owner rule: never egui's), in whole percent; with `default`, a reset button. Returns
-/// whether it changed.
+/// A density's row in `ui`, `label` and `hint` its own: its field within `range`, with the app's
+/// slider under it (owner rule: never egui's), in whole percent; with `default`, a reset button.
+/// Returns whether it changed.
 fn density_row(
     ui: &mut egui::Ui,
     (label, hint): (String, String),
     density_pct: &mut f64,
-    default: Option<f64>,
+    (range, default): (std::ops::RangeInclusive<f64>, Option<f64>),
 ) -> bool {
     let default = default.map(|d| length_default(d, 0, Unit::Percent));
     let mut edited = default_row(ui, &label, density_pct, default.as_ref(), |ui, value| {
         ui.add(
             UnitField::new(value, Unit::Percent)
-                .range(DENSITY_PCT)
+                .range(range.clone())
                 .step(10.0)
                 .decimals(0),
         )
         .on_hover_text(hint.clone())
     });
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 50 to 200.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 25 to 200.
     let mut slid = density_pct.round() as usize;
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 50 to 200.
-    let span = *DENSITY_PCT.start() as usize..=*DENSITY_PCT.end() as usize;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 25 to 200.
+    let span = *range.start() as usize..=*range.end() as usize;
     let width = ui.available_width();
     let slider = range_slider(ui, &mut slid, span, width).on_hover_text(hint);
     crate::widgets::name(&slider, &label);
@@ -361,7 +440,7 @@ fn cavity_fields(
             ui,
             (tr!("auto-cavity-density"), tr!("auto-cavity-density-hint")),
             &mut values.cavity_density_pct,
-            defaults.map(|d| d.cavity_density_pct),
+            (DENSITY_PCT, defaults.map(|d| d.cavity_density_pct)),
         );
     });
     edited
