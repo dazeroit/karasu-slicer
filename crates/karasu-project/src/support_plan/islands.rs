@@ -232,12 +232,14 @@ impl IslandSupports {
         }
     }
 
-    /// How long and how high the mini supports the tool places may be (TD-167).
+    /// How long and how high the mini supports the tool places may be (TD-167), their feet's
+    /// balls resting on the model (TD-169).
     #[must_use]
     pub fn mini_limits(&self) -> MiniLimits {
         MiniLimits {
             max_length_mm: self.mini_max_length_mm,
             min_height_mm: self.mini_min_height_mm,
+            foot_rests: true,
         }
     }
 
@@ -300,6 +302,9 @@ pub enum Skip {
     /// No standard support fits, and a mini support would rise less than the minimum height
     /// (TD-167).
     MiniTooShort,
+    /// No standard support fits, and a mini support's foot would hang off a steep surface: its
+    /// ball would start in mid-air beside it, and nowhere else in reach does it rest (TD-169).
+    MiniFootHangs,
 }
 
 /// A support planned under an island: the support in world coordinates with its anchors, and

@@ -1628,6 +1628,7 @@ supports-finding-collision = It crosses the model
 supports-finding-accepted = It crosses the model (accepted)
 supports-finding-drain-hole = It enters a drain hole through the model and may partly plug it
 supports-finding-foot-in-hole = Its foot stands where a drain hole cuts the model away: nothing is under it
+supports-finding-foot-hangs = Its foot's ball hangs off the model beside a steep surface: its bottom starts in mid-air and prints as an island
 supports-finding-volume = It leaves the build volume
 supports-finding-path = Its shaft cannot reach its foot
 supports-finding-steep = Its shaft leans too far
@@ -1660,6 +1661,7 @@ supports-short-piercing = Through a wall
 supports-short-collision = Crosses the model
 supports-short-drain-hole = In a drain hole
 supports-short-foot-in-hole = Foot in a drain hole
+supports-short-foot-hangs = Foot hangs
 supports-short-volume = Outside the volume
 supports-short-path = No way to its foot
 supports-short-raft = Raft without supports
@@ -1926,6 +1928,7 @@ islands-skip-pierces = { $count } whose tip would reach through a thin part of t
 islands-skip-crowded = { $count } whose tip, along the surface, would come too close to a wall beside it
 islands-skip-mini-too-long = { $count } where no support fits and a mini support would be longer than the maximum length
 islands-skip-mini-too-short = { $count } where no support fits and a mini support would be lower than the minimum height
+islands-skip-mini-foot-hangs = { $count } where no support fits and a mini support's foot would hang off a steep surface
 islands-skip-unbuildable = { $count } whose support cannot be built there with the preset: too close to the plate (raise the Automatic tool's Lift) or a lighter preset
 islands-apply = { $count ->
     [one] Apply one support
@@ -2043,6 +2046,7 @@ auto-left-pierces = Its tip would reach through a thin part of the model
 auto-left-crowded = Its tip, along the surface, would come too close to a wall beside it
 auto-left-mini-too-long = No support fits, and a mini support would be longer than the maximum length
 auto-left-mini-too-short = No support fits, and a mini support would be lower than the minimum height
+auto-left-mini-foot-hangs = No support fits, and a mini support's foot would hang off a steep surface
 auto-apply = { $count ->
     [one] Apply one support
    *[other] Apply { $count } supports

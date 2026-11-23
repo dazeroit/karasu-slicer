@@ -97,6 +97,11 @@ pub enum FindingKind {
     /// A foot standing on the model where a drain hole cuts it away (TD-131): nothing is under
     /// it once the hole is cut.
     FootInHole,
+    /// A mini support's foot ball that hangs off the model (TD-169): its lowest point lies
+    /// outside the model, beside a steep surface, so its bottom starts in mid-air and prints as
+    /// an island. A warning: a mini placed by hand is reported, never refused; the Islands and
+    /// Automatic tools never place one.
+    FootHangs,
     /// A part outside the printer's build volume.
     BuildVolume,
     /// A plate base that is not below the shaft above it, or a degenerate path.

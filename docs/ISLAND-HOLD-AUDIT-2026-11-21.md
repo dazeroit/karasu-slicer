@@ -606,6 +606,11 @@ Recommendations in parentheses.
    - The rest rule's tolerance: half the printer's smaller pitch, or a fixed value.
    - (A loft only where needed, a loft for turned standard feet, on every document, with half a
      pitch. Confirm the marks with the test print.)
+   - **Decided for mini feet on 2026-11-23 ([TD-169](TECHNOLOGY-DECISIONS.md)):**
+     - The tools take a foot only where its ball rests: re-placed in the fan, or refused with a
+       reason. The shape does not change.
+     - A mini placed by hand whose foot hangs is reported with a warning.
+     - Closes S1 for planned supports. Standard foot lips (S2) and the general check stay open.
 7. **Grounding policy.**
    - Planned supports on unheld material: remove and regrow, or report only.
    - Hand-made and kept supports there: flag and never credit them, or refuse them.

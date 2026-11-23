@@ -311,7 +311,8 @@ model import → optional topology gate → explicit placement → uniform layer
     (0 to 4, 2 by default: the mini supports one may carry), `--auto-mini-max-length <mm>`
     (1 to 50, 10 by default: the longest a mini support may be) and `--auto-mini-min-height
     <mm>` (0 to 10, 0.5 by default, at most the maximum length: the least height a mini support
-    may rise; a pair out of order is refused).
+    may rise; a pair out of order is refused). A mini support stands only where its foot's ball
+    rests on the model, never hanging off a steep surface (TD-169).
     `--overhang-angle <deg>` is the critical angle, as for `--unsupported`.
   - `--auto-settings <file.json>` reads the whole value set, with `--auto-supports` or
     `--auto-braces`:

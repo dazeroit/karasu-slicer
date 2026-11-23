@@ -272,13 +272,17 @@ pub fn contact_clearance(document: Option<&karasu_core::supports::SupportDocumen
 
 /// How long and how high a mini support the tools place may be (TD-167), in mm: its rod at most
 /// `max_length_mm` long between its balls' centres (or its ball and its junction), rising at
-/// least `min_height_mm` from the lower to the higher.
+/// least `min_height_mm` from the lower to the higher; and whether its foot's ball must rest on
+/// the model (TD-169).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MiniLimits {
     /// The longest its rod may be.
     pub max_length_mm: f64,
     /// The least height its rod may rise.
     pub min_height_mm: f64,
+    /// Its foot's ball rests on the model (TD-169): the tools always ask it; only the reason a
+    /// refusal is given looks without it.
+    pub foot_rests: bool,
 }
 
 /// The clearance of a new document, in mm (the core's default).
@@ -287,7 +291,8 @@ const DEFAULT_CLEARANCE_MM: f64 = 0.3;
 /// The mini support of `parameters` with its tip at `tip` (outward `normal`) on `surface`, in
 /// world coordinates, standing on the model (see [`find_mini_foot`]): straight below its tip,
 /// or, when `clear` (the Islands and Automatic tools, TD-126), where its rod keeps off the model,
-/// within `limits` when given (the tools, TD-167). `None` when it finds nowhere to stand.
+/// within `limits` when given (the tools, TD-167), its foot's ball resting on the model when they
+/// ask it (TD-169). `None` when it finds nowhere to stand.
 /// `document` gives the floor, the plate without one.
 #[must_use]
 pub fn mini_routed(
@@ -309,6 +314,7 @@ pub fn mini_routed(
         clear,
         max_length_mm: limits.map(|l| l.max_length_mm),
         min_height_mm: limits.map(|l| l.min_height_mm),
+        foot_rests: limits.is_some_and(|l| l.foot_rests),
     };
     let (point_mm, foot_normal) = find_mini_foot(mesh, &surface.grid, &query)?;
     Some(Routed {

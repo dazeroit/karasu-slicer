@@ -7796,6 +7796,91 @@ the Braces tool's defaults: 25 mm, lowest 6 mm, step 6 mm):
 - **Still to come:** native Windows validation; a test print of braces level by level and along
   a chosen pair.
 
+## TD-169 — Automatic mini supports stand only where their foot's ball rests on the model
+
+**Status:** Accepted on 2026-11-23 (owner, after the island hold audit) and implemented the same
+day. Native Windows validation and a test print are still to come.
+
+**Context** (the [island hold audit](ISLAND-HOLD-AUDIT-2026-11-21.md), finding S1):
+- **Mini foot balls make islands.** Every support-made island start the audit found in real
+  runs is a mini support's foot ball on a steep surface facing up.
+  - The ball's centre lies `r − p` out of the surface along its mean normal (TD-124, TD-126).
+  - On a plane, its lowest point leaves the model when the normal's `z` is below `1 − p/r`: on
+    surfaces steeper than about 48° from level with Light minis, 60° with Medium and 66° with
+    Heavy.
+  - In a slice its bottom is a speck starting in mid-air: 14 island starts on HillGiant turned
+    80° about X, 17 upright, none with minis off.
+- **TD-132 already fixed this for standard feet** by turning them up towards their shaft. Mini
+  feet were left as they were.
+- **The options weighed** (audit, cluster C): a flat-based foot where the ball would hang; a
+  sole or seat under it; a ball sunk deeper, which makes pits; re-placing or refusing the
+  foot.
+
+**Decision** (owner, 2026-11-23):
+1. **The tools stand a mini support only where its foot's ball rests on the model.**
+   - Applies to the Islands and Automatic tools and Grid mode, and to the final check's
+     replacement minis: they all find feet through the same search.
+   - "Rests" means the ball's lowest point, `r` straight below its centre, lies inside the
+     model.
+   - A foot whose ball would hang is no foot in that direction. The fan of directions (TD-126)
+     tries the next, and with none no mini support goes there.
+2. **The mini support's shape is unchanged.** No new foot shape and no deeper penetration, so
+   its marks stay as they are.
+3. **A refused island says why.** Its reason is new: "no support fits, and a mini support's
+   foot would hang off a steep surface" (`Skip::MiniFootHangs`).
+   - It is given when a mini support would stand there with the rule off.
+   - TD-167's maximum length and minimum height are tried first, so their reasons come first.
+4. **By hand, a mini support is placed as before**: straight down, touching allowed.
+   - Its build reports a foot ball that hangs: `FindingKind::FootHangs`, a warning, reported
+     and never refused.
+   - The supports list shows it as "Foot hangs", and the command line counts it among the
+     warnings.
+   - It applies to every document, old ones included.
+
+**How "rests" is tested** (`supports::index::ball_rests`, one function for the foot search and
+the build):
+- **The test.** The way straight up from the ball's lowest point to its centre is followed to
+  the first triangle it meets. When that triangle faces up, the way leaves the model there, so
+  the point is inside the model.
+- **Where it is exact.** A ball placed on a surface has its centre outside the model, so the
+  test is exact there. In a corner where the centre is inside the model too, nothing is met and
+  the ball reads as hanging, the safe side.
+- **Why it is enough.** A resting ball's first layer lies over the model's layer below, so its
+  first pixels are anchored in the slice.
+
+**Measured** on `HillGiant_32mm.stl` (Anycubic Photon P1, PP1, the Automatic tool's defaults
+from the command line, Linux release, a shared machine). Support-made starts were counted with a
+scratch tool outside the repository: the final print's island starts that no island start of
+the model alone explains, at the same layer with overlapping bounds. Before this TD it counted
+14 and 17, as the audit's pixel truth did.
+
+| Orientation | Code | Supports (minis) | Islands held | Overhangs | Places left | Support-made starts | Island starts in the print |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Turned 80° about X | before | 455 (196) | 263 of 307 | 98.1 % | 66 | 14 | 57 |
+| Turned 80° about X | TD-169 | 389 (131) | 207 of 307 | 95.3 % | 132 | **0** | 97 |
+| Upright | before | 834 (205) | 475 of 612 | 99.4 % | 155 | 17 | 149 |
+| Upright | TD-169 | 816 (187) | 463 of 612 | 99.1 % | 178 | **0** | 144 |
+
+- **The cost is coverage**, as the audit predicted (up to 61 islands on HillGiant turned 80°).
+  - Turned 80°, 56 islands are no longer held; upright, 12.
+  - Each is listed with its reason, and none is reported held.
+  - The print has more island starts where islands are left, and none made by a mini support.
+- **Time:** 8.8 s against 8.1 s turned 80°, and 9.3 s against 8.8 s upright: the fan tries more
+  directions.
+
+**Validation:**
+- **Core tests:**
+  - a ball beside a ramp at 80° hangs; on a level floor it rests; in the open nothing is under
+    it;
+  - asked to rest, the foot search refuses the ramp straight down, and a tool's fan finds the
+    floor;
+  - by hand, a mini support standing on the ramp builds with the `FootHangs` warning and no
+    error, and one on the floor gets no warning.
+- **Planner test:** a slab over ridges rising at 80° gets no mini support, with the reason
+  `MiniFootHangs`.
+- **Existing tests:** all pass.
+- **Still to come:** native Windows validation, and a test print.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

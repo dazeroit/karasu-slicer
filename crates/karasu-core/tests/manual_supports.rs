@@ -1629,6 +1629,7 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
         clear: false,
         max_length_mm: None,
         min_height_mm: None,
+        foot_rests: false,
     };
     // Under a slab's middle, the lower slab's top.
     let slabs = boxes(&[
@@ -1708,6 +1709,120 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
         find_mini_foot(&slabs, &grid, &query(10.0))
     );
     assert_eq!(find_mini_foot(&slabs, &grid, &rising(10.0, 6.0)), None);
+}
+
+/// A slab from Z 10 to 12 over a ramp facing +X and up, 80° from level (its face from X 14,
+/// Z 8 down to X 14 + 5/tan 80°, Z 3), beside a floor from Z 0 to 1 beyond X 16: a steep surface
+/// and a level one under the slab. Returns the mesh, the ramp face's point at `x` and its
+/// outward normal.
+fn ramp_under_a_slab(x: f64) -> (TriangleMesh, [f64; 3], [f64; 3]) {
+    let mut points = Vec::new();
+    let mut triangles = Vec::new();
+    push_box(
+        [0.0, 0.0, 10.0],
+        [30.0, 20.0, 12.0],
+        false,
+        &mut points,
+        &mut triangles,
+    );
+    push_box(
+        [16.0, 0.0, 0.0],
+        [30.0, 20.0, 1.0],
+        false,
+        &mut points,
+        &mut triangles,
+    );
+    let steep = 80f64.to_radians();
+    let foot = 14.0 + 5.0 / steep.tan();
+    let base = u32::try_from(points.len()).unwrap();
+    for y in [0.0, 20.0] {
+        for [px, pz] in [[14.0, 3.0], [foot, 3.0], [14.0, 8.0]] {
+            points.push(Point3::new(px, y, pz));
+        }
+    }
+    let [a0, b0, c0, a1, b1, c1] = [0, 1, 2, 3, 4, 5].map(|k| base + k);
+    triangles.extend([
+        [a0, b0, c0],
+        [a1, c1, b1],
+        [a0, b1, b0],
+        [a0, a1, b1],
+        [a0, c0, c1],
+        [a0, c1, a1],
+        [b0, b1, c1],
+        [b0, c1, c0],
+    ]);
+    let mesh = TriangleMesh::try_new(points, triangles).unwrap();
+    let point = [x, 10.0, 3.0 + (foot - x) * steep.tan()];
+    (mesh, point, [steep.sin(), 0.0, steep.cos()])
+}
+
+#[test]
+fn a_mini_support_s_foot_rests_on_the_model_where_a_tool_places_it() {
+    use karasu_core::supports::{find_mini_foot, MiniQuery, SurfaceGrid};
+    // TD-169: a Medium mini's foot ball (0.4 mm, sunk 0.1 mm) sits 0.1 mm out along the normal.
+    // On the 80° ramp its lowest point lies outside the ramp: the ball hangs off it and its
+    // bottom would start in mid-air. On the level floor it lies 0.1 mm inside.
+    let (mesh, on_ramp, normal) = ramp_under_a_slab(14.5);
+    let grid = SurfaceGrid::build(&mesh, &mut Cancellation::never()).unwrap();
+    let centre = |p: [f64; 3], n: [f64; 3]| [0, 1, 2].map(|k| p[k] + 0.1 * n[k]);
+    assert!(!grid.ball_rests(&mesh, centre(on_ramp, normal), 0.2));
+    assert!(grid.ball_rests(&mesh, [20.0, 10.0, 1.1], 0.2));
+    // In the open, nothing under it.
+    assert!(!grid.ball_rests(&mesh, [10.0, 10.0, 9.0], 0.2));
+
+    // By hand, straight down onto the ramp: found as before, the ball hanging.
+    let query = MiniQuery {
+        tip_mm: [14.5, 10.0, 10.0],
+        normal: [0.0, 0.0, -1.0],
+        diameter_mm: 0.4,
+        penetration_mm: 0.1,
+        floor_mm: 0.0,
+        clear: false,
+        max_length_mm: None,
+        min_height_mm: None,
+        foot_rests: false,
+    };
+    let (point, _) = find_mini_foot(&mesh, &grid, &query).unwrap();
+    assert!((point[0] - 14.5).abs() < 1e-9 && (point[2] - on_ramp[2]).abs() < 1e-9);
+    // Asked to rest, the ramp is no foot: straight down there is none.
+    let resting = MiniQuery {
+        foot_rests: true,
+        ..query
+    };
+    assert_eq!(find_mini_foot(&mesh, &grid, &resting), None);
+    // Placed by a tool, the fan finds a foot where the ball rests: on the floor.
+    let tool = MiniQuery {
+        clear: true,
+        ..resting
+    };
+    let (point, facing) = find_mini_foot(&mesh, &grid, &tool).unwrap();
+    assert!(
+        (point[2] - 1.0).abs() < 1e-9 && facing[2] > 0.99,
+        "{point:?}"
+    );
+    assert!(grid.ball_rests(&mesh, centre(point, facing), 0.2));
+}
+
+#[test]
+fn a_mini_support_whose_foot_hangs_is_reported_not_refused() {
+    // TD-169: by hand a mini support may stand its foot on the 80° ramp; its build says the ball
+    // hangs off it, as a warning, and builds it. On the level floor, nothing is said.
+    let (mesh, on_ramp, _) = ramp_under_a_slab(14.5);
+    let doc = document(&format!(
+        r#""supports":[
+            {{"id":1,"kind":"mini","tip":{{"point":[14.5,10,10]}},"base":{{"model":[{},{},{}]}}}},
+            {{"id":2,"kind":"mini","tip":{{"point":[20,10,10]}},"base":{{"model":[20,10,1]}}}}]"#,
+        on_ramp[0], on_ramp[1], on_ramp[2]
+    ));
+    let scene = build(&doc, &mesh, None, &[]);
+    assert!(!scene.has_errors(), "{:?}", scene.findings());
+    let hanging: Vec<u64> = kinds(&scene, Severity::Warning)
+        .into_iter()
+        .filter(|&(_, kind)| kind == FindingKind::FootHangs)
+        .map(|(id, _)| id)
+        .collect();
+    assert_eq!(hanging, [1]);
+    assert!(scene.supports().iter().all(|s| s.parts > 0));
 }
 
 #[test]

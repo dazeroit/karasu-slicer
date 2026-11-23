@@ -35,7 +35,9 @@
 //! may touch the model on its way. Placed by the Islands or Automatic tool (owner, 2026-11-04,
 //! TD-126), it must keep off the model: its foot is looked for in a fan of directions, ring by
 //! ring every [`TILT_STEP_DEG`] from straight down to 45°, and taken where its rod keeps off the
-//! model away from its balls; with none, no mini support goes there.
+//! model away from its balls; with none, no mini support goes there. The tools also take a foot
+//! only where its ball rests on the model (TD-169): on a steep surface the ball, centred along
+//! the surface's normal, would hang off it and its bottom would start in mid-air.
 //!
 //! "Clear" is a capsule around each straight part of the path, the widest radius of the support
 //! plus the document's clearance, kept from every triangle of the surface: exact distances
@@ -55,7 +57,9 @@
 //! reports it.
 #![allow(clippy::many_single_char_names)] // Geometric notation: points, segments, normals.
 use super::{
-    index::{normal, proven_clear, segment_meets_triangle, segment_triangle_distance, Grid},
+    index::{
+        ball_rests, normal, proven_clear, segment_meets_triangle, segment_triangle_distance, Grid,
+    },
     shapes::{add, dot, frame, frustum, length, scale, sphere, sub, unit, V},
     tip::{surface_normal, TipCone},
     walls::is_wall,
@@ -297,6 +301,20 @@ impl SurfaceGrid {
             }
         }
         best.map(|(at, n)| (add(from, scale(along, at)), n))
+    }
+
+    /// Whether a ball of `radius` centred at `centre` rests on `mesh` (TD-169): its lowest point
+    /// lies inside the model, so its first layer lies on the model's (see
+    /// [`super::index::ball_rests`]).
+    #[must_use]
+    pub fn ball_rests(&self, mesh: &TriangleMesh, centre: V, radius: f64) -> bool {
+        let lowest = [centre[0], centre[1], centre[2] - radius];
+        let triangles = self
+            .grid
+            .candidates(mesh, lowest, centre)
+            .into_iter()
+            .map(|t| Self::corners(mesh, t));
+        ball_rests(triangles, centre, radius)
     }
 
     /// Whether a mini support's rod of `radius` along `path` (its balls' centres at the ends, its
@@ -661,6 +679,11 @@ pub struct MiniQuery {
     /// (TD-167, owner 2026-11-20): a foot nearer below is no foot in that direction. `None`: no
     /// limit, as by hand.
     pub min_height_mm: Option<f64>,
+    /// Its foot's ball must rest on the model (TD-169, owner 2026-11-23): its lowest point
+    /// inside the model, so it never starts in mid-air beside a steep surface. A foot whose
+    /// ball would hang is no foot in that direction. The Islands and Automatic tools ask it; by
+    /// hand, `false`: the build reports a hanging foot instead.
+    pub foot_rests: bool,
 }
 
 /// How far from a mini support's ball centres its rod may touch the model, beyond its radius, in
@@ -670,10 +693,10 @@ pub const MINI_BALL_MARGIN_MM: f64 = 0.1;
 /// Where a mini support with `query`'s tip stands on the model: the point and the outward normal
 /// of the first surface straight below its tip's ball, if that surface faces up and the rod
 /// between them (the ball centres, as the build places them along the normals) is at most 45°
-/// from vertical, and within `query`'s maximum length and minimum height when it has them
-/// (TD-167). The rod
-/// may touch the model on its way (owner, 2026-10-30). `None` without one: a mini support then
-/// has nowhere to stand.
+/// from vertical, within `query`'s maximum length and minimum height when it has them
+/// (TD-167), and, when `query` asks it, with the foot's ball resting on the model (TD-169). The
+/// rod may touch the model on its way (owner, 2026-10-30). `None` without one: a mini support
+/// then has nowhere to stand.
 #[must_use]
 pub fn find_mini_foot(
     mesh: &TriangleMesh,
@@ -706,8 +729,11 @@ pub fn find_mini_foot(
             .max_length_mm
             .is_none_or(|longest| length(sub(foot, top)) <= longest)
             && query.min_height_mm.is_none_or(|lowest| rise >= lowest);
-        (rise > 0.0 && aside <= rise * tan_degrees(MAX_SLANT_DEG) && within)
-            .then_some((point, facing, foot))
+        (rise > 0.0
+            && aside <= rise * tan_degrees(MAX_SLANT_DEG)
+            && within
+            && (!query.foot_rests || grid.ball_rests(mesh, foot, r)))
+        .then_some((point, facing, foot))
     };
     if !query.clear {
         return foot_along([0.0, 0.0, -1.0]).map(|(point, facing, _)| (point, facing));

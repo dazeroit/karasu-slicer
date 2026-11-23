@@ -270,6 +270,47 @@ pub(super) fn segment_meets_triangle(p: V, q: V, [a, b, c]: [V; 3]) -> bool {
     !(signs.contains(&Ordering::Less) && signs.contains(&Ordering::Greater))
 }
 
+/// Whether a ball of `radius` centred at `centre` rests on the solid that `triangles` bound
+/// (TD-169): its lowest point, `radius` straight below the centre, lies inside the solid.
+///
+/// The way straight up from that point to the centre is followed to the first triangle it
+/// meets. When that triangle faces up, the way leaves the solid there, so the point is inside
+/// it. When it faces down, or nothing is met, the point is outside it.
+///
+/// A ball placed on a surface has its centre outside the solid, so the test is exact there. In
+/// a corner where the centre is inside too, nothing is met and the ball reads as not resting,
+/// which is the safe side: the planners then look elsewhere.
+///
+/// In a slice, a resting ball's first layer lies on the solid's layer below it. A ball whose
+/// lowest point lies outside starts in mid-air beside the surface: its bottom prints as an
+/// island. Triangles standing vertical, along the way, are passed over: the way only grazes
+/// them.
+pub(super) fn ball_rests(
+    triangles: impl IntoIterator<Item = [V; 3]>,
+    centre: V,
+    radius: f64,
+) -> bool {
+    let lowest = [centre[0], centre[1], centre[2] - radius];
+    let mut first: Option<(f64, f64)> = None;
+    for tri in triangles {
+        if !segment_meets_triangle(lowest, centre, tri) {
+            continue;
+        }
+        let Some(n) = normal(tri) else {
+            continue;
+        };
+        if n[2].abs() < 1e-12 {
+            continue;
+        }
+        // The vertical line meets the triangle's plane at this height.
+        let z = (lowest[2] + dot(n, sub(tri[0], lowest)) / n[2]).clamp(lowest[2], centre[2]);
+        if first.is_none_or(|(at, _)| z < at) {
+            first = Some((z, n[2]));
+        }
+    }
+    first.is_some_and(|(_, up)| up > 0.0)
+}
+
 /// Closest distance between segments `[p0, p1]` and `[q0, q1]`.
 pub(super) fn segment_segment_distance(p0: V, p1: V, q0: V, q1: V) -> f64 {
     let d1 = sub(p1, p0);

@@ -363,10 +363,10 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
   parts, as in other slicers): no part of a mini support keeps the clearance, and touching or
   entering the model is no error, since the resin there is one. The Islands and Automatic tools place
   none that touches the model away from its balls (TD-126), nor one longer than their maximum
-  length or lower than their minimum height (TD-167), and may stand one on another's rod;
-  placed by hand, it may touch, at any length and height. Where its axis crosses a surface
-  triangle (checked from `2τ` past each end's ball centre on the model), a **warning** says so,
-  once per support.
+  length or lower than their minimum height (TD-167), nor one whose foot's ball hangs off the
+  model (TD-169), and may stand one on another's rod; placed by hand, it may touch, at any
+  length and height. Where its axis crosses a surface triangle (checked from `2τ` past each
+  end's ball centre on the model), a **warning** says so, once per support.
 - **Piercing:** the penetration segment, from depth `2τ` to `p + τ` below the anchor along the
   axis, crosses any surface triangle (`τ` is the anchor tolerance). The support would pierce a
   thin wall or reach a cavity. The segment is empty, and nothing checked, only when `p ≤ τ`
@@ -413,7 +413,13 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
   are no channel: a support there is whole and plugs nothing. Parts are tested by their tapered
   capsule, so a cone's thin contact end counts as thin. Braces are planned clear of channels,
   as a brace holds no island, and automatic supports place no tip strictly inside a hole's
-  cylinder, where the hole cuts the surface away.
+  cylinder, where the hole cuts the surface away;
+- a mini support's foot ball that hangs off the model (TD-169). The ball rests only when its
+  lowest point, `r` straight below `F`, lies inside the model: the way straight up from that
+  point to `F` first meets a triangle facing up. Otherwise, beside a steep surface (on a plane,
+  when its normal's `z` is below `1 − p/r`), its bottom starts in mid-air and prints as an
+  island. Placed by hand it is reported, never refused; the Islands and Automatic tools take a
+  foot only where its ball rests.
 
 **Collision proof:**
 - **Candidates:** a uniform grid of model triangles gives the candidates for each part's bounding
