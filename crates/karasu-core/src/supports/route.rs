@@ -35,7 +35,12 @@
 //! may touch the model on its way. Placed by the Islands or Automatic tool (owner, 2026-11-04,
 //! TD-126), it must keep off the model: its foot is looked for in a fan of directions, ring by
 //! ring every [`TILT_STEP_DEG`] from straight down to 45°, and taken where its rod keeps off the
-//! model away from its balls; with none, no mini support goes there.
+//! model away from its balls; with none, no mini support goes there. The tools also take a foot
+//! only where its ball rests on the model (TD-169): on a steep surface the ball, centred along
+//! the surface's normal, would hang off it and its bottom would start in mid-air. And they keep
+//! the mini support off the model (TD-170): its rod enters the model nowhere past its balls and
+//! keeps [`MINI_ROD_GAP_MM`] from it past their margins, and neither ball reaches the model
+//! deeper than its penetration.
 //!
 //! "Clear" is a capsule around each straight part of the path, the widest radius of the support
 //! plus the document's clearance, kept from every triangle of the surface: exact distances
@@ -55,7 +60,9 @@
 //! reports it.
 #![allow(clippy::many_single_char_names)] // Geometric notation: points, segments, normals.
 use super::{
-    index::{normal, proven_clear, segment_meets_triangle, segment_triangle_distance, Grid},
+    index::{
+        ball_rests, normal, point_keeps, proven_clear, segment_keeps, segment_meets_triangle, Grid,
+    },
     shapes::{add, dot, frame, frustum, length, scale, sphere, sub, unit, V},
     tip::{surface_normal, TipCone},
     walls::is_wall,
@@ -126,17 +133,12 @@ impl SurfaceGrid {
     pub fn clear(&self, mesh: &TriangleMesh, p: [f64; 3], q: [f64; 3], radius: f64) -> bool {
         let lo = [0, 1, 2].map(|k| p[k].min(q[k]) - radius);
         let hi = [0, 1, 2].map(|k| p[k].max(q[k]) + radius);
-        // A triangle whose bounding sphere keeps clear of the capsule needs no exact distance.
-        self.grid.candidates(mesh, lo, hi).into_iter().all(|t| {
-            let tri = Self::corners(mesh, t);
-            let centre = scale(add(add(tri[0], tri[1]), tri[2]), 1.0 / 3.0);
-            let reach = tri
-                .iter()
-                .map(|&v| length(sub(v, centre)))
-                .fold(0.0, f64::max);
-            point_segment_distance(centre, p, q) - reach >= radius
-                || segment_triangle_distance(p, q, tri) >= radius
-        })
+        let triangles = self
+            .grid
+            .candidates(mesh, lo, hi)
+            .into_iter()
+            .map(|t| Self::corners(mesh, t));
+        segment_keeps(triangles, p, q, radius)
     }
 
     /// The surface's outward normal at `tip` (TD-124): the mean over the triangles of `mesh`
@@ -299,25 +301,46 @@ impl SurfaceGrid {
         best.map(|(at, n)| (add(from, scale(along, at)), n))
     }
 
-    /// Whether a mini support's rod of `radius` along `path` (its balls' centres at the ends, its
-    /// bends between) keeps off `mesh` away from its balls: farther than `radius` and
-    /// [`MINI_BALL_MARGIN_MM`] from either end along the path (TD-126).
+    /// Whether a ball of `radius` centred at `centre` rests on `mesh` (TD-169): its lowest point
+    /// lies inside the model, so its first layer lies on the model's. The way straight up from
+    /// that point to the centre is followed to the first triangle it meets: facing up, the way
+    /// leaves the model there. A ball placed on a surface has its centre outside the model; in a
+    /// corner where it is inside too, the ball reads as not resting, the safe side.
     #[must_use]
-    pub fn rod_clear(&self, mesh: &TriangleMesh, path: &[V], radius: f64) -> bool {
-        let away = radius + MINI_BALL_MARGIN_MM;
-        let lengths: Vec<f64> = path.windows(2).map(|w| length(sub(w[1], w[0]))).collect();
-        let total: f64 = lengths.iter().sum();
-        let mut run = 0.0;
-        path.windows(2).zip(&lengths).all(|(w, &l)| {
-            let (start, end) = (run, run + l);
-            run = end;
-            let (from, to) = (start.max(away), end.min(total - away));
-            if to <= from || l <= 0.0 {
-                return true;
-            }
-            let at = |t: f64| add(w[0], scale(sub(w[1], w[0]), (t - start) / l));
-            self.clear(mesh, at(from), at(to), radius)
+    pub fn ball_rests(&self, mesh: &TriangleMesh, centre: V, radius: f64) -> bool {
+        let lowest = [centre[0], centre[1], centre[2] - radius];
+        let triangles = self
+            .grid
+            .candidates(mesh, lowest, centre)
+            .into_iter()
+            .map(|t| Self::corners(mesh, t));
+        ball_rests(triangles, centre, radius)
+    }
+
+    /// Whether a mini support's rod of `radius` along `path` (its balls' centres at the ends, its
+    /// bends between) keeps off `mesh` away from its balls: farther than `radius` from it past
+    /// [`MINI_BALL_MARGIN_MM`] beyond either ball, along the path (TD-126).
+    ///
+    /// With `keep_off` (TD-170, the tools), stricter: the rod enters the model nowhere past its
+    /// balls' radius, and keeps [`MINI_ROD_GAP_MM`] from it past their margins.
+    #[must_use]
+    pub fn rod_clear(&self, mesh: &TriangleMesh, path: &[V], radius: f64, keep_off: bool) -> bool {
+        rod_keeps_off(path, radius, keep_off, |p, q, distance| {
+            self.clear(mesh, p, q, distance)
         })
+    }
+
+    /// Whether every triangle of `mesh` lies at least `distance` from `p`: a mini support's ball
+    /// centred there reaches no surface deeper than its radius less `distance` (TD-170).
+    #[must_use]
+    pub fn point_clear(&self, mesh: &TriangleMesh, p: V, distance: f64) -> bool {
+        let reach = [distance; 3];
+        let triangles = self
+            .grid
+            .candidates(mesh, sub(p, reach), add(p, reach))
+            .into_iter()
+            .map(|t| Self::corners(mesh, t));
+        point_keeps(triangles, p, distance)
     }
 
     /// Where the segment straight down from `from` to the height `to_z` first meets `mesh`,
@@ -346,16 +369,36 @@ impl SurfaceGrid {
     }
 }
 
-/// Distance from `x` to the segment `[p, q]`.
-fn point_segment_distance(x: V, p: V, q: V) -> f64 {
-    let d = sub(q, p);
-    let squared = dot(d, d);
-    let t = if squared > 0.0 {
-        (dot(sub(x, p), d) / squared).clamp(0.0, 1.0)
-    } else {
-        0.0
+/// Whether a mini support's rod of `radius` along `path` (its balls' centres at the ends, its
+/// bends between) keeps off the model, `keeps(p, q, distance)` saying whether the segment
+/// `[p, q]` keeps `distance` from it: see [`SurfaceGrid::rod_clear`]. One rule for the tools'
+/// search and the build's warning (TD-126, TD-170).
+pub(super) fn rod_keeps_off(
+    path: &[V],
+    radius: f64,
+    keep_off: bool,
+    keeps: impl Fn(V, V, f64) -> bool,
+) -> bool {
+    let lengths: Vec<f64> = path.windows(2).map(|w| length(sub(w[1], w[0]))).collect();
+    let total: f64 = lengths.iter().sum();
+    // Whether the rod, past `away` from either end along the path, keeps `distance`.
+    let past = |away: f64, distance: f64| {
+        let mut run = 0.0;
+        path.windows(2).zip(&lengths).all(|(w, &l)| {
+            let (start, end) = (run, run + l);
+            run = end;
+            let (from, to) = (start.max(away), end.min(total - away));
+            if to <= from || l <= 0.0 {
+                return true;
+            }
+            let at = |t: f64| add(w[0], scale(sub(w[1], w[0]), (t - start) / l));
+            keeps(at(from), at(to), distance)
+        })
     };
-    length(sub(x, add(p, scale(d, t))))
+    if !keep_off {
+        return past(radius + MINI_BALL_MARGIN_MM, radius);
+    }
+    past(radius, radius) && past(radius + MINI_BALL_MARGIN_MM, radius + MINI_ROD_GAP_MM)
 }
 
 /// What a route is found for: a support's tip on the surface and its sizes.
@@ -661,19 +704,41 @@ pub struct MiniQuery {
     /// (TD-167, owner 2026-11-20): a foot nearer below is no foot in that direction. `None`: no
     /// limit, as by hand.
     pub min_height_mm: Option<f64>,
+    /// Its foot's ball must rest on the model (TD-169, owner 2026-11-23): its lowest point
+    /// inside the model, so it never starts in mid-air beside a steep surface. A foot whose
+    /// ball would hang is no foot in that direction. The Islands and Automatic tools ask it; by
+    /// hand, `false`: the build reports a hanging foot instead.
+    pub foot_rests: bool,
+    /// It keeps off the model (TD-170, owner 2026-11-23): its rod enters the model nowhere past
+    /// its balls and keeps [`MINI_ROD_GAP_MM`] from it past their margins (see
+    /// [`SurfaceGrid::rod_clear`]), and neither ball reaches the model deeper than its
+    /// penetration, within [`MINI_BALL_DEPTH_TOLERANCE_MM`]. The tools ask it, with `clear`;
+    /// by hand, `false`: it may touch the model (owner, 2026-10-30).
+    pub keep_off: bool,
 }
 
 /// How far from a mini support's ball centres its rod may touch the model, beyond its radius, in
-/// mm: where the ball sits on the surface, the rod leaving it still grazes it (TD-126).
+/// mm: where the ball sits on the surface, the rod leaving it still grazes it (TD-126). Placed by
+/// the tools, it still never enters the model there (TD-170).
 pub const MINI_BALL_MARGIN_MM: f64 = 0.1;
+
+/// The least distance the rod of a mini support placed by the tools keeps from the model past
+/// its balls' margins, in mm (TD-170, owner 2026-11-23): touching it, the rod would print fused
+/// to the model's surface along its way. About one or two pixels of a resin printer.
+pub const MINI_ROD_GAP_MM: f64 = 0.05;
+
+/// How much deeper than its penetration a ball of a mini support placed by the tools may reach
+/// the model, in mm (TD-170): the facets of a curved surface under it, and rounding. A ball in a
+/// crease, or beside a wall, reaches deeper and is not placed there.
+pub const MINI_BALL_DEPTH_TOLERANCE_MM: f64 = 0.01;
 
 /// Where a mini support with `query`'s tip stands on the model: the point and the outward normal
 /// of the first surface straight below its tip's ball, if that surface faces up and the rod
 /// between them (the ball centres, as the build places them along the normals) is at most 45°
-/// from vertical, and within `query`'s maximum length and minimum height when it has them
-/// (TD-167). The rod
-/// may touch the model on its way (owner, 2026-10-30). `None` without one: a mini support then
-/// has nowhere to stand.
+/// from vertical, within `query`'s maximum length and minimum height when it has them
+/// (TD-167), and, when `query` asks it, with the foot's ball resting on the model (TD-169) and
+/// the support kept off the model (TD-170). By hand, the rod may touch the model on its way
+/// (owner, 2026-10-30). `None` without one: a mini support then has nowhere to stand.
 #[must_use]
 pub fn find_mini_foot(
     mesh: &TriangleMesh,
@@ -685,6 +750,14 @@ pub fn find_mini_foot(
     // The balls sit along the surface's mean normals, as the build places them (TD-124).
     let n = grid.surface_normal(mesh, query.tip_mm, unit(query.normal)?, r);
     let top = add(query.tip_mm, scale(n, out));
+    // Kept off the model (TD-170): a ball reaches no surface deeper than its penetration.
+    let ball_clear = |centre: V| {
+        !query.keep_off
+            || grid.point_clear(mesh, centre, (out - MINI_BALL_DEPTH_TOLERANCE_MM).max(0.0))
+    };
+    if !ball_clear(top) {
+        return None;
+    }
     // A foot met going down from the top's ball along `down`: its point, its mean normal and
     // its ball's centre, when it faces up and the rod is at most 45° from vertical.
     let foot_along = |down: V| -> Option<(V, V, V)> {
@@ -706,8 +779,12 @@ pub fn find_mini_foot(
             .max_length_mm
             .is_none_or(|longest| length(sub(foot, top)) <= longest)
             && query.min_height_mm.is_none_or(|lowest| rise >= lowest);
-        (rise > 0.0 && aside <= rise * tan_degrees(MAX_SLANT_DEG) && within)
-            .then_some((point, facing, foot))
+        (rise > 0.0
+            && aside <= rise * tan_degrees(MAX_SLANT_DEG)
+            && within
+            && (!query.foot_rests || grid.ball_rests(mesh, foot, r))
+            && ball_clear(foot))
+        .then_some((point, facing, foot))
     };
     if !query.clear {
         return foot_along([0.0, 0.0, -1.0]).map(|(point, facing, _)| (point, facing));
@@ -723,7 +800,7 @@ pub fn find_mini_foot(
             let Some((point, facing, foot)) = foot_along(down) else {
                 continue;
             };
-            if grid.rod_clear(mesh, &[top, foot], r) {
+            if grid.rod_clear(mesh, &[top, foot], r, query.keep_off) {
                 return Some((point, facing));
             }
         }

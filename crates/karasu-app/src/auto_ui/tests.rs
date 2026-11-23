@@ -613,8 +613,10 @@ fn report_minis(
         };
         minis += 1;
         let r = s.parameters.mini_diameter_mm / 2.0;
-        // As the Islands and Automatic tools check them (TD-126), and at half and no radius.
-        let meets = [r, r / 2.0, 1e-6].map(|radius| !grid.rod_clear(&world, path, radius));
+        // As the Islands and Automatic tools check them (TD-126, TD-170), and at half and no
+        // radius past the balls' margins.
+        let meets = [(r, true), (r / 2.0, false), (1e-6, false)]
+            .map(|(radius, keep_off)| !grid.rod_clear(&world, path, radius, keep_off));
         touch += usize::from(meets[0]);
         half += usize::from(meets[1]);
         axis += usize::from(meets[2]);

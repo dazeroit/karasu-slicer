@@ -200,7 +200,8 @@ pub fn junction_on(j: &Junction<'_>) -> Option<[f64; 3]> {
 /// Where a planned mini branch joins its trunk (TD-167): its ball along the surface's mean
 /// `normal`, its rod from the ball's centre to the highest point of the trunk's shaft between
 /// `low` and `high` that is at most 45° from vertical, within the limits and, with the surface,
-/// clear of the model away from its ends as the tools' mini supports are (TD-126).
+/// clear of the model away from its ends as the tools' mini supports are (TD-126), kept off it
+/// when the limits ask it (TD-170): its rod and its tip's ball.
 fn mini_junction(
     j: &Junction<'_>,
     normal: [f64; 3],
@@ -212,6 +213,15 @@ fn mini_junction(
     let top = add(j.tip, scale(axis, r - j.parameters.mini_penetration_mm));
     let longest = j.limits.map_or(f64::INFINITY, |l| l.max_length_mm);
     let lowest = j.limits.map_or(0.0, |l| l.min_height_mm);
+    let keep_off = j.limits.is_some_and(|l| l.keep_off);
+    // Its tip's ball reaches the model no deeper than its penetration (TD-170).
+    if let Some((r_surface, mesh)) = surface.filter(|_| keep_off) {
+        let out = r - j.parameters.mini_penetration_mm;
+        let distance = (out - karasu_core::supports::MINI_BALL_DEPTH_TOLERANCE_MM).max(0.0);
+        if !r_surface.grid().point_clear(mesh, top, distance) {
+            return None;
+        }
+    }
     let mut z = high.min(top[2] - lowest);
     while z >= low {
         let rise = top[2] - z;
@@ -226,8 +236,9 @@ fn mini_junction(
             if rise > 0.0
                 && across <= rise * SLANT
                 && dot(rod, rod).sqrt() <= longest
-                && surface
-                    .is_none_or(|(r_surface, mesh)| r_surface.grid().rod_clear(mesh, &[top, at], r))
+                && surface.is_none_or(|(r_surface, mesh)| {
+                    r_surface.grid().rod_clear(mesh, &[top, at], r, keep_off)
+                })
             {
                 return Some(at);
             }

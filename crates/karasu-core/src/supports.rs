@@ -41,7 +41,8 @@ pub use document::{
 };
 pub use route::{
     find_mini_foot, find_route, foot_axis, MiniQuery, Route, RouteQuery, SurfaceGrid, HIT_PIECE_MM,
-    MINI_BALL_MARGIN_MM, TILT_DIRECTIONS, TILT_STEP_DEG,
+    MINI_BALL_DEPTH_TOLERANCE_MM, MINI_BALL_MARGIN_MM, MINI_ROD_GAP_MM, TILT_DIRECTIONS,
+    TILT_STEP_DEG,
 };
 pub use tip::TipCone;
 pub use walls::WALL_BEYOND_MM;
@@ -97,6 +98,17 @@ pub enum FindingKind {
     /// A foot standing on the model where a drain hole cuts it away (TD-131): nothing is under
     /// it once the hole is cut.
     FootInHole,
+    /// A mini support's foot ball that hangs off the model (TD-169): its lowest point lies
+    /// outside the model, beside a steep surface, so its bottom starts in mid-air and prints as
+    /// an island. A warning: a mini placed by hand is reported, never refused; the Islands and
+    /// Automatic tools never place one.
+    FootHangs,
+    /// A mini support that touches the model beside its contacts (TD-170): its rod enters the
+    /// model past its balls, or comes closer to it than the gap past their margins, or a ball
+    /// reaches the model deeper than its penetration. In the print it fuses to the model's
+    /// surface there. A warning: placed by hand it may touch the model (owner, 2026-10-30), and
+    /// it is reported (owner, 2026-11-23); the Islands and Automatic tools never place one.
+    MiniTouchesModel,
     /// A part outside the printer's build volume.
     BuildVolume,
     /// A plate base that is not below the shaft above it, or a degenerate path.

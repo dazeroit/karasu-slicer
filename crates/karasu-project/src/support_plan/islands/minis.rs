@@ -122,7 +122,9 @@ impl<'a> Minis<'a> {
     /// A mini support at `tip`, added to `outcome`: its own on the model, else a branch onto a
     /// mini support of the pass. `Err` with why when neither: [`Skip::MiniTooShort`] when one
     /// would stand on the model with no minimum height, [`Skip::MiniTooLong`] when one would with
-    /// no maximum length, else `None` (the standard support's refusal stands).
+    /// no maximum length, [`Skip::MiniFootHangs`] when one would with its foot's ball hanging off
+    /// the model (TD-169), [`Skip::MiniTouches`] when one would touching the model beside its
+    /// contacts (TD-170), else `None` (the standard support's refusal stands).
     pub(crate) fn place(&mut self, outcome: &mut Outcome, tip: Tip) -> Result<(), Option<Skip>> {
         let (point, normal, _) = tip;
         let g = self.growing;
@@ -162,10 +164,22 @@ impl<'a> Minis<'a> {
             max_length_mm: f64::INFINITY,
             ..limits
         };
+        let hanging = MiniLimits {
+            foot_rests: false,
+            ..limits
+        };
+        let touching = MiniLimits {
+            keep_off: false,
+            ..limits
+        };
         if self.stands((point, normal), Some(lower)) {
             Err(Some(Skip::MiniTooShort))
         } else if self.stands((point, normal), Some(longer)) {
             Err(Some(Skip::MiniTooLong))
+        } else if self.stands((point, normal), Some(hanging)) {
+            Err(Some(Skip::MiniFootHangs))
+        } else if self.stands((point, normal), Some(touching)) {
+            Err(Some(Skip::MiniTouches))
         } else {
             Err(None)
         }
@@ -396,9 +410,82 @@ mod tests {
 
     /// The surface for routes of the boxes `list`.
     fn surface(list: &[([f64; 3], [f64; 3])]) -> RouteSurface {
-        let mesh = boxes(list);
+        surface_of(boxes(list))
+    }
+
+    /// The surface for routes of `mesh`.
+    fn surface_of(mesh: TriangleMesh) -> RouteSurface {
         let grid = SurfaceGrid::build(&mesh, &mut Cancellation::never()).unwrap();
         RouteSurface::new(SurfaceMesh::Placed(mesh), grid)
+    }
+
+    /// A slab from Z 6 to 8 over X and Y 0 to 12, over a row of ridges along Y from the plate to
+    /// Z 3.2, side by side from X -2 to 14: each rises at `steep`° from level facing -X and up,
+    /// and drops straight down on its +X side. Every surface under the slab facing up is that
+    /// steep.
+    fn slab_over_ridges(steep: f64) -> TriangleMesh {
+        let (top, low) = (3.2, 0.0);
+        let width = (top - low) / steep.to_radians().tan();
+        let mut points = Vec::new();
+        let mut triangles: Vec<[u32; 3]> = Vec::new();
+        let mut prism = |section: &[[f64; 2]]| {
+            let first = u32::try_from(points.len()).unwrap();
+            let sides = u32::try_from(section.len()).unwrap();
+            for y in [-5.0, 17.0] {
+                for &[x, z] in section {
+                    points.push(Point3::new(x, y, z));
+                }
+            }
+            let mut faces = Vec::new();
+            for k in 1..sides - 1 {
+                faces.push([first, first + k, first + k + 1]);
+                faces.push([first + sides, first + sides + k + 1, first + sides + k]);
+            }
+            for k in 0..sides {
+                let next = (k + 1) % sides;
+                faces.push([first + k, first + sides + k, first + sides + next]);
+                faces.push([first + k, first + sides + next, first + next]);
+            }
+            // Each face out of the prism: away from its middle.
+            let corners = f64::from(2 * sides);
+            let middle: Vec<f64> = (0..3)
+                .map(|axis| {
+                    points[first as usize..]
+                        .iter()
+                        .map(|p| [p.x, p.y, p.z][axis])
+                        .sum::<f64>()
+                        / corners
+                })
+                .collect();
+            let at = |v: u32| {
+                let p = points[v as usize];
+                [p.x, p.y, p.z]
+            };
+            for mut face in faces {
+                let [one, two, three] = face.map(at);
+                let along = [0, 1, 2].map(|axis| two[axis] - one[axis]);
+                let across = [0, 1, 2].map(|axis| three[axis] - one[axis]);
+                let outward = [
+                    along[1] * across[2] - along[2] * across[1],
+                    along[2] * across[0] - along[0] * across[2],
+                    along[0] * across[1] - along[1] * across[0],
+                ];
+                let away: f64 = (0..3)
+                    .map(|axis| outward[axis] * (one[axis] - middle[axis]))
+                    .sum();
+                if away < 0.0 {
+                    face.swap(1, 2);
+                }
+                triangles.push(face);
+            }
+        };
+        prism(&[[0.0, 6.0], [12.0, 6.0], [12.0, 8.0], [0.0, 8.0]]);
+        let mut x = -2.0;
+        while x < 14.0 {
+            prism(&[[x, low], [x + width, low], [x + width, top]]);
+            x += width;
+        }
+        TriangleMesh::try_new(points, triangles).unwrap()
     }
 
     fn volume() -> BuildVolume {
@@ -432,10 +519,15 @@ mod tests {
         islands: &[Island],
         values: &IslandSupports,
     ) -> Outcome {
+        planned_on(&surface(list), islands, values)
+    }
+
+    /// The Islands tool's plan of `islands` on `surface`, Light, with `values`, no final check.
+    fn planned_on(surface: &RouteSurface, islands: &[Island], values: &IslandSupports) -> Outcome {
         let numbered: Vec<(usize, Island)> = islands.iter().copied().enumerate().collect();
         plan(
             &numbered,
-            &surface(list),
+            surface,
             &NextSupport::of(Weight::Light),
             None,
             values,
@@ -510,6 +602,38 @@ mod tests {
         let made = planned(&mesh, &[start], &high);
         assert!(made.supports.is_empty());
         assert_eq!(made.skipped, [(0, Skip::MiniTooShort)]);
+    }
+
+    #[test]
+    fn a_mini_support_whose_foot_would_hang_is_not_placed_and_says_why() {
+        // TD-169: a slab 2.8 mm over ridges whose faces rise at 80°: no standard support fits,
+        // and a mini support could stand only on a ridge's face, where its foot's ball would
+        // hang off it and start in mid-air. Its feet rest on the model, so none is placed; the
+        // reason says a mini support would stand there with its foot hanging.
+        let start = island([0.0, 0.0], [12.0, 12.0], 6.0, 8.0);
+        let made = planned_on(&surface_of(slab_over_ridges(80.0)), &[start], &values());
+        assert!(made.supports.is_empty(), "{:?}", kinds(&made));
+        assert_eq!(made.skipped, [(0, Skip::MiniFootHangs)]);
+    }
+
+    #[test]
+    fn a_mini_support_that_would_touch_the_model_is_not_placed_and_says_why() {
+        // TD-170: a slab 0.05 mm over a block, but for a slot 0.36 mm wide under its middle,
+        // down to Z 3.2. No standard support fits; a Light mini support (0.3 mm) fits down the
+        // slot only 0.03 mm from its walls, closer than the gap. It is not placed, and the
+        // reason says a mini support would touch the model there.
+        let mesh = [
+            ([0.0, 0.0, 6.0], [12.0, 12.0, 8.0]),
+            ([-5.0, -5.0, 0.0], [5.82, 17.0, 5.95]),
+            ([6.18, -5.0, 0.0], [17.0, 17.0, 5.95]),
+            ([5.82, -5.0, 0.0], [6.18, 5.82, 5.95]),
+            ([5.82, 6.18, 0.0], [6.18, 17.0, 5.95]),
+            ([5.82, 5.82, 0.0], [6.18, 6.18, 3.2]),
+        ];
+        let start = island([5.82, 5.82], [6.18, 6.18], 6.0, 8.0);
+        let made = planned(&mesh, &[start], &values());
+        assert!(made.supports.is_empty(), "{:?}", kinds(&made));
+        assert_eq!(made.skipped, [(0, Skip::MiniTouches)]);
     }
 
     #[test]

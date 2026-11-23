@@ -43,6 +43,8 @@ pub(crate) fn reason(skip: Skip) -> String {
         Skip::Crowded => tr!("auto-left-crowded"),
         Skip::MiniTooLong => tr!("auto-left-mini-too-long"),
         Skip::MiniTooShort => tr!("auto-left-mini-too-short"),
+        Skip::MiniFootHangs => tr!("auto-left-mini-foot-hangs"),
+        Skip::MiniTouches => tr!("auto-left-mini-touches"),
     }
 }
 
@@ -733,6 +735,20 @@ impl IslandsUi {
                 tr!(
                     "islands-skip-mini-too-short",
                     count = count(Skip::MiniTooShort)
+                ),
+            ),
+            (
+                Skip::MiniFootHangs,
+                tr!(
+                    "islands-skip-mini-foot-hangs",
+                    count = count(Skip::MiniFootHangs)
+                ),
+            ),
+            (
+                Skip::MiniTouches,
+                tr!(
+                    "islands-skip-mini-touches",
+                    count = count(Skip::MiniTouches)
                 ),
             ),
         ]

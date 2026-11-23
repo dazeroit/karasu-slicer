@@ -1446,6 +1446,8 @@ fn describe(finding: &SupportFinding) -> String {
         FindingKind::Collision => tr!("supports-finding-collision"),
         FindingKind::DrainHole => tr!("supports-finding-drain-hole"),
         FindingKind::FootInHole => tr!("supports-finding-foot-in-hole"),
+        FindingKind::FootHangs => tr!("supports-finding-foot-hangs"),
+        FindingKind::MiniTouchesModel => tr!("supports-finding-mini-touches"),
         FindingKind::BuildVolume => tr!("supports-finding-volume"),
         FindingKind::InvalidPath => tr!("supports-finding-path"),
         FindingKind::SteepShaft => tr!("supports-finding-steep"),
