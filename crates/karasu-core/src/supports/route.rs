@@ -302,8 +302,10 @@ impl SurfaceGrid {
     }
 
     /// Whether a ball of `radius` centred at `centre` rests on `mesh` (TD-169): its lowest point
-    /// lies inside the model, so its first layer lies on the model's (see
-    /// [`super::index::ball_rests`]).
+    /// lies inside the model, so its first layer lies on the model's. The way straight up from
+    /// that point to the centre is followed to the first triangle it meets: facing up, the way
+    /// leaves the model there. A ball placed on a surface has its centre outside the model; in a
+    /// corner where it is inside too, the ball reads as not resting, the safe side.
     #[must_use]
     pub fn ball_rests(&self, mesh: &TriangleMesh, centre: V, radius: f64) -> bool {
         let lowest = [centre[0], centre[1], centre[2] - radius];
