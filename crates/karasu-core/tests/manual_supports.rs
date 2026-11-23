@@ -1630,6 +1630,7 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
         max_length_mm: None,
         min_height_mm: None,
         foot_rests: false,
+        keep_off: false,
     };
     // Under a slab's middle, the lower slab's top.
     let slabs = boxes(&[
@@ -1660,7 +1661,7 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
     let (touching, _) = find_mini_foot(&slabs, &grid, &query(15.2)).unwrap();
     assert!((touching[0] - 15.2).abs() < 1e-9, "{touching:?}");
     let straight = |x: f64| [[x, 10.0, 10.0 - 0.1], [x, 10.0, 4.0 + 0.1]];
-    assert!(!grid.rod_clear(&slabs, &straight(15.2), 0.2));
+    assert!(!grid.rod_clear(&slabs, &straight(15.2), 0.2, false));
     let clear = |x: f64| MiniQuery {
         clear: true,
         ..query(x)
@@ -1671,7 +1672,7 @@ fn a_mini_support_finds_its_foot_straight_below_its_tip() {
         "{point:?}"
     );
     let rod = [[15.2, 10.0, 9.9], [point[0], point[1], point[2] + 0.1]];
-    assert!(grid.rod_clear(&slabs, &rod, 0.2), "{point:?}");
+    assert!(grid.rod_clear(&slabs, &rod, 0.2, false), "{point:?}");
     // Clear of anything, it goes straight down either way.
     assert_eq!(
         find_mini_foot(&slabs, &grid, &clear(10.0)),
@@ -1781,6 +1782,7 @@ fn a_mini_support_s_foot_rests_on_the_model_where_a_tool_places_it() {
         max_length_mm: None,
         min_height_mm: None,
         foot_rests: false,
+        keep_off: false,
     };
     let (point, _) = find_mini_foot(&mesh, &grid, &query).unwrap();
     assert!((point[0] - 14.5).abs() < 1e-9 && (point[2] - on_ramp[2]).abs() < 1e-9);
@@ -1822,6 +1824,114 @@ fn a_mini_support_whose_foot_hangs_is_reported_not_refused() {
         .map(|(id, _)| id)
         .collect();
     assert_eq!(hanging, [1]);
+    assert!(scene.supports().iter().all(|s| s.parts > 0));
+}
+
+/// A slab from Z 10 to 12 over a floor from Z 0 to 1, with `extra` boxes.
+fn slab_over_a_floor(extra: &[([f64; 3], [f64; 3])]) -> TriangleMesh {
+    let mut list = vec![
+        ([0.0, 0.0, 10.0], [30.0, 20.0, 12.0], false),
+        ([0.0, 0.0, 0.0], [30.0, 20.0, 1.0], false),
+    ];
+    list.extend(extra.iter().map(|&(min, max)| (min, max, false)));
+    boxes(&list)
+}
+
+#[test]
+fn a_mini_support_placed_by_a_tool_keeps_off_the_model() {
+    use karasu_core::supports::{find_mini_foot, MiniQuery, SurfaceGrid};
+    // TD-170: a Medium mini's rod (0.4 mm) straight down from under the slab to the floor,
+    // beside a fin standing on the floor. 0.03 mm from the fin it touches it: by the old rule
+    // it is clear, kept off it is not. 0.1 mm away it is clear either way.
+    let rod = [[15.0, 10.0, 9.9], [15.0, 10.0, 1.1]];
+    let near = slab_over_a_floor(&[([15.23, 0.0, 1.0], [15.33, 20.0, 9.0])]);
+    let grid = SurfaceGrid::build(&near, &mut Cancellation::never()).unwrap();
+    assert!(grid.rod_clear(&near, &rod, 0.2, false));
+    assert!(!grid.rod_clear(&near, &rod, 0.2, true));
+    let far = slab_over_a_floor(&[([15.3, 0.0, 1.0], [15.4, 20.0, 9.0])]);
+    let far_grid = SurfaceGrid::build(&far, &mut Cancellation::never()).unwrap();
+    assert!(far_grid.rod_clear(&far, &rod, 0.2, true));
+    // Just past its foot's ball, a step 0.15 mm from its axis and 0.25 mm high: the old rule
+    // lets the rod enter it there, beside the ball; kept off, it may not.
+    let step = slab_over_a_floor(&[([15.15, 0.0, 1.0], [16.0, 20.0, 1.25])]);
+    let step_grid = SurfaceGrid::build(&step, &mut Cancellation::never()).unwrap();
+    assert!(step_grid.rod_clear(&step, &rod, 0.2, false));
+    assert!(!step_grid.rod_clear(&step, &rod, 0.2, true));
+
+    // The tool's search: beside the near fin, straight down by the old rule; kept off, the fan
+    // stands it elsewhere, its rod the gap from the fin.
+    let query = MiniQuery {
+        tip_mm: [15.0, 10.0, 10.0],
+        normal: [0.0, 0.0, -1.0],
+        diameter_mm: 0.4,
+        penetration_mm: 0.1,
+        floor_mm: 0.0,
+        clear: true,
+        max_length_mm: None,
+        min_height_mm: None,
+        foot_rests: true,
+        keep_off: false,
+    };
+    let (straight, _) = find_mini_foot(&near, &grid, &query).unwrap();
+    assert!((straight[0] - 15.0).abs() < 1e-9, "{straight:?}");
+    let kept = MiniQuery {
+        keep_off: true,
+        ..query
+    };
+    let (aside, facing) = find_mini_foot(&near, &grid, &kept).unwrap();
+    assert!((aside[0] - 15.0).abs() > 1e-6, "{aside:?}");
+    let foot = [0, 1, 2].map(|k| aside[k] + 0.1 * facing[k]);
+    assert!(grid.rod_clear(&near, &[rod[0], foot], 0.2, true));
+
+    // A tip 0.06 mm from a wall hanging under the slab: its ball (centre 0.1 mm under the
+    // slab) reaches the wall 0.14 mm deep, deeper than its 0.1 mm penetration. Kept off, no
+    // mini support goes there.
+    let wall = slab_over_a_floor(&[([15.26, 0.0, 9.5], [15.4, 20.0, 10.0])]);
+    let wall_grid = SurfaceGrid::build(&wall, &mut Cancellation::never()).unwrap();
+    let beside = MiniQuery {
+        tip_mm: [15.2, 10.0, 10.0],
+        ..query
+    };
+    assert!(find_mini_foot(&wall, &wall_grid, &beside).is_some());
+    let beside_kept = MiniQuery {
+        keep_off: true,
+        ..beside
+    };
+    assert_eq!(find_mini_foot(&wall, &wall_grid, &beside_kept), None);
+}
+
+#[test]
+fn a_mini_support_touching_the_model_by_hand_is_reported_not_refused() {
+    // TD-170: by hand a mini support may touch the model (owner, 2026-10-30); its build says
+    // so, as a warning (owner, 2026-11-23). Beside the fin, its rod; beside the hanging wall,
+    // its tip's ball; in the open, nothing.
+    let mesh = slab_over_a_floor(&[
+        ([15.23, 0.0, 1.0], [15.33, 20.0, 9.0]),
+        ([22.06, 0.0, 9.5], [22.2, 20.0, 10.0]),
+    ]);
+    let doc = document(
+        r#""supports":[
+            {"id":1,"kind":"mini","tip":{"point":[15,10,10]},"base":{"model":[15,10,1]}},
+            {"id":2,"kind":"mini","tip":{"point":[22,10,10]},"base":{"model":[22,10,1]}},
+            {"id":3,"kind":"mini","tip":{"point":[5,10,10]},"base":{"model":[5,10,1]}}]"#,
+    );
+    let scene = build(&doc, &mesh, None, &[]);
+    assert!(!scene.has_errors(), "{:?}", scene.findings());
+    let touching: Vec<(u64, SupportPart)> = scene
+        .findings()
+        .iter()
+        .filter(|f| f.kind == FindingKind::MiniTouchesModel)
+        .map(|f| {
+            assert_eq!(f.severity, Severity::Warning);
+            (f.entity, f.part)
+        })
+        .collect();
+    assert_eq!(
+        touching,
+        [(1, SupportPart::Shaft), (2, SupportPart::Contact)],
+        "{:?}",
+        scene.findings()
+    );
     assert!(scene.supports().iter().all(|s| s.parts > 0));
 }
 

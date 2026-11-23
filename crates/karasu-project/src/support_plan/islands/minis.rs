@@ -123,7 +123,8 @@ impl<'a> Minis<'a> {
     /// mini support of the pass. `Err` with why when neither: [`Skip::MiniTooShort`] when one
     /// would stand on the model with no minimum height, [`Skip::MiniTooLong`] when one would with
     /// no maximum length, [`Skip::MiniFootHangs`] when one would with its foot's ball hanging off
-    /// the model (TD-169), else `None` (the standard support's refusal stands).
+    /// the model (TD-169), [`Skip::MiniTouches`] when one would touching the model beside its
+    /// contacts (TD-170), else `None` (the standard support's refusal stands).
     pub(crate) fn place(&mut self, outcome: &mut Outcome, tip: Tip) -> Result<(), Option<Skip>> {
         let (point, normal, _) = tip;
         let g = self.growing;
@@ -167,12 +168,18 @@ impl<'a> Minis<'a> {
             foot_rests: false,
             ..limits
         };
+        let touching = MiniLimits {
+            keep_off: false,
+            ..limits
+        };
         if self.stands((point, normal), Some(lower)) {
             Err(Some(Skip::MiniTooShort))
         } else if self.stands((point, normal), Some(longer)) {
             Err(Some(Skip::MiniTooLong))
         } else if self.stands((point, normal), Some(hanging)) {
             Err(Some(Skip::MiniFootHangs))
+        } else if self.stands((point, normal), Some(touching)) {
+            Err(Some(Skip::MiniTouches))
         } else {
             Err(None)
         }
@@ -607,6 +614,26 @@ mod tests {
         let made = planned_on(&surface_of(slab_over_ridges(80.0)), &[start], &values());
         assert!(made.supports.is_empty(), "{:?}", kinds(&made));
         assert_eq!(made.skipped, [(0, Skip::MiniFootHangs)]);
+    }
+
+    #[test]
+    fn a_mini_support_that_would_touch_the_model_is_not_placed_and_says_why() {
+        // TD-170: a slab 0.05 mm over a block, but for a slot 0.36 mm wide under its middle,
+        // down to Z 3.2. No standard support fits; a Light mini support (0.3 mm) fits down the
+        // slot only 0.03 mm from its walls, closer than the gap. It is not placed, and the
+        // reason says a mini support would touch the model there.
+        let mesh = [
+            ([0.0, 0.0, 6.0], [12.0, 12.0, 8.0]),
+            ([-5.0, -5.0, 0.0], [5.82, 17.0, 5.95]),
+            ([6.18, -5.0, 0.0], [17.0, 17.0, 5.95]),
+            ([5.82, -5.0, 0.0], [6.18, 5.82, 5.95]),
+            ([5.82, 6.18, 0.0], [6.18, 17.0, 5.95]),
+            ([5.82, 5.82, 0.0], [6.18, 6.18, 3.2]),
+        ];
+        let start = island([5.82, 5.82], [6.18, 6.18], 6.0, 8.0);
+        let made = planned(&mesh, &[start], &values());
+        assert!(made.supports.is_empty(), "{:?}", kinds(&made));
+        assert_eq!(made.skipped, [(0, Skip::MiniTouches)]);
     }
 
     #[test]

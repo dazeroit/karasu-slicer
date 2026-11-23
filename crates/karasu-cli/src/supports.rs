@@ -646,6 +646,9 @@ fn why(skip: Skip) -> &'static str {
         Skip::MiniFootHangs => {
             "no support fits, and a mini support's foot would hang off a steep surface"
         }
+        Skip::MiniTouches => {
+            "no support fits, and a mini support would touch the model beside its contacts"
+        }
     }
 }
 

@@ -53,6 +53,7 @@ pub(super) fn short(kind: FindingKind) -> String {
         FindingKind::DrainHole => tr!("supports-short-drain-hole"),
         FindingKind::FootInHole => tr!("supports-short-foot-in-hole"),
         FindingKind::FootHangs => tr!("supports-short-foot-hangs"),
+        FindingKind::MiniTouchesModel => tr!("supports-short-mini-touches"),
         FindingKind::BuildVolume => tr!("supports-short-volume"),
         FindingKind::InvalidPath | FindingKind::InvalidParent => tr!("supports-short-path"),
         FindingKind::EmptyRaft => tr!("supports-short-raft"),

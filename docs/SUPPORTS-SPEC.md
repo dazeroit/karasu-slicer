@@ -364,8 +364,8 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
   entering the model is no error, since the resin there is one. The Islands and Automatic tools place
   none that touches the model away from its balls (TD-126), nor one longer than their maximum
   length or lower than their minimum height (TD-167), nor one whose foot's ball hangs off the
-  model (TD-169), and may stand one on another's rod; placed by hand, it may touch, at any
-  length and height. Where its axis crosses a surface triangle (checked from `2τ` past each
+  model (TD-169), nor one that touches the model beside its contacts (TD-170, below), and may
+  stand one on another's rod; placed by hand, it may touch, at any length and height. Where its axis crosses a surface triangle (checked from `2τ` past each
   end's ball centre on the model), a **warning** says so, once per support.
 - **Piercing:** the penetration segment, from depth `2τ` to `p + τ` below the anchor along the
   axis, crosses any surface triangle (`τ` is the anchor tolerance). The support would pierce a
@@ -419,7 +419,17 @@ no shape to build. Whether a document with errors is sliced is the caller's deci
   point to `F` first meets a triangle facing up. Otherwise, beside a steep surface (on a plane,
   when its normal's `z` is below `1 − p/r`), its bottom starts in mid-air and prints as an
   island. Placed by hand it is reported, never refused; the Islands and Automatic tools take a
-  foot only where its ball rests.
+  foot only where its ball rests;
+- a mini support that touches the model beside its contacts (TD-170), checked as the Islands
+  and Automatic tools keep their own off the model:
+  - **its balls:** neither reaches the model deeper than its penetration, within 0.01 mm for a
+    curved surface's facets: every triangle lies at least `r − p − 0.01` from each ball's
+    centre on the model;
+  - **its rod:** past each ball's radius along the path, the rod (a capsule of radius `r`)
+    enters the model nowhere; past `r + 0.1`, it keeps 0.05 mm from it. Touching, it would
+    print fused to the model's surface along its way.
+  The first failing part is named, once per support, and only when its axis does not cross
+  the model (that warning says more). Placed by hand it is reported, never refused.
 
 **Collision proof:**
 - **Candidates:** a uniform grid of model triangles gives the candidates for each part's bounding

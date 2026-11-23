@@ -311,6 +311,49 @@ pub(super) fn ball_rests(
     first.is_some_and(|(_, up)| up > 0.0)
 }
 
+/// Distance from `x` to the segment `[p, q]`.
+pub(super) fn point_segment_distance(x: V, p: V, q: V) -> f64 {
+    let d = sub(q, p);
+    let squared = dot(d, d);
+    let t = if squared > 0.0 {
+        (dot(sub(x, p), d) / squared).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    length(sub(x, add(p, scale(d, t))))
+}
+
+/// Whether every one of `triangles` keeps at least `distance` from the segment `[p, q]`: the
+/// capsule of that radius around it meets none. A triangle whose bounding sphere keeps clear of
+/// the capsule needs no exact distance.
+pub(super) fn segment_keeps(
+    triangles: impl IntoIterator<Item = [V; 3]>,
+    p: V,
+    q: V,
+    distance: f64,
+) -> bool {
+    triangles.into_iter().all(|tri| {
+        let centre = scale(add(add(tri[0], tri[1]), tri[2]), 1.0 / 3.0);
+        let reach = tri
+            .iter()
+            .map(|&v| length(sub(v, centre)))
+            .fold(0.0, f64::max);
+        point_segment_distance(centre, p, q) - reach >= distance
+            || segment_triangle_distance(p, q, tri) >= distance
+    })
+}
+
+/// Whether every one of `triangles` lies at least `distance` from `p`.
+pub(super) fn point_keeps(
+    triangles: impl IntoIterator<Item = [V; 3]>,
+    p: V,
+    distance: f64,
+) -> bool {
+    triangles
+        .into_iter()
+        .all(|tri| point_triangle_distance(p, tri) >= distance)
+}
+
 /// Closest distance between segments `[p0, p1]` and `[q0, q1]`.
 pub(super) fn segment_segment_distance(p0: V, p1: V, q0: V, q1: V) -> f64 {
     let d1 = sub(p1, p0);

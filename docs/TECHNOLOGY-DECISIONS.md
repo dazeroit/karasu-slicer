@@ -7881,6 +7881,105 @@ the model alone explains, at the same layer with overlapping bounds. Before this
 - **Existing tests:** all pass.
 - **Still to come:** native Windows validation, and a test print.
 
+## TD-170 — Automatic mini supports keep off the model beside their contacts
+
+**Status:** Accepted on 2026-11-23 (owner, after the analysis below) and implemented the same
+day, on top of TD-169. Native Windows validation and a test print are still to come.
+
+**Context:**
+- **Where the tools let a mini support meet the model.** A mini support's rod had to keep only
+  its radius from the model (TD-126), and only past 0.1 mm beyond each ball. So:
+  - the rod could lie on the model's surface along its way;
+  - beside its balls it could enter the model;
+  - its balls, sunk `p` along the normal, were never checked against other surfaces, and in a
+    crease or beside a wall they sank deeper.
+- **Measured** on `HillGiant_32mm.stl` (Photon P1, Medium minis, TD-169's build), by a scratch
+  tool outside the repository that measures exact distances from each mini support's balls and
+  rod to the placed model:
+
+  | Turned 80° about X / upright | Mini supports |
+  | --- | --- |
+  | Rod entering the model beside its balls | 54 of 131 (to 0.14 mm) / 45 of 187 (to 0.17 mm) |
+  | Rod within 0.05 mm of the model past the balls' margins | 60 of 101 / 41 of 165 |
+  | A ball reaching the model over 0.01 mm deeper than its penetration | 64 of 241 balls (to +0.1 mm) / 46 of 324 |
+
+  No rod's axis crossed the model. A rod touching the model prints fused to its surface along
+  its way, and leaves a mark there when it is removed.
+- **The rules weighed** on prototypes (islands held, from TD-169's 207 of 307 and 463 of 612):
+  - no entry beside the balls: 204 / 453;
+  - ball depth only: 200 / 454;
+  - both: 197 / 448;
+  - **both, and a 0.05 mm gap: 192 / 443**;
+  - with a 0.1 mm gap: 189 / 439;
+  - with the standard supports' 0.3 mm: 166 / 428.
+
+**Decision** (owner, 2026-11-23): the third rule, with a fixed gap of 0.05 mm.
+1. **The Islands and Automatic tools keep every mini support they place off the model.** This
+   covers Grid mode and the final check's replacement mini supports too.
+   - **Its balls:** neither reaches the model deeper than its penetration, within 0.01 mm
+     (`MINI_BALL_DEPTH_TOLERANCE_MM`) for a curved surface's facets and rounding.
+   - **Its rod:**
+     - past its balls' radius along the path, it enters the model nowhere;
+     - past their margins (0.1 mm, `MINI_BALL_MARGIN_MM`), it keeps 0.05 mm from the model
+       (`MINI_ROD_GAP_MM`), about one or two pixels of a resin printer.
+   - **The same for mini branches:** their tip's ball and their rod to the trunk.
+   - **Where this cannot hold**, another direction of the fan, or another place, is tried.
+     With none, no mini support goes there.
+2. **A refused island says why:** "no support fits, and a mini support would touch the model
+   beside its contacts" (`Skip::MiniTouches`). It is given when a mini support would stand
+   there without this rule, after TD-167's and TD-169's reasons.
+3. **By hand**, a mini support is placed as before and may touch the model (owner,
+   2026-10-30).
+   - Its build checks the same rule and reports a breach as a warning (owner, 2026-11-23):
+     `FindingKind::MiniTouchesModel`, shown as "Touches the model".
+   - It names the ball or the rod, once per support, and only when its axis does not cross
+     the model (that warning says more).
+   - It applies to every document, old ones included, and never refuses a support.
+
+**As implemented:**
+- **Core** (`karasu_core::supports`):
+  - one rule, `route::rod_keeps_off`, for the tools' search (`SurfaceGrid::rod_clear` with
+    `keep_off`) and for the build's warning;
+  - `SurfaceGrid::point_clear` for the balls;
+  - `MiniQuery::keep_off`;
+  - the shared distance helpers moved to `index.rs`.
+- **Planners:** `MiniLimits::keep_off`, always on in the tools' limits; turned off only to find
+  the reason a mini support was refused.
+- **Interface:** the new reason, and the warning's text and short label.
+
+**Measured** on `HillGiant_32mm.stl` (Anycubic Photon P1, PP1, the Automatic tool's defaults
+from the command line, Linux release). Support-made starts were counted as in TD-169.
+
+| Orientation | Code | Supports (minis) | Islands held | Overhangs | Places left | Support-made starts |
+| --- | --- | --- | --- | --- | --- | --- |
+| Turned 80° about X | TD-169 | 389 (131) | 207 of 307 | 95.3 % | 132 | 0 |
+| Turned 80° about X | TD-170 | 338 (80) | 192 of 307 | 88.4 % | 173 | 0 |
+| Upright | TD-169 | 816 (187) | 463 of 612 | 99.1 % | 178 | 0 |
+| Upright | TD-170 | 776 (147) | 443 of 612 | 97.4 % | 208 | 0 |
+
+- **Effect:**
+  - no mini support enters the model;
+  - two rods per model come exactly to the gap;
+  - no ball reaches deeper than its penetration beyond the tolerance;
+  - the build reports no `MiniTouchesModel` on the tools' supports.
+- **The cost:**
+  - 15 islands fewer held turned 80°, 20 upright, each listed with its reason;
+  - the overhangs lose more, since the mini supports placed for them keep off the model too:
+    88.4 % against 95.3 % turned 80°.
+- **Time:** about as before (8.7 s against 8.8 s turned 80°, 9.3 s upright).
+
+**Validation:**
+- **Core tests:**
+  - a rod 0.03 mm from a fin is clear by the old rule and not kept off; 0.1 mm away it is both;
+  - a step entered beside the foot's ball passes the old rule and not the new;
+  - the tools' search stands a mini support elsewhere beside the fin, and nowhere when its
+    tip's ball would reach a wall;
+  - by hand the build warns for the rod and for the tip's ball, and builds them.
+- **Planner test:** a slot 0.36 mm wide takes no Light mini support, with the reason
+  `MiniTouches`.
+- **Existing tests:** all pass.
+- **Still to come:** native Windows validation, and a test print.
+
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 
 **Status:** Accepted on 2026-10-23, owner decisions (M6.5 u2). The points marked open are

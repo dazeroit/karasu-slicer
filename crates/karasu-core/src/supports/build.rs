@@ -7,9 +7,10 @@ use super::{
     },
     fit,
     index::{
-        ball_rests, clear_of_tapered, normal, point_triangle_distance, proven_clear,
-        segment_meets_triangle, TriangleIndex, PROOF_MARGIN_MM,
+        ball_rests, clear_of_tapered, normal, point_keeps, point_triangle_distance, proven_clear,
+        segment_keeps, segment_meets_triangle, TriangleIndex, PROOF_MARGIN_MM,
     },
+    route::{rod_keeps_off, MINI_BALL_DEPTH_TOLERANCE_MM},
     shapes::{add, dot, frustum, length, scale, sphere, sub, unit, Part, V},
     tip::{reach, surface_normal, Reach, TipCone, NEAR_FOOTPRINTS},
     walls::is_wall,
@@ -442,6 +443,60 @@ impl Builder<'_, '_, '_> {
                 ),
             });
         }
+    }
+
+    /// Where a mini support along `points` (its tip's ball centre first, its foot's or its
+    /// junction last), of radius `r` sunk `depth`, touches the model beside its contacts as the
+    /// tools never let it (TD-170): a ball reaching the model deeper than its penetration, or its
+    /// rod entering it past the balls or coming closer than the gap past their margins. The part
+    /// and what is wrong, or `None` when it keeps off the model.
+    fn mini_touches(
+        &self,
+        points: &[V],
+        r: f64,
+        depth: f64,
+        foot_on_model: bool,
+    ) -> Option<(SupportPart, &'static str)> {
+        let segment_keeps_off = |p: V, q: V, distance: f64| {
+            let lo = [0, 1, 2].map(|k| p[k].min(q[k]) - distance);
+            let hi = [0, 1, 2].map(|k| p[k].max(q[k]) + distance);
+            let triangles = self
+                .index
+                .candidates(lo, hi)
+                .into_iter()
+                .map(|t| self.index.corners(t));
+            segment_keeps(triangles, p, q, distance)
+        };
+        let ball_keeps_off = |centre: V| {
+            let distance = (r - depth - MINI_BALL_DEPTH_TOLERANCE_MM).max(0.0);
+            let reach = [distance; 3];
+            let triangles = self
+                .index
+                .candidates(sub(centre, reach), add(centre, reach))
+                .into_iter()
+                .map(|t| self.index.corners(t));
+            point_keeps(triangles, centre, distance)
+        };
+        let (&tip, &foot) = (points.first()?, points.last()?);
+        if !ball_keeps_off(tip) {
+            return Some((
+                SupportPart::Contact,
+                "its tip's ball reaches the model deeper than its penetration, beside a wall or \
+                 in a crease",
+            ));
+        }
+        if foot_on_model && !ball_keeps_off(foot) {
+            return Some((
+                SupportPart::Foot,
+                "its foot's ball reaches the model deeper than its penetration, beside a wall or \
+                 in a crease",
+            ));
+        }
+        (!rod_keeps_off(points, r, true, segment_keeps_off)).then_some((
+            SupportPart::Shaft,
+            "its rod touches or enters the model beside its balls: it would print fused to the \
+             surface there",
+        ))
     }
 
     fn push(&mut self, s: &ManualSupport, part: SupportPart, exempt: bool, shape: Part) {
@@ -956,6 +1011,14 @@ impl Builder<'_, '_, '_> {
                 kind: FindingKind::Collision,
                 severity: Severity::Warning,
                 detail: format!("its axis crosses the model (triangle {t})"),
+            });
+        } else if let Some((part, detail)) = self.mini_touches(&points, r, depth, on_model) {
+            self.findings.push(SupportFinding {
+                entity: id,
+                part,
+                kind: FindingKind::MiniTouchesModel,
+                severity: Severity::Warning,
+                detail: detail.to_owned(),
             });
         }
         let count = parts.len();
