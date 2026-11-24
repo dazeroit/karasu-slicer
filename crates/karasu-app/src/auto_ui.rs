@@ -151,8 +151,29 @@ struct Applied {
     branches: usize,
     braces: usize,
     islands: [usize; 2],
+    told: Told,
     overhangs: [usize; 2],
     left: Vec<Left>,
+}
+
+/// What a plan's counts leave out (TD-171): the islands they do not count, by why (`place`
+/// names the place a plan of one place does not cover), and why its final check did not run.
+#[derive(Clone)]
+struct Told {
+    not_counted: plan::NotCounted,
+    place: plan::Place,
+    unchecked: Option<String>,
+}
+
+impl Told {
+    /// What `outcome`, planned for `place`, leaves out.
+    fn of(outcome: &AutoOutcome, place: plan::Place) -> Self {
+        Self {
+            not_counted: outcome.not_counted,
+            place,
+            unchecked: outcome.plan.unchecked.clone(),
+        }
+    }
 }
 
 /// Turns a slice's progress into a share of the work done.
@@ -343,11 +364,14 @@ impl AutoUi {
         supports: &SupportsUi,
     ) -> bool {
         if let Some(index) = self.waiting {
+            // The surface for routes, and the model prepared as it stands, drain holes included,
+            // for the final check (TD-171).
             if index >= workspace.plate().objects.len() {
                 self.waiting = None;
             } else if supports
                 .route_surface(workspace, preparation, index)
                 .is_some()
+                && !crate::islands_ui::plan::check::model_pending(workspace, preparation, index)
             {
                 self.waiting = None;
                 self.start(workspace, preparation, supports, index);
@@ -567,14 +591,22 @@ impl AutoUi {
             braces = outcome.braces.len(),
             left = left
         );
-        self.outbox.push(Message::new(
-            if left > 0 {
+        let mut message = Message::new(
+            if left > 0 || outcome.plan.unchecked.is_some() {
                 Level::Warning
             } else {
                 Level::Success
             },
             text,
-        ));
+        );
+        // A plan whose final check did not run says so (TD-171).
+        if let Some(reason) = &outcome.plan.unchecked {
+            message = message.detail(tr!(
+                "auto-final-check-not-run-hint",
+                reason = reason.as_str()
+            ));
+        }
+        self.outbox.push(message);
         self.applied = Some(Applied {
             object: index,
             revision: workspace.revision(),
@@ -588,6 +620,7 @@ impl AutoUi {
             branches: outcome.plan.branches,
             braces: outcome.braces.len(),
             islands: outcome.islands,
+            told: Told::of(outcome, planned.key.values.place),
             overhangs: outcome.overhangs,
             left: outcome.left.clone(),
         });

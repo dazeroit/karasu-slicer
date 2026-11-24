@@ -25,7 +25,7 @@ use super::{
     },
     braces::{NewBraces, Pattern, DEFAULT_BRACES, DIAMETER_MM, DISTANCE_MM, LOWEST_MM, STEP_MM},
     islands::{
-        BRANCH_MM, CONTACT_MIN_MM, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
+        BRANCH_MM, CONTACT_MIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
         MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
     },
     values::{SupportPreset, Weight},
@@ -39,21 +39,16 @@ pub const DEFAULT_OVERHANG_ANGLE_DEG: f64 = 45.0;
 /// The critical angles the user may set, in degrees: a surface level with the plate always
 /// needs support, and a vertical one never.
 pub const OVERHANG_ANGLE_RANGE: RangeInclusive<f64> = 1.0..=89.0;
-/// The islands' and the Automatic tool's join distance's default before schema 2, in mm.
-pub const OLD_JOIN_MM: f64 = 1.0;
 /// The new braces' diameter before schema 4, in mm.
 pub const OLD_BRACE_DIAMETER_MM: f64 = 0.8;
 
 /// Bring the Automatic tool's values and the new braces' diameter, read from a settings file of
-/// schema `schema`, up to date, as the application reads its file: schema 2 (2026-10-30) turns
-/// the join distance from the old default, 1 mm, to none; schema 4 (2026-11-06, TD-136) turns a
-/// Light preset to Medium and the braces off, the first defaults, and a diameter still at
-/// 0.8 mm to 1.0 mm. A value the user chose otherwise stays.
+/// schema `schema`, up to date, as the application reads its file: schema 4 (2026-11-06,
+/// TD-136) turns a Light preset to Medium and the braces off, the first defaults, and a
+/// diameter still at 0.8 mm to 1.0 mm. A value the user chose otherwise stays. The join
+/// distance, which schema 2 turned from 1 mm to none, is gone (TD-171): a saved one is not
+/// read.
 pub fn migrate(schema: u32, auto: &mut AutoSupports, brace_diameter_mm: &mut f64) {
-    #[allow(clippy::float_cmp)] // The old defaults, exactly as they were saved.
-    if schema < 2 && auto.join_mm == OLD_JOIN_MM {
-        auto.join_mm = 0.0;
-    }
     if schema < 4 {
         if auto.weight == Weight::Light {
             auto.weight = DEFAULT_AUTO_SUPPORTS.weight;
@@ -140,6 +135,10 @@ impl Tools {
         }
     }
 }
+
+/// The join distance's key, retired (TD-171): islands closer than it shared a support, counted
+/// as held without being touched. The command line's own document may still give it as zero.
+const RETIRED_JOIN: &str = "join_mm";
 
 /// The keys of the command line's own document besides the [`AutoSupports`] fields.
 const OWN_KEYS: [&str; 10] = [
@@ -238,7 +237,15 @@ impl AutoSettings {
         let mut auto = serde_json::Map::new();
         let mut rest = serde_json::Map::new();
         for (key, value) in object {
-            if fields.contains_key(&key) || key == "inside" {
+            if key == RETIRED_JOIN {
+                // Retired (TD-171): none, as before, is still read; any other refused.
+                if value.as_f64() != Some(0.0) {
+                    return Err(format!(
+                        "{RETIRED_JOIN} is no longer offered: islands within it were counted as \
+                         held by a support that does not touch them; leave it out"
+                    ));
+                }
+            } else if fields.contains_key(&key) || key == "inside" {
                 auto.insert(key, value);
             } else if OWN_KEYS.contains(&key.as_str()) {
                 rest.insert(key, value);
@@ -318,7 +325,7 @@ fn range(range: &RangeInclusive<f64>) -> String {
 /// The first of `values` out of its range, said with its range; `None` when every value is in
 /// its range (then [`AutoSupports::valid`] keeps them).
 fn out_of_range(values: &AutoSupports) -> Option<String> {
-    let checks: [(&str, f64, &RangeInclusive<f64>); 21] = [
+    let checks: [(&str, f64, &RangeInclusive<f64>); 20] = [
         ("spacing_mm", values.spacing_mm, &SPACING_MM),
         ("steep_spacing_mm", values.steep_spacing_mm, &SPACING_MM),
         ("lift_mm", values.lift_mm, &LIFT_MM),
@@ -335,7 +342,6 @@ fn out_of_range(values: &AutoSupports) -> Option<String> {
             &WIDE_CLOSEST_PCT,
         ),
         ("passes", f64::from(values.passes), &PASSES),
-        ("join_mm", values.join_mm, &JOIN_MM),
         ("skip_under_mm2", values.skip_under_mm2, &SKIP_UNDER_MM2),
         ("branch_mm", values.branch_mm, &BRANCH_MM),
         ("per_trunk", f64::from(values.per_trunk), &PER_TRUNK),
@@ -439,6 +445,13 @@ mod tests {
         assert_eq!(read.values, DEFAULT_AUTO_SUPPORTS);
         assert_eq!(read.braces, DEFAULT_BRACES);
         assert!((read.angle_deg - DEFAULT_OVERHANG_ANGLE_DEG).abs() < 1e-12);
+        // A join distance saved before TD-171 is not read: none, as every island now has.
+        let joined = serde_json::json!({
+            "schema_version": 4,
+            "tools": {"auto_supports": {"join_mm": 2.5}}
+        });
+        let read = AutoSettings::from_json(joined.to_string().as_bytes()).unwrap();
+        assert_eq!(read.values, DEFAULT_AUTO_SUPPORTS);
         // Without tools: the defaults.
         let read = AutoSettings::from_json(br#"{"schema_version": 4}"#).unwrap();
         assert_eq!(read, AutoSettings::default());
@@ -457,6 +470,9 @@ mod tests {
         assert_eq!(read.braces.pattern, Pattern::Cross);
         assert!((read.angle_deg - 40.0).abs() < 1e-12);
         assert_eq!(read.values.lift_mm, DEFAULT_AUTO_SUPPORTS.lift_mm);
+        // The retired join distance is still read as none (TD-171).
+        let read = AutoSettings::from_json(br#"{"join_mm": 0}"#).unwrap();
+        assert_eq!(read, AutoSettings::default());
         for (refused, says) in [
             (&br#"{"densty_pct": 120}"#[..], "unknown key \"densty_pct\""),
             (
@@ -502,6 +518,8 @@ mod tests {
             ),
             (br#"{"weight": "feather"}"#, "invalid value"),
             (br#"{"brace_pattern": "horizontal"}"#, "no longer offered"),
+            (br#"{"join_mm": 1}"#, "join_mm is no longer offered"),
+            (br#"{"join_mm": "none"}"#, "join_mm is no longer offered"),
             (br"[1]", "expected a JSON object"),
         ] {
             let error = AutoSettings::from_json(refused).unwrap_err();

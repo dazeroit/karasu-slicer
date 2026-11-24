@@ -22,7 +22,7 @@ use karasu_core::{
 };
 pub use karasu_project::support_plan::islands::{
     add_planned, alone, plan, IslandSupports, Outcome, Skip, Tip, BRANCH_MM, CONTACT_MIN_MM,
-    DEFAULT_ISLAND_SUPPORTS, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
+    DEFAULT_ISLAND_SUPPORTS, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
     MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
 };
 #[cfg(test)]
@@ -77,7 +77,6 @@ pub fn wanted(
     islands: &[Island],
     only: Option<usize>,
     skip_under_mm2: f64,
-    join_mm: f64,
 ) -> Vec<(usize, Island)> {
     islands
         .iter()
@@ -87,7 +86,7 @@ pub fn wanted(
             Some(one) => k == one,
             None => island.area_mm2 >= skip_under_mm2,
         })
-        .filter(|(_, island)| holder(workspace, index, island, join_mm).is_none())
+        .filter(|(_, island)| holder(workspace, index, island).is_none())
         .collect()
 }
 

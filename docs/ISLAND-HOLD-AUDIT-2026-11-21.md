@@ -525,6 +525,9 @@ into three stages.
   - Inscribed own-diameter braces.
   - Editor guards.
   - Closes H7, H8, H12, H13, H14 and the side-tip gap.
+  - **Done on 2026-11-24 ([TD-171](TECHNOLOGY-DECISIONS.md), issue #65).** The default command
+    line output stayed byte-identical on HillGiant. Inscribed braces and the editor guards
+    narrow S5, S6 and S7; P4's error closes them.
 - **P2. Core foundation and the one rule** (800-900 lines).
   - First, with output unchanged: a streaming `find_unsupported` that keeps two layers, the start
     pieces (an index on `IslandStart`, which stays Copy) and the piece graph.
@@ -599,6 +602,7 @@ Recommendations in parentheses.
    - Retire it; keep it as planning order only; or later turn it into "one contact touching
      several islands".
    - (Retire it.)
+   - **Decided on 2026-11-24 ([TD-171](TECHNOLOGY-DECISIONS.md)):** retired.
 6. **Foot shapes and the rest rule.**
    - Mini feet: a loft only where the ball would hang; a loft on every mini foot; a sole or seat;
      or a sunk ball.

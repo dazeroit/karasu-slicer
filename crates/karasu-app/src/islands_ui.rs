@@ -62,11 +62,12 @@ pub const ANGLE_DEG: std::ops::RangeInclusive<f64> = 1.0..=89.0;
 pub const HIDE_UNDER_MM2: std::ops::RangeInclusive<f64> = 0.0..=100.0;
 
 /// A finished search: the model, the plate's revision it describes and its islands, lowest
-/// first.
+/// first, with its serial among the tool's searches: a plan is of one search (TD-171).
 struct Found {
     object: usize,
     revision: u64,
     islands: Vec<Island>,
+    serial: u64,
 }
 
 /// What a search reports while it runs, and at its end.
@@ -92,7 +93,8 @@ impl Drop for Search {
 }
 
 /// What a plan of the islands' supports is of: the model, the plate's revision, the values, the
-/// one island Support it here asked for, and the surface for routes (by its identity).
+/// one island Support it here asked for, the surface for routes (by its identity), and the
+/// search whose islands it holds (by its serial, TD-171): a new search plans again.
 #[derive(Clone, Debug, PartialEq)]
 struct PlanKey {
     object: usize,
@@ -100,6 +102,7 @@ struct PlanKey {
     values: plan::IslandSupports,
     only: Option<usize>,
     surface: usize,
+    search: u64,
 }
 
 /// A finished plan, and its preview's mesh and whether it is in the viewport.
@@ -167,9 +170,6 @@ pub struct IslandsUi {
     pub hide_under_mm2: f64,
     /// The list window shows only the islands without a support.
     only_free: bool,
-    /// Islands closer than this share a support, in mm: the Islands tool's value, as last
-    /// polled; a support holds them alike.
-    join_mm: f64,
     /// The list window's place: everywhere (0), outside (1), or in the cavity (2).
     place: usize,
     /// An island was chosen in the scene or the panel: the list scrolls to its row once.
@@ -178,6 +178,8 @@ pub struct IslandsUi {
     cache: Option<PathBuf>,
     search: Option<Search>,
     found: Option<Found>,
+    /// The searches finished so far: the next one's serial follows.
+    searches: u64,
     /// The chosen island, by its place in the found ones.
     at: usize,
     minima: Option<Minima>,
@@ -242,12 +244,12 @@ impl IslandsUi {
             default_angle_deg: crate::settings::DEFAULT_OVERHANG_ANGLE_DEG,
             hide_under_mm2: 0.0,
             only_free: false,
-            join_mm: plan::DEFAULT_ISLAND_SUPPORTS.join_mm,
             place: 0,
             reveal: false,
             cache: None,
             search: None,
             found: None,
+            searches: 0,
             at: 0,
             minima: None,
             uploaded: false,
@@ -282,25 +284,53 @@ impl IslandsUi {
         self.search.is_some()
     }
 
-    /// Model `index`'s islands as last found, and whether they still describe the plate.
     /// Whether `island` is shown: not smaller than [`Self::hide_under_mm2`].
     fn shows(&self, island: &Island) -> bool {
         island.area_mm2 >= self.hide_under_mm2
     }
 
+    /// How many of `islands` have no support on model `index` (TD-171): those shown, and those
+    /// hidden. What is said of the islands shown is never said of the hidden ones.
+    fn free_counts(&self, workspace: &Workspace, index: usize, islands: &[Island]) -> [usize; 2] {
+        let mut free = [0, 0];
+        for island in islands
+            .iter()
+            .filter(|i| holder(workspace, index, i).is_none())
+        {
+            free[usize::from(!self.shows(island))] += 1;
+        }
+        free
+    }
+
+    /// How many of `islands` are hidden without a support, by their `holders`.
+    fn hidden_free(&self, islands: &[Island], holders: &[Option<u64>]) -> usize {
+        islands
+            .iter()
+            .zip(holders)
+            .filter(|(island, holder)| !self.shows(island) && holder.is_none())
+            .count()
+    }
+
     /// How many of `islands` are hidden, and the area they are smaller than, for the counts'
-    /// note; `None` when none is.
-    fn hidden_note(&self, islands: &[Island]) -> Option<String> {
+    /// note, with how many of them have no support (`free`); `None` when none is hidden.
+    fn hidden_note(&self, islands: &[Island], free: usize) -> Option<String> {
         let hidden = islands.iter().filter(|i| !self.shows(i)).count();
+        let area = decimal(self.hide_under_mm2, 2);
         (hidden > 0).then(|| {
-            tr!(
-                "islands-hidden",
-                count = hidden,
-                area = decimal(self.hide_under_mm2, 2)
-            )
+            if free > 0 {
+                tr!(
+                    "islands-hidden-free",
+                    count = hidden,
+                    area = area,
+                    free = free
+                )
+            } else {
+                tr!("islands-hidden", count = hidden, area = area)
+            }
         })
     }
 
+    /// Model `index`'s islands as last found, and whether they still describe the plate.
     fn found(&self, workspace: &Workspace, index: Option<usize>) -> Option<(&[Island], bool)> {
         let found = self.found.as_ref().filter(|f| Some(f.object) == index)?;
         Some((&found.islands, found.revision == workspace.revision()))
@@ -424,7 +454,6 @@ impl IslandsUi {
         supports: &SupportsUi,
         selected: Option<usize>,
     ) -> bool {
-        self.join_mm = supports.islands.join_mm;
         let searching = self.poll_search(workspace);
         let minima = self.poll_minima(workspace, preparation, selected);
         let planning = self.poll_plan(workspace, preparation, supports, selected);
@@ -485,8 +514,12 @@ impl IslandsUi {
                 Err(mpsc::TryRecvError::Disconnected) => self.planning = None,
             }
         }
-        let Some(surface) = supports.route_surface(workspace, preparation, index) else {
-            // The surface is being gridded: the plan waits for it.
+        // The surface being gridded, or the model being prepared as it stands (its drain holes
+        // included, TD-171): the plan waits for them.
+        let surface = supports.route_surface(workspace, preparation, index);
+        let Some(surface) =
+            surface.filter(|_| !plan::check::model_pending(workspace, preparation, index))
+        else {
             self.waiting = true;
             return true;
         };
@@ -494,6 +527,7 @@ impl IslandsUi {
         let Some((islands, _)) = self.found(workspace, Some(index)) else {
             return false;
         };
+        let search = self.found.as_ref().map_or(0, |f| f.serial);
         let values = supports.islands;
         let key = PlanKey {
             object: index,
@@ -501,6 +535,7 @@ impl IslandsUi {
             values,
             only: self.here,
             surface: Arc::as_ptr(&surface) as usize,
+            search,
         };
         if self.planned.as_ref().is_some_and(|p| p.key == key) {
             return false;
@@ -508,14 +543,7 @@ impl IslandsUi {
         if self.planning.as_ref().is_some_and(|j| j.key == key) {
             return true;
         }
-        let wanted = plan::wanted(
-            workspace,
-            index,
-            islands,
-            self.here,
-            values.skip_under_mm2,
-            values.join_mm,
-        );
+        let wanted = plan::wanted(workspace, index, islands, self.here, values.skip_under_mm2);
         let next = values.next(&supports.presets);
         let Some(printer) = workspace.printer() else {
             return false;
@@ -612,11 +640,21 @@ impl IslandsUi {
             Level::Success
         };
         let mut message = Message::new(level, text);
-        if let Some(hint) = (skipped > 0)
+        let mut details: Vec<String> = (skipped > 0)
             .then(|| Self::skipped_of(&planned.outcome))
             .flatten()
-        {
-            message = message.detail(hint);
+            .into_iter()
+            .collect();
+        // A plan whose final check did not run says so (TD-171).
+        if let Some(reason) = &planned.outcome.unchecked {
+            message.level = Level::Warning;
+            details.push(tr!(
+                "auto-final-check-not-run-hint",
+                reason = reason.as_str()
+            ));
+        }
+        if !details.is_empty() {
+            message = message.detail(details.join("\n"));
         }
         self.outbox.push(message);
         self.auto = false;
@@ -663,25 +701,36 @@ impl IslandsUi {
         self.search = None;
         match result {
             Ok(islands) => {
+                self.searches += 1;
                 let found = Found {
                     object,
                     revision,
                     islands,
+                    serial: self.searches,
                 };
                 let count = found.islands.iter().filter(|i| self.shows(i)).count();
-                let free = found
-                    .islands
-                    .iter()
-                    .filter(|i| self.shows(i))
-                    .filter(|i| holder(workspace, object, i, self.join_mm).is_none())
-                    .count();
-                let hidden = self.hidden_note(&found.islands);
+                let [free, hidden_free] = self.free_counts(workspace, object, &found.islands);
+                let hidden = self.hidden_note(&found.islands, hidden_free);
+                let all = found.islands.len();
                 self.found = Some(found);
                 self.at = 0;
-                let (level, text) = if count == 0 {
+                // What is said of the islands shown is never said of the hidden ones (TD-171).
+                let (level, text) = if all == 0 {
                     (Level::Success, tr!("islands-found-none"))
-                } else if free == 0 {
+                } else if count == 0 {
+                    let level = if hidden_free == 0 {
+                        Level::Success
+                    } else {
+                        Level::Warning
+                    };
+                    (level, tr!("islands-found-all-hidden", count = all))
+                } else if free == 0 && hidden_free == 0 {
                     (Level::Success, tr!("islands-found-held", count = count))
+                } else if free == 0 {
+                    (
+                        Level::Warning,
+                        tr!("islands-found-held-shown", count = count),
+                    )
                 } else {
                     (
                         Level::Warning,
@@ -825,7 +874,7 @@ impl IslandsUi {
                     if k == self.at || !self.shows(island) {
                         continue;
                     }
-                    let mut color = if holder(workspace, index, island, self.join_mm).is_some() {
+                    let mut color = if holder(workspace, index, island).is_some() {
                         appearance.hole_valid.linear()
                     } else {
                         appearance.support_error.linear()
@@ -980,15 +1029,15 @@ fn around(island: &Island) -> [[f64; 3]; 2] {
     ]
 }
 
-/// The support of model `index` holding `island` where it starts, islands closer than
-/// `join_mm` sharing a support: the first whose tip does ([`plan::check::holds`]).
-fn holder(workspace: &Workspace, index: usize, island: &Island, join_mm: f64) -> Option<u64> {
+/// The support of model `index` holding `island` where it starts: the first whose tip does
+/// ([`plan::check::holds`]).
+fn holder(workspace: &Workspace, index: usize, island: &Island) -> Option<u64> {
     let document = workspace.supports(index)?;
     let to_world = workspace.model_to_world(index)?;
     document
         .supports
         .iter()
-        .find(|s| plan::check::holds(island, to_world.point(s.tip_mm), join_mm))
+        .find(|s| plan::check::holds(island, to_world.point(s.tip_mm)))
         .map(|s| s.id)
 }
 

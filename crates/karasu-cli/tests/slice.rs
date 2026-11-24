@@ -4260,6 +4260,57 @@ fn auto_settings_take_the_application_s_settings_file() {
 }
 
 #[test]
+fn islands_the_counts_leave_out_are_said_and_the_join_distance_is_retired() {
+    // TD-171: the two islands are 10 × 10 mm and 6 × 6 mm; skipped under 50 mm², the smaller
+    // is said apart, never silently left out of "held N of M".
+    let setup = Setup::new();
+    let model = two_islands(&setup);
+    let options = |settings: &std::path::Path| {
+        vec![
+            "--center".to_owned(),
+            "--drop".to_owned(),
+            "--auto-supports".to_owned(),
+            "--auto-settings".to_owned(),
+            settings.to_str().unwrap().to_owned(),
+        ]
+    };
+    let skip = setup.temp.write("skip.json", r#"{"skip_under_mm2": 50}"#);
+    let given = options(&skip);
+    let given: Vec<&str> = given.iter().map(String::as_str).collect();
+    let report = success(&setup.slice(&model, "goo-v3", &setup.temp.path("skip.goo"), &given));
+    assert!(
+        field(&report, "Automatic supports held").starts_with("islands 1 of 1"),
+        "{report}"
+    );
+    assert_eq!(
+        field(&report, "Automatic supports islands not counted"),
+        "1 smaller than 50 mm^2"
+    );
+    // With the defaults, nothing is left out and the final check ran: no such lines.
+    let report = success(&setup.slice(
+        &model,
+        "goo-v3",
+        &setup.temp.path("plain.goo"),
+        &["--center", "--drop", "--auto-supports"],
+    ));
+    assert!(!report.contains("islands not counted"), "{report}");
+    assert!(!report.contains("final check"), "{report}");
+    // A join distance is refused; none, as before, is still read.
+    let join = setup.temp.write("join.json", r#"{"join_mm": 1}"#);
+    let given = options(&join);
+    let given: Vec<&str> = given.iter().map(String::as_str).collect();
+    let error = failure(
+        &setup.slice(&model, "goo-v3", &setup.temp.path("join.goo"), &given),
+        1,
+    );
+    assert!(error.contains("join_mm is no longer offered"), "{error}");
+    let none = setup.temp.write("none.json", r#"{"join_mm": 0}"#);
+    let given = options(&none);
+    let given: Vec<&str> = given.iter().map(String::as_str).collect();
+    success(&setup.slice(&model, "goo-v3", &setup.temp.path("none.goo"), &given));
+}
+
+#[test]
 fn automatic_braces_join_the_given_supports() {
     let setup = Setup::new();
     let slab = setup

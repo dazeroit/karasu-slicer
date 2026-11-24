@@ -759,8 +759,11 @@ The Supports step has its four tools: Supports, Islands, Braces and Raft (owner,
   a preset, thicker than that (its shaft or its tip's body), it takes its trunk's values, so its
   preset is its trunk's, and a notification says so; a value changed in the panel past that is
   brought back to the trunk's thickness.
-  The junction is a handle (a square) that slides along the trunk; released, the branch is
-  brought back to no thicker than the trunk where it now joins it.
+  The junction is a handle (a square) that slides along the trunk, never above the lowest point
+  of the branch's path above it (its knee, or its tip's join) less 0.25 mm, so the path never
+  rises (TD-171); released, the branch is brought back to no thicker than the trunk where it
+  now joins it. Merge trunks and Join a support thin a support they hang on a thinner shaft to
+  it, and say so (TD-171).
 - **Trees** (owner, 2026-10-30): **Merge trunks** (a mode) works out on a thread of its own how
   the selected model's supports standing on their own (on the plate, the raft or the model,
   placed by hand or by the Islands tool) would merge, as the Islands tool merges its own, with
@@ -798,7 +801,9 @@ The Supports step has its four tools: Supports, Islands, Braces and Raft (owner,
   the surface), and its knee (a diamond, owner 2026-10-29: the top of the vertical shaft; it
   moves up and down the shaft, which stays where it stands so the support never moves towards
   its neighbours, and the tip leans from its contact to the knee; it stays 2 mm above the plate
-  at least and at most where the slanted part is 45° from vertical; "Remove the knee" in the
+  at least, 0.5 mm above where its path goes on (a branch's junction, a foot's join on the
+  model; TD-171: the path never rises, and the knee does not move where the tip's join is not
+  above that) and at most where the slanted part is 45° from vertical; "Remove the knee" in the
   support's row puts the shaft straight down from the tip's join again). A knee goes along
   when the tip slides, and follows the foot when the foot moves, keeping the shaft vertical,
   unless the tool strip's switch "Knee follows the foot" (on by default, kept like the other
@@ -880,7 +885,10 @@ for now (owner, 2026-10-30).
   the Manual tool's surface for routes. Its progress shows under the button, and the state
   line names the stage: finding, placing the tips, routing and growing trees, checking the
   coverage, building the supports to check them, planning braces. It waits first for the surface for routes, while the tool keeps
-  it ready.
+  it ready, and for the model prepared as it stands, its drain holes included (TD-171): right
+  after a hole is edited, the plan waits for the new preparation, so it is never checked
+  against the holes before. The Islands tool's plans and the Grid mode wait the same way, and an
+  Islands plan is of one search: a new Find plans again.
 - **What is planned.** Islands are supported as Support the islands supports them; an island a
   kept support (placed by hand or by the Islands tool) already holds is left to it. With
   "Islands and overhangs", every region's underside is probed on a grid half the tip spacing
@@ -900,7 +908,11 @@ for now (owner, 2026-10-30).
 - **The final check:** the supports are built as a slice builds them, against the model. One
   built with an error (a tip piercing a thin part, a part too close to the model or outside the
   build volume) goes, and what hung from it is grown again on supports of its own. Its place
-  is left, with why: the plan never offers a support that would print with an error.
+  is left, with why: the plan never offers a support that would print with an error. When the
+  check cannot run (the supports cannot be built at all, as with a raft that cannot be made, or
+  the model could not be prepared), the facts show "Final check: Not run" with why on hover,
+  Apply's notification says it, and the Islands tool's footer says its plan is not checked
+  against the model (TD-171).
 - **Panel:**
   - **Lift** (owner, 2026-11-04, TD-128): how high the model's lowest point stands above the
     plate, 5 mm by default, with the tool's other values in Settings › Supports. Generate lifts
@@ -913,8 +925,8 @@ for now (owner, 2026-10-30).
     opens); with Advanced, "Skip islands under".
   - **Supports:** the preset (a weight or one of the user's; Medium by default, TD-136);
     "Tip spacing" (2.5 mm); with
-    Advanced, "Spacing at the critical angle" (5 mm), "Join islands closer than" (0 mm, owner 2026-10-30) and
-    "Closing check: at most" (3 passes); "Density" (100%, 50 to 200%: the tips per area, a
+    Advanced, "Spacing at the critical angle" (5 mm) and
+    "Closing check: at most" (3 passes); "Join islands closer than" is gone (TD-171); "Density" (100%, 50 to 200%: the tips per area, a
     value field with the app's slider under it and the spacings it gives under them; TD-127);
     "Closer under wide undersides" (on), with "Wide from" (20 mm²) and "As close as" (60%);
     for a hollowed model, "Own values in the cavity" (off; TD-137), which gives the cavity its
@@ -922,7 +934,9 @@ for now (owner, 2026-10-30).
     outside's when switched on;
     "Feet on the model" (on, owner 2026-10-30); "Mini
     supports where a support does not fit" (on, TD-113). The plan's facts count the mini
-    supports when there are any.
+    supports when there are any, and name the islands "Islands held" leaves out (TD-171): those
+    in the cavity (or outside it) when the plan covers one place, those skipped as smaller, and
+    those held by supports kept, each row only when there are any.
   - **Trees and braces:** "Branches" (on), with the branch distance and branches per trunk, and
     with Advanced the merging values; "Braces" (off, TD-136). The braces' values are the Braces tool's
     own, shared with it (owner, 2026-10-30): with Advanced, every one as the Braces tool and the
@@ -959,8 +973,8 @@ starts in mid-air and which of those places a support holds.
   layers' masks are read for the unsupported regions at the critical angle (TD-107). An island
   is where one piece starts in mid-air (owner, 2026-10-30): several may grow into one region,
   each its own island. A support holds an island when its tip stands where it starts: on its
-  first layer's footprint, widened by 0.6 mm and by the join distance (islands that close share
-  a support), within 1 mm above it. A support beside it does not. The tool
+  first layer's footprint, within a layer of its first layer's underside (TD-167); a support
+  beside it does not, however close (no join distance, TD-171). The tool
   never searches by itself: once the plate changes, the islands found show as out of date until
   found again. A notification says what was found and how long it took.
 - **Scene:** markers a constant size on screen, drawn on the GPU through the model as the
@@ -969,11 +983,10 @@ starts in mid-air and which of those places a support holds.
   over the others and whole through the model, its row's dot in the list too; a click on one chooses it. The local minima (TD-107 level 2) of the prepared surface
   (the hollowed shell's, its cavity's ceiling included) show as small yellow markers when asked,
   worked out on a thread of their own.
-- **Panel:** Search (the critical angle, its default Settings › Supports' overhang angle; with Advanced, "Hide islands under": smaller islands are left out of the markers, the list, the stepping and the counts, and the list's summary and the search's notification say how many are hidden (owner, 2026-11-05); Support the islands still supports them unless "Skip islands under" leaves them out); **Island supports** (owner
+- **Panel:** Search (the critical angle, its default Settings › Supports' overhang angle; with Advanced, "Hide islands under": smaller islands are left out of the markers, the list, the stepping and the counts, and the list's summary and the search's notification say how many are hidden (owner, 2026-11-05), and how many of those have no support: what is said of the islands shown is never said of the hidden ones, so the footer says "Every island shown is supported; 3 hidden have no support" rather than "Every island is supported" (TD-171); Support the islands still supports them unless "Skip islands under" leaves them out); **Island supports** (owner
   mockup revised 2026-10-29): the preset (a weight or one of the user's), "Branches: join tips within" (5 mm; zero
   makes no branches), "Branches per trunk" (4), "Trunks: merge within" (10 mm; zero makes no
-  merging), "Trunks per merge" (3) and "Merge levels" (2), with Advanced "Join islands closer than"
-  (0 mm: every island its own support, owner 2026-10-30) and "Skip islands under" (mm², for
+  merging), "Trunks per merge" (3) and "Merge levels" (2), with Advanced "Skip islands under" (mm², for
   Support the islands only), "Foot on the model when the plate is out of reach" (on) and "Mini
   supports where a support does not fit" (on, TD-113), all
   their defaults set in Settings › Supports › Island supports; then the chosen
@@ -985,9 +998,8 @@ starts in mid-air and which of those places a support holds.
   without one are planned on a thread of their own and shown in green, again when a value or
   the plate changes. One support an island (owner, 2026-10-30), where it starts: under its
   first layer's centroid. If that is refused (no way down, or the final check), the next point
-  of its first layer at least 2 mm from every refused one is tried, three at most. Islands
-  closer than the join distance (in plan and in height) share one support under the lowest; an
-  island of the group that support does not reach gets its own. An island too close to the
+  of its first layer at least 2 mm from every refused one is tried, three at most. Islands no
+  longer share a support across a join distance (TD-171). An island too close to the
   plate for the preset (its tip, base cone and base need 3.2 mm with Light) is left, and Support
   it here says how much more to lift the model. What grows from an island
   higher up is an overhang, the Automatic tool's.

@@ -2078,7 +2078,8 @@ day.
      background, as Slice does, and finds the islands and overhang regions (TD-107 level 3); a
      navigator steps through the islands (layers, area, whether a support holds it) and **Support
      it here** adds a draft support under the island's lowest point. Advanced: a display filter
-     that hides the markers of islands under an area (they stay found and counted).
+     that hides the markers of islands under an area (they stay found; **revised by TD-171**:
+     the counts leave them out, and say how many of them have no support).
    - *New supports:* Supports or Braces; **Place supports** (as Place holes); the weight (Light,
      Medium, Heavy: TD-062's presets); contact diameter, tip length, shaft diameter and
      penetration; the foot, **Automatic** (on the plate, or on the model when the model is below
@@ -2489,11 +2490,13 @@ the same day. Weight by load is a later phase, after M6.4j.
       refused (no way down, or the final check), the next point of its first layer at least
       2 mm from every refused one is tried, three at most. "Large islands: one every" is gone.
       Islands within the join distance share a support; an island of a chain that support does
-      not reach gets its own.
+      not reach gets its own. **Retired by TD-171 (2026-11-24):** no join distance; each island
+      takes a support of its own.
     - **Held only where it starts:** a tip on its first layer's footprint, widened by 0.6 mm and
       the join distance, within 1 mm above it. A support beside it no longer turns its marker
       green. **Revised by TD-167 (2026-11-20):** within a layer of its first layer's underside,
-      on the footprint widened by the join distance only.
+      on the footprint widened by the join distance only. **Revised by TD-171 (2026-11-24):**
+      on the footprint itself, the join distance retired.
     - **Measured** on `HillGiant_32mm.stl` (lifted 5 mm): 568 islands. "Islands only" holds 546
       of them with 285 supports in 1.7 s; "Islands and overhangs" holds 557 with 410 supports in
       3.4 s. Every island left has no way down clear of the model, and the supports build
@@ -7644,6 +7647,7 @@ These rows have no minimum height. With one (the defaults otherwise):
   Islands tool's list: a tip holds an island when it lies on its first layer's footprint,
   widened by the join distance only, from a layer below the layer under it to a layer above its
   first (`join_mm` higher with a join). A tip beside it or above where it starts does not.
+  **Revised by TD-171 (2026-11-24):** the join distance is retired; the footprint itself.
 - **The island's own tip does not move** (TD-164): a tip moved off the first layer would no
   longer hold it. A crowded island tip is tried at the island's other places, 0.5 mm apart.
   TD-164 as first committed moved it up to 0.6 mm; that was removed from TD-164 before its
@@ -7979,6 +7983,107 @@ from the command line, Linux release). Support-made starts were counted as in TD
   `MiniTouches`.
 - **Existing tests:** all pass.
 - **Still to come:** native Windows validation, and a test print.
+
+## TD-171 — Island reports say only what was checked, and edits start no support in mid-air
+
+**Status:** Accepted on 2026-11-24 (owner: phase P1 of the island hold audit, issue #65) and
+implemented the same day. Native Windows validation is still to come.
+
+**Context** (the [island hold audit](ISLAND-HOLD-AUDIT-2026-11-21.md), its plan's phase P1):
+reports that claim more than was checked, and edits that start support material in mid-air
+with no finding.
+- **H8, the join distance.** Islands closer than it shared one support, and it widened the
+  hold test's footprint and window by as much: an island counted held without being touched.
+  On HillGiant, 52 false holds at 1 mm and 120 at 3 mm; 0 by default.
+- **H12, hidden islands.** With "Hide islands under", "Every island is supported" was said of
+  the islands shown while hidden ones had no support.
+- **H13, the Automatic tool's counts.** "Held N of M" left out, without a word, the islands
+  under "Skip islands under", those in the place the plan does not cover, and those a kept
+  support holds.
+- **H14, the final check.** When the supports could not be built at all (a raft that cannot be
+  made, say), the check returned without checking, and the plan's supports counted as checked.
+- **Thinned side tips.** A side tip thinned away by a mini support stayed counted as held when
+  the final check removed that mini support.
+- **H7, an older preparation.** Right after a drain hole was edited, a plan was checked against
+  the previous holes and could be applied.
+- **S6, thick braces.** A brace of its own diameter, thicker than its shafts, ended in balls of
+  its radius: on a slanted shaft the lower ball's bottom lies outside the shaft.
+- **S5 and S7, edits by hand.** A junction or a knee dragged past where its path goes on made
+  the path rise; Merge trunks and Join a support could hang a wider support on a thinner shaft.
+
+**Decision** (owner, 2026-11-24: the audit's decision 5, retire the join distance, and P1):
+1. **The join distance is retired** from the Islands and Automatic tools, Settings and the
+   command line. Each island takes a support of its own, and a tip holds an island only on its
+   first layer's footprint, within a layer of its start (TD-167). A saved join distance is not
+   read; the command line's own settings document still reads `"join_mm": 0` and refuses any
+   other value.
+2. **Statements are true of what was checked.** What is said of the islands shown is never
+   said of the hidden ones: "Every island shown is supported; 3 hidden have no support", and
+   the search's notification and the list's summary say how many hidden islands have no
+   support.
+3. **The Automatic tool's counts name what they leave out:** islands in the place the plan
+   does not cover, skipped as smaller, and held by supports kept, each counted once, in that
+   order (`AutoOutcome::not_counted`). The panel shows a row for each that has any; the command
+   line a line, `Automatic supports islands not counted: …`, only then.
+4. **The final check returns an outcome.** When it cannot run (no preparation, supports that
+   cannot be built at all, or no model given to the planner), the plan says why
+   (`Outcome::unchecked`): "Final check: Not run" in the Automatic panel, in Apply's
+   notification and in the Islands tool's footer, and `Automatic supports final check: not
+   run: <why>` on the command line. A stopped plan says nothing: it is dropped.
+5. **Thinned side tips are counted again** after the final check: one stays held only while a
+   tip remains within the reach that thinned it.
+6. **Plans are of the exact preparation and of one search.** The Automatic tool, the Islands
+   tool's plans and the Grid mode wait for the preparation that describes the model as it
+   stands, drain holes included (`PreparationUi::exact`); once the preparation settles without
+   one, the plan goes ahead without the model and says its final check did not run. An Islands
+   plan carries its search's serial: a new Find plans again.
+7. **A brace thicker than a shaft narrows to it at that end**, its end ball no wider: the
+   brace is the hull of its two end balls. Automatic braces, and braces of their own no
+   thicker than their shafts, build as before.
+8. **Guards in the editor.** A dragged junction stays 0.25 mm below the lowest point of its
+   branch's path above it; a dragged knee stays 0.5 mm above where its path goes on (a branch's
+   junction, a foot's join on the model), and does not move where the tip's join is not above
+   that. Merge trunks and Join a support thin a support they hang on a thinner shaft to it, and
+   say so, as a branch placed by hand is thinned (owner, 2026-10-30). Planned branches already
+   take their trunk's preset: none is thicker (checked on HillGiant below).
+
+**As implemented:**
+- **Planners** (`karasu_project::support_plan`): `islands::order` (lowest first, each island on
+  its own, the same order as before) in place of the groups; `check::holds` and `check::held`
+  without a join; `Outcome::unchecked`, set through `check::not_checked`; `auto::NotCounted`;
+  the settings reader's `join_mm` rule; `Outcome::joined` removed.
+- **Core:** the brace's end radii (`build.rs`).
+- **Command line:** the two lines.
+- **Interface:** the Islands tool's counts, statements and plan key; the Automatic panel's rows;
+  `PreparationUi::exact` and `check::model_pending`; the junction and knee clamps
+  (`handles.rs`); the thinning in `merging.rs`; the strings in `assets/locales/en-US`.
+
+**Measured** on `HillGiant_32mm.stl` (Anycubic Photon P1, PP1, the Automatic tool's defaults
+from the command line, Linux release), against `main` at `d8003c2`:
+- turned 80° about X and upright, the PP1 files and the written support documents are
+  byte-identical, and the summaries differ only in the output's name;
+- the planned branches, 154 turned and 382 upright (16 and 46 of them mini supports on mini
+  supports), are none thicker than their trunk.
+
+**Validation:**
+- **Planner tests:** the hold test without a join; islands held lowest first, each on its own;
+  a plan made without the model says its check did not run; an island a kept support holds is
+  counted apart; the settings reader refuses a join distance and reads none.
+- **Core test:** a 2 mm brace between 1 mm shafts slanted about 37° from vertical: its lowest
+  point lies in the lower shaft, and at each end it is no wider than the shaft (it fails
+  without the change).
+- **Command line test:** a skipped island is said on its line, the defaults print no new line,
+  and `join_mm` 1 is refused while 0 is read.
+- **Interface tests:** the hidden islands' note with the islands without a support; a settings
+  file holding a join distance is read without it, at every schema; a dragged knee stays above
+  where its path goes on and a dragged junction below its branch's knee, or does not move; a
+  Heavy support hung on a 0.8 mm shaft is thinned to it, one no thicker is left as it is.
+- **Existing tests:** all pass.
+- **Still to come:** native Windows validation.
+
+**Not in this decision:** the pixel hold test (H1, H2), grounding (H3, S3), the application's
+holder (H4, H5), the print check (D1), detection (D2 to D5) and supported models moved, turned
+or scaled (H15, S8, S9), the audit's later phases.
 
 ## TD-098 — The application layout: menu bar, workflow bar, sidebar and fixed panels
 

@@ -4,8 +4,8 @@
 use super::{
     holder,
     plan::{
-        IslandSupports, Skip, BRANCH_MM, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES,
-        MINI_MAX_LENGTH_MM, MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
+        IslandSupports, Skip, BRANCH_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
+        MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
     },
     Island, IslandsUi, ANGLE_DEG, HIDE_UNDER_MM2,
 };
@@ -222,14 +222,6 @@ pub fn island_fields(
         defaults.map(|d| d.levels),
     );
     if advanced {
-        // Islands share a support only when asked (owner, 2026-10-30: none by default).
-        edited |= field(
-            ui,
-            (tr!("islands-join"), tr!("islands-join-hint")),
-            &mut values.join_mm,
-            (Unit::Millimetre, JOIN_MM),
-            length(defaults.map(|d| d.join_mm), Unit::Millimetre),
-        );
         edited |= field(
             ui,
             (tr!("islands-skip-under"), tr!("islands-skip-under-hint")),
@@ -303,13 +295,8 @@ fn layers(island: &Island) -> String {
 }
 
 /// An island's support in a few words, and its colour.
-fn held(
-    workspace: &Workspace,
-    index: usize,
-    island: &Island,
-    join_mm: f64,
-) -> (String, egui::Color32) {
-    match holder(workspace, index, island, join_mm) {
+fn held(workspace: &Workspace, index: usize, island: &Island) -> (String, egui::Color32) {
+    match holder(workspace, index, island) {
         Some(id) => (tr!("islands-held", support = id), theme::SUCCESS.color()),
         None => (tr!("islands-free"), theme::ERROR.color()),
     }
@@ -460,7 +447,7 @@ impl IslandsUi {
         }
         let dash = || "–".to_owned();
         let facts = island.zip(index).map(|(island, i)| {
-            let (state, colour) = held(workspace, i, &island, self.join_mm);
+            let (state, colour) = held(workspace, i, &island);
             (island, state, colour)
         });
         let mut add = false;
@@ -493,7 +480,7 @@ impl IslandsUi {
                 ui.label(egui::RichText::new(state).color(colour));
             });
             let free = facts.as_ref().is_some_and(|(island, _, _)| {
-                index.is_some_and(|i| holder(workspace, i, island, self.join_mm).is_none())
+                index.is_some_and(|i| holder(workspace, i, island).is_none())
             });
             let hint = if facts.as_ref().is_some_and(|f| f.0.inside) {
                 tr!("islands-support-here-cavity-hint")
@@ -615,24 +602,20 @@ impl IslandsUi {
                 Some(Icon::Info),
             );
         }
-        let free = islands
-            .iter()
-            .filter(|i| self.shows(i))
-            .filter(|i| holder(workspace, index, i, self.join_mm).is_none())
-            .count();
-        if free > 0 {
-            (
-                tr!("islands-state-free", count = free),
-                theme::WARNING.color(),
-                Some(Icon::Warning),
-            )
-        } else {
-            (
-                tr!("islands-state-held"),
-                theme::SUCCESS.color(),
-                Some(Icon::Success),
-            )
-        }
+        // What is said of the islands shown is never said of the hidden ones (TD-171).
+        let text = match self.free_counts(workspace, index, islands) {
+            [0, 0] => {
+                return (
+                    tr!("islands-state-held"),
+                    theme::SUCCESS.color(),
+                    Some(Icon::Success),
+                );
+            }
+            [0, hidden] => tr!("islands-state-held-shown", hidden = hidden),
+            [free, 0] => tr!("islands-state-free", count = free),
+            [free, hidden] => tr!("islands-state-free-hidden", count = free, hidden = hidden),
+        };
+        (text, theme::WARNING.color(), Some(Icon::Warning))
     }
 
     /// What the footer says of the islands' supports being planned: the surface or the plan
@@ -647,6 +630,18 @@ impl IslandsUi {
             return (text, theme::ACCENT.color(), Some(Icon::Info));
         };
         let skipped = outcome.skipped.len();
+        // A plan whose final check did not run says so (TD-171).
+        if outcome.unchecked.is_some() {
+            return (
+                tr!(
+                    "islands-plan-unchecked",
+                    count = outcome.supports.len(),
+                    islands = outcome.held
+                ),
+                theme::WARNING.color(),
+                Some(Icon::Warning),
+            );
+        }
         if skipped == 0 {
             (
                 tr!(
@@ -816,7 +811,7 @@ impl IslandsUi {
             .map_or((Vec::new(), true), |(i, c)| (i.to_vec(), c));
         let holders: Vec<Option<u64>> = islands
             .iter()
-            .map(|i| index.and_then(|o| holder(workspace, o, i, self.join_mm)))
+            .map(|i| index.and_then(|o| holder(workspace, o, i)))
             .collect();
         // The counts are of the islands shown; the summary says how many are hidden.
         let visible: Vec<usize> = (0..islands.len())
@@ -824,7 +819,7 @@ impl IslandsUi {
             .collect();
         let free = visible.iter().filter(|&&k| holders[k].is_none()).count();
         let inside = visible.iter().filter(|&&k| islands[k].inside).count();
-        let hidden = self.hidden_note(&islands);
+        let hidden = self.hidden_note(&islands, self.hidden_free(&islands, &holders));
         let items = self.shown(&islands, &holders);
         let reveal = std::mem::take(&mut self.reveal)
             .then_some(self.at)

@@ -274,7 +274,11 @@ the tip length.
   worked out at each build, so it follows its supports' values; with `max_diameter_mm` (owner,
   2026-11-06, TD-136), at most that (`Brace::radius_mm`). A brace with a `diameter_mm` of its
   own takes no `max_diameter_mm`; a document written before TD-136 has none, and its automatic
-  braces build as they did.
+  braces build as they did. A brace thicker than a shaft where it meets it narrows to that
+  shaft's diameter at that end, its end sphere no wider (TD-171): the brace is the hull of its
+  two end spheres. A wider sphere on a slanted shaft hangs its bottom outside the shaft, where
+  it starts in mid-air. An automatic brace, and a brace of its own no thicker than its shafts,
+  build as before.
 - **Planned braces** (`plan_braces`, the Braces tool's automatic braces): braces a document
   could add between neighbouring supports, or between the plan's chosen pair, from a plan
   (maximum distance in plan, lowest height above the floor, step, pattern and diameter, or none

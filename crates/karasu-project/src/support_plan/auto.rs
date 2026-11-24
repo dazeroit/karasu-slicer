@@ -4,9 +4,9 @@
 //! **What needs support** is the per-layer analysis's (TD-107): its islands, and with "Islands
 //! and overhangs" its overhangs too, found on the model sliced alone.
 //!
-//! **Islands** are supported as Support the islands supports them ([`super::islands`]):
-//! close ones share a support, a large one takes several. An island a support placed by hand
-//! already holds is left to it.
+//! **Islands** are supported as Support the islands supports them ([`super::islands`]): each
+//! takes a support of its own where it starts. An island a support placed by hand already holds
+//! is left to it, and counted apart (TD-171).
 //!
 //! **Overhangs.** Each region's footprint is probed on a grid half its tip spacing apart, a
 //! vertical line up from under the region to its first surface. A point is a candidate where
@@ -60,9 +60,9 @@ use super::{
     islands::{
         self, add_planned,
         check::{self, check_built, distance, held, Kept},
-        groups, grow, hold_every_start,
+        grow, hold_every_start,
         minis::{self, Minis},
-        Growing, Island, IslandSupports, Nudge, Outcome, Skip, Starts, Tip, PROBE_MM,
+        order, Growing, Island, IslandSupports, Nudge, Outcome, Skip, Starts, Tip, PROBE_MM,
     },
     route::RouteSurface,
     values::{NextSupport, SupportPreset, Weight},
@@ -194,8 +194,6 @@ pub struct AutoSupports {
     pub wide_from_mm2: f64,
     /// The closest they stand there, in percent of the spacing.
     pub wide_closest_pct: f64,
-    /// Islands closer than this share a support, in mm.
-    pub join_mm: f64,
     /// A support whose way down reaches no plate stands on the model below.
     pub feet_on_model: bool,
     /// Where a support finds no room or no way down, a mini support stands on the model below
@@ -263,7 +261,6 @@ pub const DEFAULT_AUTO_SUPPORTS: AutoSupports = AutoSupports {
     wide: true,
     wide_from_mm2: 20.0,
     wide_closest_pct: 60.0,
-    join_mm: 0.0,
     feet_on_model: true,
     minis: true,
     mini_density_pct: 100.0,
@@ -380,7 +377,6 @@ impl AutoSupports {
         IslandSupports {
             weight: self.weight,
             mine: self.mine,
-            join_mm: self.join_mm,
             skip_under_mm2: self.skip_under_mm2,
             foot_on_model: self.feet_on_model,
             minis: self.minis,
@@ -427,8 +423,11 @@ pub struct Left {
 pub struct AutoOutcome {
     /// The supports planned, as Support the islands plans them.
     pub plan: Outcome,
-    /// Islands held, and islands wanted (held by supports placed by hand excluded).
+    /// Islands held, and islands wanted: those [`Self::not_counted`] counts are not among
+    /// them.
     pub islands: [usize; 2],
+    /// The islands found that `islands` leaves out, and why (TD-171): the reports name them.
+    pub not_counted: NotCounted,
     /// Overhang points covered, and every overhang point: their share approximates the
     /// overhangs' area covered.
     pub overhangs: [usize; 2],
@@ -445,6 +444,26 @@ pub struct AutoOutcome {
     /// writes it to the document with that rule ([`with_planned`]). `None`: the document's own
     /// checks (the Grid mode's tips).
     pub clearance_mm: Option<f64>,
+}
+
+/// The islands found that a plan neither holds nor leaves unsupported (TD-171): each counted
+/// once, under the first of these that applies.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct NotCounted {
+    /// In the place the plan does not cover: the cavity, or outside it.
+    pub elsewhere: usize,
+    /// Smaller than the area Skip islands under leaves out.
+    pub smaller: usize,
+    /// Held by a support the plan keeps (placed by hand, or by another tool), by its tip.
+    pub kept: usize,
+}
+
+impl NotCounted {
+    /// Whether no island is left out.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
 }
 
 /// Everything a plan is made from.
@@ -746,11 +765,17 @@ impl AutoOutcome {
                 p
             }));
         self.plan.held += other.plan.held;
-        self.plan.joined += other.plan.joined;
         self.plan.branches += other.plan.branches;
         self.plan.skipped.extend(other.plan.skipped);
         self.plan.room_needed_mm = self.plan.room_needed_mm.max(other.plan.room_needed_mm);
         self.islands = [0, 1].map(|k| self.islands[k] + other.islands[k]);
+        // The two places cover every island: none is elsewhere.
+        self.not_counted = NotCounted {
+            elsewhere: 0,
+            smaller: self.not_counted.smaller + other.not_counted.smaller,
+            kept: self.not_counted.kept + other.not_counted.kept,
+        };
+        self.plan.unchecked = self.plan.unchecked.take().or(other.plan.unchecked);
         self.overhangs = [0, 1].map(|k| self.overhangs[k] + other.overhangs[k]);
         self.left.extend(other.left);
         self.left.sort_by(|a, b| a.point[2].total_cmp(&b.point[2]));
@@ -771,6 +796,9 @@ pub fn plan_tips(
     stop: &AtomicBool,
 ) -> AutoOutcome {
     let mut out = AutoOutcome::default();
+    if input.model.is_none() {
+        check::not_checked(&mut out.plan, islands::NO_MODEL.to_owned());
+    }
     let surface = input.surface.as_ref();
     let growing_values = IslandSupports {
         merge_mm: 0.0,
@@ -902,30 +930,35 @@ fn plan_with(
         ..growing
     };
     stage(0);
-    // The islands wanted, grouped as Support the islands groups them, each held where it starts
-    // as Support the islands holds it.
-    let islands: Vec<(usize, Island)> = input
-        .islands
-        .iter()
-        .filter(|island| {
-            island.area_mm2 >= values.skip_under_mm2
-                && values.place.holds(island.inside)
-                && !held(island, &input.kept_tips, values.join_mm)
-        })
-        .copied()
-        .enumerate()
-        .collect();
-    let island_groups = groups(&islands, values.join_mm);
+    // The islands wanted, each held where it starts as Support the islands holds it; those left
+    // out are counted, and said (TD-171).
+    let mut islands: Vec<(usize, Island)> = Vec::new();
+    for island in &input.islands {
+        let counted = &mut out.not_counted;
+        if !values.place.holds(island.inside) {
+            counted.elsewhere += 1;
+        } else if island.area_mm2 < values.skip_under_mm2 {
+            counted.smaller += 1;
+        } else if held(island, &input.kept_tips) {
+            counted.kept += 1;
+        } else {
+            islands.push((islands.len(), *island));
+        }
+    }
+    let island_order = order(&islands);
     let kept = Kept {
         document: input.document.as_ref(),
         to_model: &input.to_model,
     };
     let checking = input.model.as_ref().map(|model| (&kept, model));
+    if checking.is_none() {
+        check::not_checked(&mut out.plan, islands::NO_MODEL.to_owned());
+    }
     let mut why_at: Vec<([f64; 3], Skip)> = Vec::new();
-    let group_why = hold_every_start(
+    let island_why = hold_every_start(
         &Starts {
             islands: &islands,
-            groups: &island_groups,
+            order: &island_order,
             surface,
             mesh,
             growing: &growing,
@@ -1075,7 +1108,9 @@ fn plan_with(
     // The mini pass (TD-167): mini supports at the islands and candidates the standard supports
     // left, the candidates as far apart as the mini density asks; then they stand on one
     // another, and are checked.
-    let mut thinned: Vec<[f64; 3]> = Vec::new();
+    // The side tips thinned away by the mini supports, by their places, with the reach that
+    // thinned them: counted again once the final check has removed what it removes.
+    let mut thinned: Vec<(usize, f64)> = Vec::new();
     if values.minis && !stop.load(Ordering::Relaxed) {
         let with_minis = Growing {
             values: &growing_values,
@@ -1087,18 +1122,21 @@ fn plan_with(
         let mut near = tips_now(&out.plan.supports);
         // The candidates in the order the plan takes them, then the side tips, half their reach
         // apart as they were placed.
-        let wanted = all
-            .iter()
-            .map(|c| (c, c.reach * scale, false))
-            .chain(sides.iter().map(|&c| (c, c.reach / 2.0 * scale, true)));
+        let wanted = all.iter().map(|c| (c, c.reach * scale, None)).chain(
+            sides
+                .iter()
+                .enumerate()
+                .map(|(k, &c)| (c, c.reach / 2.0 * scale, Some(k))),
+        );
         for (c, reach, side) in wanted {
             if stop.load(Ordering::Relaxed) {
                 break;
             }
             if near.within(c.tip.0, reach) {
-                // A side tip thinned away counts as held, as a candidate within reach does.
-                if side {
-                    thinned.push(c.tip.0);
+                // A side tip thinned away counts as held while a tip stays within that reach,
+                // as a candidate within reach does.
+                if let Some(k) = side {
+                    thinned.push((k, reach));
                 }
                 continue;
             }
@@ -1129,7 +1167,7 @@ fn plan_with(
         .collect();
     let mut held_now = 0;
     for (m, (_, island)) in islands.iter().enumerate() {
-        if held(island, &final_tips, values.join_mm) {
+        if held(island, &final_tips) {
             held_now += 1;
         } else {
             let [[x0, y0], [x1, y1]] = island.footprint;
@@ -1137,15 +1175,21 @@ fn plan_with(
                 point: island.point,
                 bounds: [[x0, y0, island.heights[0]], [x1, y1, island.heights[1]]],
                 island: true,
-                why: check::why_near(&why_at, island.point).unwrap_or(group_why[m]),
+                why: check::why_near(&why_at, island.point).unwrap_or(island_why[m]),
             });
         }
     }
     out.islands = [held_now, islands.len()];
-    for point in sides.iter().map(|c| c.tip.0) {
-        let held_here =
-            |tips: &[[f64; 3]]| tips.iter().any(|&tip| distance(tip, point) <= SIDE_HELD_MM);
-        if !held_here(&final_tips) && !held_here(&thinned) {
+    // After the final check: a side tip thinned away by a mini support it removed is not held.
+    let kept = tips_now(&out.plan.supports);
+    for (k, point) in sides.iter().map(|c| c.tip.0).enumerate() {
+        let held_here = final_tips
+            .iter()
+            .any(|&tip| distance(tip, point) <= SIDE_HELD_MM);
+        let thinned_here = thinned
+            .iter()
+            .any(|&(side, reach)| side == k && kept.within(point, reach));
+        if !held_here && !thinned_here {
             out.left.push(Left {
                 point,
                 bounds: [point, point],
@@ -1154,7 +1198,6 @@ fn plan_with(
             });
         }
     }
-    let kept = tips_now(&out.plan.supports);
     let uncovered: Vec<&Candidate> = all
         .iter()
         .filter(|c| !kept.within(c.tip.0, c.reach * values.mini_scale()))

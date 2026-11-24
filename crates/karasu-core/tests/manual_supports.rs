@@ -252,6 +252,82 @@ fn feet_on_the_model_on_supports_and_inside_cavities() {
 }
 
 #[test]
+fn a_brace_thicker_than_its_shafts_narrows_to_them_at_its_ends() {
+    // TD-171: two Medium supports (1 mm shafts) slanted about 37° from vertical, braced with an
+    // own diameter of 2 mm. A 1 mm end ball on the slanted shaft would hang its bottom 0.6 mm
+    // from the shaft's axis, outside its 0.5 mm radius, where it starts in mid-air.
+    let mesh = boxes(&[([0.0, 0.0, 15.0], [20.0, 20.0, 20.0], false)]);
+    let doc = document(
+        r#""supports":[
+            {"id":1,"tip":{"point":[4,10,15]},"bends":[[4,10,12],[7,10,8]],"base":{"vertical":true}},
+            {"id":2,"tip":{"point":[12,10,15]},"bends":[[12,10,12],[15,10,8]],"base":{"vertical":true}}
+        ],
+        "braces":[{"id":9,"from":{"support":1,"z_mm":9.5},"to":{"support":2,"z_mm":11},"diameter_mm":2}]"#,
+    );
+    let scene = build(&doc, &mesh, None, &[]);
+    assert!(!scene.has_errors(), "{:?}", scene.findings());
+    assert_eq!(scene.braces(), 1);
+    let vertices = scene.mesh().vertices();
+    let triangles = scene.mesh().triangles();
+    let brace: Vec<[f64; 3]> = scene
+        .part_ranges()
+        .iter()
+        .filter(|r| r.entity == 9 && r.part == SupportPart::Brace)
+        .flat_map(|r| triangles[r.triangles.clone()].iter())
+        .flat_map(|t| t.iter().map(|&v| vertices[v as usize]))
+        .map(|p| [p.x, p.y, p.z])
+        .collect();
+    assert_ne!(brace.len(), 0);
+    // Its lowest point lies in the lower shaft: within the shaft's radius of its axis.
+    let lowest = brace
+        .iter()
+        .copied()
+        .min_by(|a, b| a[2].total_cmp(&b[2]))
+        .unwrap();
+    let axis = scene.shaft_path(1).unwrap();
+    let from_axis = axis
+        .windows(2)
+        .map(|w| point_segment(lowest, w[0], w[1]))
+        .fold(f64::INFINITY, f64::min);
+    let radius = scene.shaft_diameter(1, lowest[2]).unwrap() / 2.0;
+    assert!(from_axis <= radius + 1e-9, "{from_axis} > {radius}");
+    // At each end, the brace is no wider than the shaft there.
+    for (id, z) in [(1, 9.5), (2, 11.0)] {
+        let end = scene.shaft_point(id, z).unwrap();
+        let shaft = scene.shaft_diameter(id, z).unwrap() / 2.0;
+        let nearest_end = |p: &[f64; 3]| {
+            let other = if id == 1 { (2, 11.0) } else { (1, 9.5) };
+            let far = scene.shaft_point(other.0, other.1).unwrap();
+            distance(*p, end) < distance(*p, far)
+        };
+        let widest = brace
+            .iter()
+            .filter(|p| nearest_end(p))
+            .map(|&p| distance(p, end))
+            .fold(0.0, f64::max);
+        assert!(widest <= shaft + 1e-9, "support {id}: {widest} > {shaft}");
+    }
+}
+
+/// The distance from `p` to the segment from `a` to `b`.
+fn point_segment(p: [f64; 3], a: [f64; 3], b: [f64; 3]) -> f64 {
+    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let ap = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
+    let length = ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2];
+    let t = if length > 0.0 {
+        ((ap[0] * ab[0] + ap[1] * ab[1] + ap[2] * ab[2]) / length).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    distance(p, [a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t])
+}
+
+/// The distance between `a` and `b`.
+fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+}
+
+#[test]
 fn rafts_drain_holes_and_the_build_volume() {
     let mesh = boxes(&[([0.0, 0.0, 8.0], [20.0, 20.0, 13.0], false)]);
     let doc = document(
