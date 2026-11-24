@@ -384,9 +384,12 @@ impl GridUi {
         let done = self.planned.as_ref().is_some_and(|p| current(&p.key));
         if let (Some(key), false, false) = (wanted.clone(), busy, done) {
             self.job = None;
+            // The surface for routes, and the model prepared as it stands, drain holes
+            // included, for the final check (TD-171).
             if supports
                 .route_surface(workspace, preparation, key.pick.object)
                 .is_none()
+                || check::model_pending(workspace, preparation, key.pick.object)
             {
                 return true;
             }

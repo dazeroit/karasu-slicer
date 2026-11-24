@@ -111,7 +111,7 @@ fn islands_are_found_supported_here_and_held_by_their_support() {
     assert!((island.point[2] - 6.0).abs() < 0.2, "{island:?}");
     assert!(!island.inside);
     assert!(island.area_mm2 > 50.0, "{island:?}");
-    assert_eq!(holder(&workspace, 0, &island, 0.0), None);
+    assert_eq!(holder(&workspace, 0, &island), None);
     let messages = ui.take_messages();
     assert_eq!(messages.len(), 1);
     // Supported here: one support where it starts, under its first layer's centroid, added as
@@ -138,7 +138,7 @@ fn islands_are_found_supported_here_and_held_by_their_support() {
     assert!(added
         .iter()
         .all(|s| s.base == BaseSpec::Vertical && s.bends.is_empty()));
-    assert!(holder(&workspace, 0, &island, 0.0).is_some());
+    assert!(holder(&workspace, 0, &island).is_some());
     let (_, current) = ui.found(&workspace, Some(0)).unwrap();
     assert!(!current);
     assert_eq!(ui.take_messages().len(), 1);
@@ -162,7 +162,7 @@ fn islands_are_found_supported_here_and_held_by_their_support() {
     for _ in 0..3 {
         workspace.undo();
     }
-    assert_eq!(holder(&workspace, 0, &island, 0.0), None);
+    assert_eq!(holder(&workspace, 0, &island), None);
     // Support the islands: one support, previewed, added on Apply.
     planned(
         &mut ui,
@@ -212,13 +212,13 @@ fn a_support_holds_an_island_when_its_tip_is_within_its_footprint() {
         ],
         ..island
     };
-    assert_eq!(holder(&workspace, 0, &moved, 0.0), None);
+    assert_eq!(holder(&workspace, 0, &moved), None);
     let mut supports = SupportsUi::new();
     supports.toggle_placing();
     let under = crate::supports_ui::tests::ray(centre[0], centre[1], true);
     let hit = workspace.hit(&under);
     assert!(supports.click(&mut workspace, &under, hit, 0));
-    assert!(holder(&workspace, 0, &moved, 0.0).is_some());
+    assert!(holder(&workspace, 0, &moved).is_some());
     // Elsewhere on the plate, it holds nothing.
     let far = Island {
         footprint: [
@@ -227,7 +227,7 @@ fn a_support_holds_an_island_when_its_tip_is_within_its_footprint() {
         ],
         ..island
     };
-    assert_eq!(holder(&workspace, 0, &far, 0.0), None);
+    assert_eq!(holder(&workspace, 0, &far), None);
     let _ = std::fs::remove_dir_all(directory);
 }
 
@@ -386,12 +386,11 @@ fn a_local_model_s_islands_are_found_and_supported() {
         println!("{weight:?}: {on_plate} supports stand on the plate or the model");
         let why = |skip: plan::Skip| outcome.skipped.iter().filter(|(_, w)| *w == skip).count();
         println!(
-            "{weight:?}: {} supports ({} branches) for {} islands ({} joined) planned in \
-             {:.2} s; skipped: {} out of reach, {} no way, {} no surface, {} unbuildable",
+            "{weight:?}: {} supports ({} branches) for {} islands planned in {:.2} s; \
+             skipped: {} out of reach, {} no way, {} no surface, {} unbuildable",
             outcome.supports.len(),
             outcome.branches,
             outcome.held,
-            outcome.joined,
             took.as_secs_f64(),
             why(plan::Skip::OutOfReach),
             why(plan::Skip::NoWay),
@@ -418,6 +417,7 @@ fn stepping_out_of_the_cavity_turns_off_the_view_stepping_turned_on() {
         object: 0,
         revision: workspace.revision(),
         islands: vec![island(false), island(true), island(false)],
+        serial: 1,
     });
     // In the cavity: the view turns on; outside again: it turns off.
     ui.go_to(&workspace, 0, 1, &mut supports);
@@ -453,16 +453,26 @@ fn islands_hidden_as_too_small_leave_the_list_and_its_counts_and_are_said() {
     let holders = [None; 4];
     // Nothing hidden by default.
     assert_eq!(ui.shown(&islands, &holders), vec![0, 1, 2, 3]);
-    assert_eq!(ui.hidden_note(&islands), None);
+    assert_eq!(ui.hidden_note(&islands, 0), None);
     // Under 0.01 mm²: the two smaller are left out and said; one of 0.01 stays.
     ui.hide_under_mm2 = 0.01;
     assert_eq!(ui.shown(&islands, &holders), vec![1, 3]);
     assert_eq!(
-        ui.hidden_note(&islands),
+        ui.hidden_note(&islands, 0),
         Some(crate::i18n::tr!(
             "islands-hidden",
             count = 2_usize,
             area = "0.01"
+        ))
+    );
+    // Hidden islands without a support are said too (TD-171).
+    assert_eq!(
+        ui.hidden_note(&islands, 2),
+        Some(crate::i18n::tr!(
+            "islands-hidden-free",
+            count = 2_usize,
+            area = "0.01",
+            free = 2_usize
         ))
     );
     ui.hide_under_mm2 = 5.0;
@@ -726,7 +736,7 @@ fn a_local_model_s_first_island_is_supported_here() {
         .min_by(|a, b| a.0.total_cmp(&b.0));
     println!(
         "nearest tip to where it starts: {nearest:?}; held: {:?}",
-        holder(&workspace, 0, &first, 0.0)
+        holder(&workspace, 0, &first)
     );
 }
 

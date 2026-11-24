@@ -4,8 +4,9 @@
 //!
 //! **Where** (owner, 2026-10-30: one support, where the island starts; there the resin cures in
 //! mid-air). An island is where one piece starts in mid-air ([`Island`]).
-//! Islands closer than the join distance (in plan and in height) share one support, under the
-//! lowest of them. Its tip goes under the centroid of the island's first layer, where a vertical
+//! Each island takes a support of its own, lowest first; islands no longer share one across a
+//! join distance (TD-171: a support beside an island does not hold it). Its tip goes under the
+//! centroid of the island's first layer, where a vertical
 //! line up from just under it first meets the surface facing down; when that is refused (no way
 //! down, or the final check), the next points of that first layer are tried, nearest first, a
 //! few at most. A hollowed model's cavity triangle there means the island starts on the cavity's
@@ -105,6 +106,8 @@ const RETRY_APART_MM: f64 = 2.0;
 /// those refused: the island's first layer often lies all within 2 mm of the wall, and a place
 /// a little farther from it has room.
 const CROWDED_APART_MM: f64 = APART_MM;
+/// Why the final check did not run when the plan was given no model to build against.
+pub(crate) const NO_MODEL: &str = "the model was not given to build the supports against";
 /// The places kept for an island's support, and how many are tried at most.
 const CANDIDATES: usize = 96;
 const ATTEMPTS: usize = 6;
@@ -117,8 +120,6 @@ const NUDGE_RISE_MM: f64 = 0.5;
 /// ... facing down, turned from the tip's surface by no more than an outline's turn, in degrees
 /// (TD-136).
 const NUDGE_TURN_DEG: f64 = 30.0;
-/// The distance under which islands share a support the panel accepts, in mm.
-pub const JOIN_MM: std::ops::RangeInclusive<f64> = 0.0..=20.0;
 /// The smallest islands' areas Support the islands can leave out, in mm².
 pub const SKIP_UNDER_MM2: std::ops::RangeInclusive<f64> = 0.0..=100.0;
 /// The distance under which tips share a trunk the panel accepts, in mm; zero, no branches.
@@ -149,8 +150,6 @@ pub struct IslandSupports {
     pub weight: Weight,
     /// The user's preset chosen, by its place in the list.
     pub mine: Option<usize>,
-    /// Islands closer than this share a support, in mm.
-    pub join_mm: f64,
     /// Support the islands leaves out islands smaller than this, in mm².
     pub skip_under_mm2: f64,
     /// A support whose way down reaches no plate stands on the model below.
@@ -185,7 +184,6 @@ pub struct IslandSupports {
 pub const DEFAULT_ISLAND_SUPPORTS: IslandSupports = IslandSupports {
     weight: Weight::Light,
     mine: None,
-    join_mm: 0.0,
     skip_under_mm2: 0.0,
     foot_on_model: true,
     minis: true,
@@ -211,8 +209,7 @@ impl IslandSupports {
     /// These values if every one is in its range, else the built-in ones.
     #[must_use]
     pub fn valid(self) -> Self {
-        if JOIN_MM.contains(&self.join_mm)
-            && SKIP_UNDER_MM2.contains(&self.skip_under_mm2)
+        if SKIP_UNDER_MM2.contains(&self.skip_under_mm2)
             && BRANCH_MM.contains(&self.branch_mm)
             && PER_TRUNK.contains(&f64::from(self.per_trunk))
             && MERGE_MM.contains(&self.merge_mm)
@@ -323,16 +320,14 @@ pub struct Planned {
     pub joins: Option<(usize, f64)>,
 }
 
-/// A plan: the supports kept, the islands they hold (joined ones included), how many supports
-/// join another (branches and merged trunks), and the islands skipped with why.
+/// A plan: the supports kept, the islands they hold, how many supports join another (branches
+/// and merged trunks), and the islands skipped with why.
 #[derive(Default)]
 pub struct Outcome {
     /// The supports kept, trunks before the branches that name them by their place.
     pub supports: Vec<Planned>,
-    /// The islands they hold, joined ones included.
+    /// The islands they hold.
     pub held: usize,
-    /// The islands held by another island's support.
-    pub joined: usize,
     /// The supports joining another: branches and merged trunks.
     pub branches: usize,
     /// The islands skipped, by their places in the search, with why.
@@ -342,6 +337,9 @@ pub struct Outcome {
     pub room_needed_mm: f64,
     /// Where supports stand: the raft's top, or the plate, in mm.
     pub floor_mm: f64,
+    /// Why the final check did not run, when it did not (TD-171): its supports are then not
+    /// checked as a slice builds them. `None` when it ran, or when the plan was stopped.
+    pub unchecked: Option<String>,
 }
 
 /// A tip under an island: its point, its outward normal, and whether it lies on a cavity
@@ -361,7 +359,7 @@ pub fn start_tips(surface: &RouteSurface, mesh: &TriangleMesh, island: &Island) 
                 .grid()
                 .first_above(mesh, [x, y, under - 1e-3], top + PROBE_MM)?;
         // Its underside where it starts: facing down, holding it.
-        (normal[2] < 0.0 && check::holds(island, point, 0.0)).then_some((
+        (normal[2] < 0.0 && check::holds(island, point)).then_some((
             point,
             normal,
             surface.is_cavity(t),
@@ -393,10 +391,9 @@ pub fn start_tips(surface: &RouteSurface, mesh: &TriangleMesh, island: &Island) 
     found
 }
 
-/// The islands among `islands` (their places with them) that share a support: groups of those
-/// closer than `join` in plan and in height, directly or through others, each led by its
-/// lowest.
-pub(crate) fn groups(islands: &[(usize, Island)], join: f64) -> Vec<Vec<usize>> {
+/// The order `islands` (their places with them) are held in: lowest first, ties by plan
+/// position. Each island takes a support of its own (TD-171).
+pub(crate) fn order(islands: &[(usize, Island)]) -> Vec<usize> {
     let mut order: Vec<usize> = (0..islands.len()).collect();
     order.sort_by(|&a, &b| {
         let (p, q) = (islands[a].1.point, islands[b].1.point);
@@ -404,21 +401,7 @@ pub(crate) fn groups(islands: &[(usize, Island)], join: f64) -> Vec<Vec<usize>> 
             .then(p[0].total_cmp(&q[0]))
             .then(p[1].total_cmp(&q[1]))
     });
-    let mut out: Vec<Vec<usize>> = Vec::new();
-    for &k in &order {
-        let p = islands[k].1.point;
-        let near = out.iter().position(|group| {
-            group.iter().any(|&m| {
-                let q = islands[m].1.point;
-                plan_length(p[0] - q[0], p[1] - q[1]) <= join && (p[2] - q[2]).abs() <= join
-            })
-        });
-        match near.filter(|_| join > 0.0) {
-            Some(g) => out[g].push(k),
-            None => out.push(vec![k]),
-        }
-    }
-    out
+    order
 }
 
 /// The tips of `tasks` (by their places) that share a trunk: each tip not yet taken, in order,
@@ -749,12 +732,15 @@ pub fn plan(
     };
     let kept = checked.map(|(model, to_model)| (check::Kept { document, to_model }, model));
     let checking = kept.as_ref().map(|(kept, model)| (kept, *model));
+    if checking.is_none() {
+        check::not_checked(&mut outcome, NO_MODEL.to_owned());
+    }
     let mut why_at = Vec::new();
-    let groups = groups(islands, values.join_mm);
+    let order = order(islands);
     let why = hold_every_start(
         &Starts {
             islands,
-            groups: &groups,
+            order: &order,
             surface,
             mesh,
             growing: &growing,
@@ -778,46 +764,41 @@ pub fn plan(
             check::check_built(kept, model, &mut outcome, &with_minis, &mut why_at, stop);
         }
     }
-    tally(
-        &mut outcome,
-        values.join_mm,
-        islands,
-        &groups,
-        &why,
-        &why_at,
-    );
+    tally(&mut outcome, islands, &order, &why, &why_at);
     outcome
 }
 
-/// What [`hold_starts`] holds: the islands (their places in the search with them), grouped as
-/// they share supports, on `surface` (its `mesh`), grown with `growing`, and checked with
-/// `checking` (the kept supports and the model) when given.
+/// What [`hold_starts`] holds: the islands (their places in the search with them), in the order
+/// they are held (by their places in `islands`), on `surface` (its `mesh`), grown with
+/// `growing`, and checked with `checking` (the kept supports and the model) when given.
 pub(crate) struct Starts<'a> {
     pub islands: &'a [(usize, Island)],
-    pub groups: &'a [Vec<usize>],
+    pub order: &'a [usize],
     pub surface: &'a RouteSurface,
     pub mesh: &'a TriangleMesh,
     pub growing: &'a Growing<'a>,
     pub checking: Option<(&'a check::Kept<'a>, &'a check::ModelInput)>,
 }
 
-/// One support for each group of `starts`, where its lowest island starts: the first place
+/// One support for each island of `starts`, in their order, where it starts: the first place
 /// [`start_tips`] gives, then, while it is refused (no way down, or the final check), the next
 /// at least [`RETRY_APART_MM`] from every one refused ([`CROWDED_APART_MM`] after a crowded
 /// tip), [`ATTEMPTS`] at most. The supports are added to `outcome`; what the final check
-/// refused leaves why in `why_at`. Returns each group's last refusal (unused for a group held).
+/// refused leaves why in `why_at`. Returns each island's last refusal, in their order (unused
+/// for one held).
 pub(crate) fn hold_starts(
     starts: &Starts<'_>,
     outcome: &mut Outcome,
     why_at: &mut Vec<([f64; 3], Skip)>,
     stop: &AtomicBool,
 ) -> Vec<Skip> {
-    let lead = |g: usize| &starts.islands[starts.groups[g][0]].1;
-    let places: Vec<Vec<Tip>> = (0..starts.groups.len())
+    let count = starts.order.len();
+    let lead = |g: usize| &starts.islands[starts.order[g]].1;
+    let places: Vec<Vec<Tip>> = (0..count)
         .map(|g| start_tips(starts.surface, starts.mesh, lead(g)))
         .collect();
-    let mut why = vec![Skip::NoSurface; starts.groups.len()];
-    let mut tried: Vec<Vec<[f64; 3]>> = vec![Vec::new(); starts.groups.len()];
+    let mut why = vec![Skip::NoSurface; count];
+    let mut tried: Vec<Vec<[f64; 3]>> = vec![Vec::new(); count];
     for _ in 0..ATTEMPTS {
         if stop.load(Ordering::Relaxed) {
             break;
@@ -827,8 +808,8 @@ pub(crate) fn hold_starts(
             .iter()
             .map(|p| p.routed.support.tip_mm)
             .collect();
-        let tasks: Vec<(usize, Tip)> = (0..starts.groups.len())
-            .filter(|&g| !check::held(lead(g), &tips, starts.growing.values.join_mm))
+        let tasks: Vec<(usize, Tip)> = (0..count)
+            .filter(|&g| !check::held(lead(g), &tips))
             .filter_map(|g| {
                 let apart = if why[g] == Skip::Crowded {
                     CROWDED_APART_MM
@@ -847,7 +828,7 @@ pub(crate) fn hold_starts(
         for &(g, (tip, _, _)) in &tasks {
             tried[g].push(tip);
         }
-        let grove = grow(&tasks, starts.groups.len(), starts.growing, stop);
+        let grove = grow(&tasks, count, starts.growing, stop);
         for &(g, _) in &tasks {
             if grove.kept[g] == 0 {
                 why[g] = grove.why[g];
@@ -873,45 +854,41 @@ pub(crate) fn hold_starts(
     why
 }
 
-/// One support where each of `starts`' islands starts: their groups first, as [`hold_starts`]
-/// holds them, then each island its group's support leaves (a chain of islands joined across
-/// the join distance) on a support of its own. Returns each island's last refusal, by its
-/// place (unused for one held).
+/// One support where each of `starts`' islands starts, as [`hold_starts`] holds them; then a
+/// second round for the islands still not held, by their places, each tried again from its
+/// first place among the supports the first round grew. Returns each island's last refusal, by
+/// its place (unused for one held).
 pub(crate) fn hold_every_start(
     starts: &Starts<'_>,
     outcome: &mut Outcome,
     why_at: &mut Vec<([f64; 3], Skip)>,
     stop: &AtomicBool,
 ) -> Vec<Skip> {
-    let join = starts.growing.values.join_mm;
     let mut why = vec![Skip::NoSurface; starts.islands.len()];
     let refused = hold_starts(starts, outcome, why_at, stop);
-    for (members, refused) in starts.groups.iter().zip(&refused) {
-        for &m in members {
-            why[m] = *refused;
-        }
+    for (&m, refused) in starts.order.iter().zip(&refused) {
+        why[m] = *refused;
     }
     let tips: Vec<[f64; 3]> = outcome
         .supports
         .iter()
         .map(|p| p.routed.support.tip_mm)
         .collect();
-    let left: Vec<Vec<usize>> = (0..starts.islands.len())
-        .filter(|&m| !check::held(&starts.islands[m].1, &tips, join))
-        .map(|m| vec![m])
+    let left: Vec<usize> = (0..starts.islands.len())
+        .filter(|&m| !check::held(&starts.islands[m].1, &tips))
         .collect();
     if !left.is_empty() {
-        let alone = hold_starts(
+        let again = hold_starts(
             &Starts {
-                groups: &left,
+                order: &left,
                 ..*starts
             },
             outcome,
             why_at,
             stop,
         );
-        for (members, refused) in left.iter().zip(alone) {
-            why[members[0]] = refused;
+        for (&m, refused) in left.iter().zip(again) {
+            why[m] = refused;
         }
     }
     why
@@ -919,12 +896,11 @@ pub(crate) fn hold_every_start(
 
 /// Tell `outcome`'s islands held, by the supports it holds, where they start: an island not
 /// held is skipped with why (the final check's near where it starts, else its last refusal in
-/// `why`, by its place).
+/// `why`, by its place), in the `order` they were held in.
 fn tally(
     outcome: &mut Outcome,
-    join_mm: f64,
     islands: &[(usize, Island)],
-    groups: &[Vec<usize>],
+    order: &[usize],
     why: &[Skip],
     why_at: &[([f64; 3], Skip)],
 ) {
@@ -933,24 +909,18 @@ fn tally(
         .iter()
         .map(|p| p.routed.support.tip_mm)
         .collect();
-    let (mut held, mut held_groups) = (0, 0);
+    let mut held = 0;
     outcome.skipped.clear();
-    for members in groups {
-        let mut any = false;
-        for &m in members {
-            let island = &islands[m].1;
-            if check::held(island, &tips, join_mm) {
-                held += 1;
-                any = true;
-            } else {
-                let because = check::why_near(why_at, island.point).unwrap_or(why[m]);
-                outcome.skipped.push((islands[m].0, because));
-            }
+    for &m in order {
+        let island = &islands[m].1;
+        if check::held(island, &tips) {
+            held += 1;
+        } else {
+            let because = check::why_near(why_at, island.point).unwrap_or(why[m]);
+            outcome.skipped.push((islands[m].0, because));
         }
-        held_groups += usize::from(any);
     }
     outcome.held = held;
-    outcome.joined = held.saturating_sub(held_groups);
 }
 
 /// What supports are grown with: the surface for routes, the supports' values and the
@@ -1239,7 +1209,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn islands_closer_than_the_join_distance_share_a_support_under_the_lowest() {
+    fn islands_are_held_lowest_first_each_on_its_own() {
         let island = |x: f64, z: f64| {
             (
                 0,
@@ -1259,11 +1229,9 @@ mod tests {
             island(1.5, 5.0),
             island(9.0, 5.0),
         ];
-        // 0.6 mm apart: one group, led by the lower; 1.5 is within 1 mm of 0.6, so it joins too.
-        let found = groups(&islands, 1.0);
-        assert_eq!(found, [vec![1, 0, 2], vec![3]]);
-        // No joining: every island its own.
-        assert_eq!(groups(&islands, 0.0).len(), 4);
+        // Lowest first, ties by plan position; islands close together no longer share one
+        // support (TD-171).
+        assert_eq!(order(&islands), [1, 0, 2, 3]);
     }
 
     #[test]
@@ -1278,17 +1246,15 @@ mod tests {
             footprint: [[0.0, 0.0], [1.0, 1.0]],
             inside: false,
         };
-        let holds = |tip: [f64; 3], join: f64| check::holds(&island, tip, join);
+        let holds = |tip: [f64; 3]| check::holds(&island, tip);
         // On its first layer's underside.
-        assert!(holds([0.5, 0.5, 5.03], 0.0));
-        assert!(holds([0.9, 0.1, 5.0], 0.0));
-        // Beside it, at the same height, or above where it starts: not held.
-        assert!(!holds([1.3, 0.5, 5.03], 0.0));
-        assert!(!holds([0.5, 0.5, 5.5], 0.0));
-        assert!(!holds([0.5, 0.5, 4.9], 0.0));
-        // Islands sharing a support within a join distance: beside and above by as much.
-        assert!(holds([1.3, 0.5, 5.03], 0.5));
-        assert!(holds([0.5, 0.5, 5.5], 0.5));
-        assert!(!holds([1.6, 0.5, 5.03], 0.5));
+        assert!(holds([0.5, 0.5, 5.03]));
+        assert!(holds([0.9, 0.1, 5.0]));
+        // Beside it, at the same height, or above where it starts: not held, however close
+        // (no join distance, TD-171).
+        assert!(!holds([1.3, 0.5, 5.03]));
+        assert!(!holds([1.001, 0.5, 5.03]));
+        assert!(!holds([0.5, 0.5, 5.5]));
+        assert!(!holds([0.5, 0.5, 4.9]));
     }
 }

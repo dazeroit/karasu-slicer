@@ -316,6 +316,12 @@ model import → optional topology gate → explicit placement → uniform layer
     beside its contacts: its rod 0.05 mm from it, its balls no deeper than their penetration
     (TD-170).
     `--overhang-angle <deg>` is the critical angle, as for `--unsupported`.
+  - **What the summary says** (TD-171): `Automatic supports held: islands N of M` counts the
+    islands the plan covers. Those it leaves out are said on a line of their own, only when
+    there are any: `Automatic supports islands not counted: 2 in the cavity, 1 smaller than
+    0.5 mm^2, 3 held by given supports`. When the final check cannot build the supports at
+    all, `Automatic supports final check: not run: <why>` says so; its supports are then not
+    checked as the slice builds them.
   - `--auto-settings <file.json>` reads the whole value set, with `--auto-supports` or
     `--auto-braces`:
     - the application's own `settings.json`, recognised by its `schema_version`: the values of
@@ -332,7 +338,9 @@ model import → optional topology gate → explicit placement → uniform layer
       `auto_cavity_preset`, the `brace_*` values and `overhang_angle_deg`. An unknown key, a
       value out of its range or a preset name that names none is refused, and so is
       `"brace_pattern": "horizontal"`, no longer offered (TD-168); the application's
-      `settings.json` holding it reads as `"zigzag"`, as the application reads it.
+      `settings.json` holding it reads as `"zigzag"`, as the application reads it. The join
+      distance is retired (TD-171): `"join_mm": 0` is still read, any other value is refused,
+      and the application's `settings.json` holding one is read without it.
     The value options given beside it win over it.
   - **Given supports:** supports given with `--supports` (world coordinates at the job's
     placement, which `--auto-supports` lifts) are kept exactly as given, and the plan holds what

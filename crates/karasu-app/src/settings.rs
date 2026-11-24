@@ -12,9 +12,9 @@
 //! with the settings it lacks at their defaults.
 //!
 //! **Migrations.** A file of an earlier schema is brought up to date as it is read, and saved at
-//! the current one: schema 2 (2026-10-30) turns the islands' join distance from the old default,
-//! 1 mm, to the new one, none (owner: each island its own support where it starts); a distance
-//! the user set otherwise stays. Schema 3 (2026-11-02) gives the hollowing blockers' colours
+//! the current one: schema 2 (2026-10-30) turned the islands' join distance from the old
+//! default, 1 mm, to none; the join distance is gone since TD-171 (2026-11-24): a saved one is
+//! not read, so every island takes its own support where it starts. Schema 3 (2026-11-02) gives the hollowing blockers' colours
 //! still at their first defaults the new, more visible ones; colours the user chose stay.
 //! Schema 4 (2026-11-06, TD-136) turns the Automatic tool's Light preset and its braces on, its
 //! first defaults, to Medium and off, and the new braces' diameter still at 0.8 mm to 1.0 mm: a
@@ -45,8 +45,6 @@ const OLD_BLOCKER_SELECTED: [u8; 4] = [0xF5, 0xF4, 0xF8, 0x60];
 pub use karasu_project::support_plan::settings::{
     DEFAULT_OVERHANG_ANGLE_DEG, OVERHANG_ANGLE_RANGE,
 };
-// The islands' join distance's default before schema 2, in mm.
-use karasu_project::support_plan::settings::OLD_JOIN_MM;
 
 /// Every setting the user keeps.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -467,8 +465,6 @@ pub struct ToolSettings {
     /// Islands: the user's preset the islands' supports start from, by name (a default); `None`
     /// starts from `island_weight`.
     pub island_preset: Option<String>,
-    /// Islands: islands closer than this share a support, in mm (a default).
-    pub island_join_mm: f64,
     /// Islands: Support the islands leaves out islands smaller than this, in mm² (a default).
     pub island_skip_under_mm2: f64,
     /// Islands: a support with no way down to the plate stands on the model (a default).
@@ -626,7 +622,6 @@ impl ToolSettings {
             island_supports: crate::islands_ui::plan::IslandSupports {
                 weight: self.island_weight,
                 mine: None,
-                join_mm: self.island_join_mm,
                 skip_under_mm2: self.island_skip_under_mm2,
                 foot_on_model: self.island_foot_on_model,
                 minis: self.island_minis,
@@ -691,7 +686,6 @@ impl ToolSettings {
         self.raft_bar_height_mm = defaults.raft.bars.height_mm;
         self.raft_bar_longest_mm = defaults.raft.bars.longest_mm;
         self.island_weight = defaults.island_supports.weight;
-        self.island_join_mm = defaults.island_supports.join_mm;
         self.island_skip_under_mm2 = defaults.island_supports.skip_under_mm2;
         self.island_foot_on_model = defaults.island_supports.foot_on_model;
         self.island_minis = defaults.island_supports.minis;
@@ -790,7 +784,6 @@ impl Default for ToolSettings {
             grid_preset: None,
             island_weight: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.weight,
             island_preset: None,
-            island_join_mm: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.join_mm,
             island_skip_under_mm2: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.skip_under_mm2,
             island_foot_on_model: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.foot_on_model,
             island_minis: crate::islands_ui::plan::DEFAULT_ISLAND_SUPPORTS.minis,
@@ -956,15 +949,6 @@ impl Store {
 /// `settings`, read from a file of schema `schema`, brought up to the current one (see the
 /// module).
 fn migrated(mut settings: Settings, schema: u32) -> Settings {
-    if schema < 2 {
-        #[allow(clippy::float_cmp)] // The old default, exactly as it was saved.
-        let old = |join: &mut f64| {
-            if *join == OLD_JOIN_MM {
-                *join = 0.0;
-            }
-        };
-        old(&mut settings.tools.island_join_mm);
-    }
     if schema < 3 {
         // The blockers' first colours, too faint (owner, 2026-11-02), take the new defaults
         // where the user kept them.
@@ -1032,17 +1016,24 @@ mod tests {
     }
 
     #[test]
-    fn a_schema_1_file_drops_the_old_join_distance_and_keeps_a_chosen_one() {
-        let (settings, opened) = read(
-            br#"{"schema_version": 1, "tools": {"island_join_mm": 1.0, "auto_supports": {"join_mm": 2.5}}}"#,
-        );
-        assert_eq!(opened, Opened::Read);
-        assert_eq!(settings.schema_version, SCHEMA_VERSION);
-        assert!(settings.tools.island_join_mm.abs() < f64::EPSILON);
-        assert!((settings.tools.auto_supports.join_mm - 2.5).abs() < f64::EPSILON);
-        // At schema 2, a 1 mm the user chose stays.
-        let (settings, _) = read(br#"{"schema_version": 2, "tools": {"island_join_mm": 1.0}}"#);
-        assert!((settings.tools.island_join_mm - 1.0).abs() < f64::EPSILON);
+    fn a_saved_join_distance_is_no_longer_read() {
+        // TD-171: islands no longer share a support across a join distance; a file that saved
+        // one, of any schema, is read without it, its other values kept.
+        for schema in [1, 2, SCHEMA_VERSION] {
+            let file = format!(
+                r#"{{"schema_version": {schema}, "tools": {{"island_join_mm": 2.0, "island_skip_under_mm2": 3.0, "auto_supports": {{"join_mm": 2.5, "spacing_mm": 3.0}}}}}}"#
+            );
+            let (settings, opened) = read(file.as_bytes());
+            assert_eq!(opened, Opened::Read);
+            assert_eq!(settings.schema_version, SCHEMA_VERSION);
+            assert!((settings.tools.island_skip_under_mm2 - 3.0).abs() < f64::EPSILON);
+            assert!((settings.tools.auto_supports.spacing_mm - 3.0).abs() < f64::EPSILON);
+            // Saved again, neither is written.
+            let saved = serde_json::to_string(&settings).unwrap();
+            assert!(!saved.contains("island_join_mm"));
+            let automatic = serde_json::to_string(&settings.tools.auto_supports).unwrap();
+            assert!(!automatic.contains("join_mm"), "{automatic}");
+        }
     }
 
     #[test]

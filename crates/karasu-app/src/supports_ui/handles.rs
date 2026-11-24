@@ -39,6 +39,12 @@ const FOOT_PROBE_MM: f64 = 0.2;
 const KNEE_FLOOR_MM: f64 = 2.0;
 /// How far beyond the tip's join a knee stays at least, in mm: the slanted part keeps a shaft.
 const KNEE_PAST_JOIN_MM: f64 = 0.5;
+/// How far above where its path goes on (a branch's junction, a foot's join on the model) a
+/// dragged knee stays at least, in mm (TD-171): the path never rises to it.
+const KNEE_ABOVE_BASE_MM: f64 = 0.5;
+/// How far below the lowest point of its path above (its knee, or its tip's join) a dragged
+/// junction stays at least, in mm (TD-171): the path never rises to it.
+const JUNCTION_BELOW_MM: f64 = 0.25;
 
 /// The height of a knee, from `z` the pointer asked for: at least `floor` (room for the pad and
 /// its cone above the plate) and at most where the slanted part from the `tip` to the knee,
@@ -49,6 +55,30 @@ fn knee_height(z: f64, floor: f64, tip: [f64; 3], xy: [f64; 2], length_mm: f64) 
     let reach = length_mm + KNEE_PAST_JOIN_MM;
     let drop = (reach * reach - across * across).max(0.0).sqrt();
     z.min(tip[2] - drop.max(across)).max(floor)
+}
+
+/// `z`, a dragged knee's height within its own limits ([`knee_height`]), raised to `above` when
+/// given: where its path goes on, a branch's junction or a foot's join on the model, less
+/// nothing, so the path never rises (TD-171). `None` where `highest`, the most the tip's join
+/// allows, is below that: the knee then stays where it was.
+fn knee_above(z: f64, above: Option<f64>, highest: f64) -> Option<f64> {
+    match above {
+        Some(above) if above > highest => None,
+        Some(above) => Some(z.max(above)),
+        None => Some(z),
+    }
+}
+
+/// The highest a dragged junction may slide on a trunk spanning `[low, high]`: `room` from its
+/// top (and its bottom), and [`JUNCTION_BELOW_MM`] below `above` when given, the lowest point of
+/// the branch's path above it, so the path never rises (TD-171). `None` where that leaves no
+/// height above the trunk's bottom less `room`.
+fn junction_top([low, high]: [f64; 2], room: f64, above: Option<f64>) -> Option<f64> {
+    let mut top = (high - room).max(low + room);
+    if let Some(above) = above {
+        top = top.min(above - JUNCTION_BELOW_MM);
+    }
+    (top >= low + room).then_some(top)
 }
 
 /// A handle of the selected support.
@@ -290,13 +320,15 @@ fn within(direction: [f64; 3], normal: [f64; 3], limit_deg: f64) -> [f64; 3] {
 /// Move a dragged knee to where `ray` asks (by the handle, up and down the vertical shaft,
 /// which stays where it stands; by the gizmo, along an axis or on the level plane, the foot
 /// following unless `knee_stays`), at least the knee floor above `floor` (the plate or the raft's
-/// top). Returns whether it moved.
+/// top), and at least `above` when given: the height of where the path goes on, a branch's
+/// junction or a foot's join on the model, so the path never rises (TD-171). Where the tip's
+/// join is not above that, the knee does not move. Returns whether it moved.
 fn move_knee(
     drag: &mut Drag,
     ray: &Ray,
     to_world: &Affine,
     to_model: &Affine,
-    floor: f64,
+    (floor, above): (f64, Option<f64>),
     knee_stays: bool,
 ) -> bool {
     // The owner's rule (2026-10-29); the tip leans from its contact to the knee.
@@ -313,13 +345,12 @@ fn move_knee(
         };
         [x, y, z]
     };
-    let z = knee_height(
-        z,
-        floor + KNEE_FLOOR_MM,
-        tip,
-        [x, y],
-        drag.support.parameters.tip_length_mm,
-    );
+    let length = drag.support.parameters.tip_length_mm;
+    let z = knee_height(z, floor + KNEE_FLOOR_MM, tip, [x, y], length);
+    let highest = knee_height(f64::INFINITY, f64::NEG_INFINITY, tip, [x, y], length);
+    let Some(z) = knee_above(z, above, highest) else {
+        return false;
+    };
     drag.support.bends = vec![to_model.point([x, y, z])];
     drag.support.tip_axis = AxisSpec::Straight;
     // Moved aside, a foot on the plate goes along, keeping the shaft vertical.
@@ -334,7 +365,9 @@ fn move_knee(
 }
 
 /// Slide a dragged branch's junction up and down its trunk's shaft in `scene`, within it, to
-/// where `ray` passes closest. Returns whether it moved.
+/// where `ray` passes closest, and below the lowest point of the branch's path above it (its
+/// knee, or its tip's join) by [`JUNCTION_BELOW_MM`], so the path never rises (TD-171).
+/// Returns whether it moved.
 fn slide_junction(drag: &mut Drag, scene: &SupportScene, ray: &Ray) -> bool {
     let BaseSpec::Support { parent, z_mm } = drag.support.base else {
         return false;
@@ -347,7 +380,13 @@ fn slide_junction(drag: &mut Drag, scene: &SupportScene, ray: &Ray) -> bool {
         return false;
     };
     let room = drag.support.parameters.shaft_diameter_mm;
-    let z = (at[2] + t).clamp(low + room, (high - room).max(low + room));
+    // The branch's path as built ends at the junction; the point before it is the lowest above.
+    let path = scene.shaft_path(drag.support.id).unwrap_or_default();
+    let above = path.len().checked_sub(2).map(|k| path[k][2]);
+    let Some(top) = junction_top([low, high], room, above) else {
+        return false;
+    };
+    let z = (at[2] + t).clamp(low + room, top);
     drag.support.base = BaseSpec::Support { parent, z_mm: z };
     true
 }
@@ -1049,7 +1088,20 @@ impl SupportsUi {
                     .supports(drag.object)
                     .and_then(|d| d.raft)
                     .map_or(0.0, |r| r.thickness_mm);
-                if !move_knee(drag, ray, &to_world, &to_model, floor, self.knee_stays) {
+                // Where the path goes on below the knee, a branch's junction or a foot's join
+                // on the model, as built: the knee stays above it (TD-171).
+                let above = match drag.support.base {
+                    BaseSpec::Support { .. } | BaseSpec::Model { .. } => self
+                        .builds
+                        .get(&drag.object)
+                        .and_then(|b| b.scene.as_ref().ok())
+                        .and_then(|scene| scene.shaft_path(drag.support.id))
+                        .and_then(|path| path.last())
+                        .map(|join| join[2] + KNEE_ABOVE_BASE_MM),
+                    _ => None,
+                };
+                let limits = (floor, above);
+                if !move_knee(drag, ray, &to_world, &to_model, limits, self.knee_stays) {
                     return;
                 }
             }
@@ -1341,6 +1393,25 @@ impl SupportsUi {
 mod tests {
     use super::*;
     use crate::supports_ui::tests::{built, lifted_cube, ray};
+
+    #[test]
+    fn dragged_knees_and_junctions_never_make_a_path_rise() {
+        // TD-171. A knee stays above where its path goes on, and does not move where the tip's
+        // join leaves no room above that.
+        assert_eq!(knee_above(5.0, None, 10.0), Some(5.0));
+        assert_eq!(knee_above(5.0, Some(6.0), 10.0), Some(6.0));
+        assert_eq!(knee_above(7.0, Some(6.0), 10.0), Some(7.0));
+        assert_eq!(knee_above(5.0, Some(11.0), 10.0), None);
+        // A junction on a trunk from 2 to 15 mm, 1 mm from its ends: below the branch's knee
+        // at 8 mm by the margin; with nothing above, the trunk's top less its room; none where
+        // the knee is lower than the trunk's bottom allows.
+        assert_eq!(junction_top([2.0, 15.0], 1.0, None), Some(14.0));
+        assert_eq!(
+            junction_top([2.0, 15.0], 1.0, Some(8.0)),
+            Some(8.0 - JUNCTION_BELOW_MM)
+        );
+        assert_eq!(junction_top([2.0, 15.0], 1.0, Some(3.0)), None);
+    }
 
     #[test]
     #[allow(clippy::too_many_lines)] // One support through every handle, step by step.

@@ -531,6 +531,22 @@ impl PreparationUi {
         Some((Arc::clone(preparation), self.generation))
     }
 
+    /// Object `index`'s preparation, shared, only while it describes the object exactly as it
+    /// stands: its surface (see [`Self::latest`]) and every operation, drain holes included.
+    /// The planners' final check builds their supports against it (TD-171): right after a hole
+    /// is edited, [`Self::shared`] still gives the preparation of the holes before, and a plan
+    /// checked against those could be applied.
+    #[must_use]
+    pub fn exact(&self, workspace: &Workspace, index: usize) -> Option<(Arc<Preparation>, u64)> {
+        self.latest(workspace, index)?;
+        let (_, preparation, then) = self.result.as_ref()?;
+        let (before, now) = (
+            then.objects.get(index)?,
+            workspace.plate().objects.get(index)?,
+        );
+        (before.operations == now.operations).then(|| (Arc::clone(preparation), self.generation))
+    }
+
     /// Ask for a hole probe of the `objects` drain holes are being placed on, which have none
     /// without holes; the plate is prepared again when one is missing.
     pub fn set_probes(&mut self, objects: Vec<usize>) {

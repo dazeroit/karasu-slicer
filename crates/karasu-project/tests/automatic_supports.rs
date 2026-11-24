@@ -17,7 +17,7 @@ use karasu_project::{
         DEFAULT_REPAIR,
     },
     support_plan::{
-        auto::{Cover, Place},
+        auto::{Cover, NotCounted, Place},
         generate::{generate, given, Generated, Run},
         settings::AutoSettings,
     },
@@ -220,6 +220,9 @@ fn automatic_supports_hold_the_islands_and_the_overhang_and_slice() {
         outcome.left
     );
     assert!(outcome.left.is_empty(), "{:?}", outcome.left);
+    // No island is left out of the counts, and the final check ran (TD-171).
+    assert!(outcome.not_counted.is_empty(), "{:?}", outcome.not_counted);
+    assert_eq!(outcome.plan.unchecked, None);
     // Every support is automatic, in both frames, and the model frame's is the source's.
     let document = generated.document.as_ref().expect("a document");
     let model = generated.model_document.as_ref().expect("a model document");
@@ -310,6 +313,14 @@ fn given_supports_are_kept_as_given_and_the_automatic_ones_replaced() {
         Some(&by_hand().supports[0])
     );
     assert_eq!(generated.outcome.islands, [1, 1]);
+    // The island the support by hand holds is counted apart, never silently left out (TD-171).
+    assert_eq!(
+        generated.outcome.not_counted,
+        NotCounted {
+            kept: 1,
+            ..NotCounted::default()
+        }
+    );
     assert_eq!(
         document.supports.len(),
         1 + generated.outcome.plan.supports.len()

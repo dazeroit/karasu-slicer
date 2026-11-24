@@ -150,3 +150,44 @@ fn a_support_joins_the_shaft_clicked_below_its_braces_and_never_its_own_branch()
     assert_eq!(ui.take_messages().len(), 1);
     let _ = std::fs::remove_dir_all(directory);
 }
+
+#[test]
+fn a_support_hung_on_a_thinner_shaft_is_thinned_to_it() {
+    // TD-171: Merge trunks and Join a support hang a support on another's shaft; a Heavy one
+    // (1.2 mm shaft) on a 0.8 mm shaft is thinned to it, and one no thicker is left as it is.
+    use karasu_core::supports::{AxisSpec, ManualSupport, Preset, SupportKind, SupportOrigin};
+    let mut heavy = ManualSupport {
+        id: 2,
+        tip_mm: [0.0, 0.0, 10.0],
+        tip_axis: AxisSpec::Normal,
+        bends: Vec::new(),
+        base: BaseSpec::Support {
+            parent: 1,
+            z_mm: 5.0,
+        },
+        parameters: Preset::Heavy.parameters(),
+        accept_collision: false,
+        origin: SupportOrigin::Placed,
+        kind: SupportKind::Standard,
+    };
+    let as_given = heavy.clone();
+    assert!(!no_thicker(&mut heavy, &|_, _| Some(2.0)));
+    assert_eq!(heavy, as_given);
+    assert!(!no_thicker(&mut heavy, &|_, _| None));
+    assert!(no_thicker(&mut heavy, &|parent, z| {
+        assert_eq!((parent, z), (1, 5.0));
+        Some(0.8)
+    }));
+    let p = &heavy.parameters;
+    assert!(
+        p.shaft_diameter_mm <= 0.8 && p.tip_body_diameter_mm <= 0.8,
+        "{p:?}"
+    );
+    assert!(p.contact_diameter_mm <= p.tip_body_diameter_mm);
+    // Standing on its own, it is never thinned.
+    let mut alone = ManualSupport {
+        base: BaseSpec::Vertical,
+        ..as_given
+    };
+    assert!(!no_thicker(&mut alone, &|_, _| Some(0.8)));
+}

@@ -1061,9 +1061,17 @@ impl Builder<'_, '_, '_> {
             );
             return false;
         }
-        // Automatic: the thinner shaft where the brace meets it, up to its largest.
+        // Automatic: the thinner shaft where the brace meets it, up to its largest. An own
+        // diameter thicker than a shaft narrows to that shaft's at its end, its end ball no
+        // wider (TD-171): a wider ball on a slanted shaft hangs its bottom outside the shaft,
+        // where it starts in mid-air. The brace is the hull of its two end balls.
         let r = brace.radius_mm(ra, rb);
-        for shape in [frustum(a, r, b, r, 16), sphere(a, r, 16), sphere(b, r, 16)] {
+        let (end_a, end_b) = (r.min(ra), r.min(rb));
+        for shape in [
+            frustum(a, end_a, b, end_b, 16),
+            sphere(a, end_a, 16),
+            sphere(b, end_b, 16),
+        ] {
             self.parts.push(Owned {
                 entity: brace.id,
                 part: SupportPart::Brace,

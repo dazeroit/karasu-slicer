@@ -73,7 +73,6 @@ impl<'a> Minis<'a> {
         why_at: &mut Vec<([f64; 3], Skip)>,
         stop: &AtomicBool,
     ) {
-        let join = self.growing.values.join_mm;
         for (_, island) in islands {
             if stop.load(Ordering::Relaxed) {
                 return;
@@ -83,7 +82,7 @@ impl<'a> Minis<'a> {
                 .iter()
                 .map(|p| p.routed.support.tip_mm)
                 .collect();
-            if check::held(island, &tips, join) {
+            if check::held(island, &tips) {
                 continue;
             }
             for place in start_tips(self.growing.surface, mesh, island)
@@ -567,6 +566,8 @@ mod tests {
             let made = planned(&mesh, &[start], &IslandSupports { minis, ..values() });
             assert_eq!(kinds(&made), [SupportKind::Standard], "minis {minis}");
             assert_eq!(made.held, 1);
+            // Planned without the model, its final check did not run, and it says so (TD-171).
+            assert_eq!(made.unchecked.as_deref(), Some(super::super::NO_MODEL));
             let tip = made.supports[0].routed.support.tip_mm;
             assert!(tip[0] > 7.9, "{tip:?}");
         }

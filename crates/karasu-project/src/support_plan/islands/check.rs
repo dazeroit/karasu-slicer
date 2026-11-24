@@ -61,30 +61,29 @@ pub struct Kept<'a> {
 }
 
 /// Whether a tip at `tip` holds `island` where it starts (owner, 2026-10-30: there the resin
-/// cures in mid-air): on its first layer's footprint, widened by `join_mm` (islands that close
-/// share a support), and at its first layer's underside, within a layer of it: from a layer
-/// below the layer under it to a layer above its first, `join_mm` higher with a join.
+/// cures in mid-air): on its first layer's footprint, and at its first layer's underside,
+/// within a layer of it: from a layer below the layer under it to a layer above its first.
 ///
 /// **Strict (TD-167, owner 2026-11-20):** a tip beside the island or above where it starts does
 /// not hold it, though it may lie within a fraction of a millimetre: the island's first layers
 /// cure in mid-air all the same. Before, a tip up to 0.6 mm beyond the footprint and 1.6 mm above
 /// the start counted; with standard supports grown first, islands were then left to tips of
 /// their neighbours'.
+///
+/// **No join distance (TD-171, owner 2026-11-24):** islands closer than a join distance no
+/// longer share a support, nor widen the footprint and the window: a support that does not
+/// touch an island does not hold it.
 #[must_use]
-pub fn holds(island: &Island, [x, y, z]: [f64; 3], join_mm: f64) -> bool {
-    let join = join_mm.max(0.0);
+pub fn holds(island: &Island, [x, y, z]: [f64; 3]) -> bool {
     let [under, first] = [island.heights[0], island.point[2]];
     let layer = (first - under).max(0.0);
     let [[x0, y0], [x1, y1]] = island.footprint;
-    (under - layer..=first + layer + join).contains(&z)
-        && (x0 - join..=x1 + join).contains(&x)
-        && (y0 - join..=y1 + join).contains(&y)
+    (under - layer..=first + layer).contains(&z) && (x0..=x1).contains(&x) && (y0..=y1).contains(&y)
 }
 
-/// Whether one of `tips` holds `island` where it starts, islands closer than `join_mm` sharing
-/// a support: see [`holds`].
-pub(crate) fn held(island: &Island, tips: &[[f64; 3]], join_mm: f64) -> bool {
-    tips.iter().any(|&tip| holds(island, tip, join_mm))
+/// Whether one of `tips` holds `island` where it starts: see [`holds`].
+pub(crate) fn held(island: &Island, tips: &[[f64; 3]]) -> bool {
+    tips.iter().any(|&tip| holds(island, tip))
 }
 
 /// The distance between `a` and `b`.
@@ -105,14 +104,18 @@ fn skip_of(kind: FindingKind) -> Skip {
 }
 
 /// `planned` added to `kept`, built as a slice builds them against the model: the planned ones
-/// built with an error, by their places, with why; `None` when they cannot be built.
+/// built with an error, by their places, with why.
+///
+/// # Errors
+/// Why they cannot be built at all, the plan's supports and the kept ones together: then none
+/// of them is checked.
 fn built_errors(
     kept: &Kept<'_>,
     model: &ModelInput,
     prepared: &ObjectPreparation,
     planned: &Outcome,
     stop: &AtomicBool,
-) -> Option<BTreeMap<usize, Skip>> {
+) -> Result<BTreeMap<usize, Skip>, String> {
     let mut document = kept
         .document
         .cloned()
@@ -125,8 +128,7 @@ fn built_errors(
         prepared,
         &model.printer,
         &|_| stop.load(Ordering::Relaxed),
-    )
-    .ok()?;
+    )?;
     let place: HashMap<u64, usize> = ids.iter().enumerate().map(|(k, &id)| (id, k)).collect();
     let mut failed = BTreeMap::new();
     // A tip where a drain hole cuts the material away holds nothing (TD-131).
@@ -147,7 +149,7 @@ fn built_errors(
             failed.entry(k).or_insert(skip_of(f.kind));
         }
     }
-    Some(failed)
+    Ok(failed)
 }
 
 /// `gone` (places among `supports`) with every support hanging from them, through others too.
@@ -168,6 +170,11 @@ fn with_hanging(supports: &[Planned], mut gone: BTreeSet<usize>) -> BTreeSet<usi
 /// The final check of `plan` (see the module) with `kept`'s supports against `model`: what it
 /// removes leaves why at its tip in `why_at`; what hung from it is regrown with `growing`'s
 /// values, without branches.
+///
+/// When the check cannot run (the model has no preparation, or the supports cannot be built
+/// at all, as with a raft that cannot be made), `plan` says why in [`Outcome::unchecked`]
+/// (TD-171): its supports are not checked, and nothing claims they were. Stopped, it says
+/// nothing: the plan is dropped.
 pub(crate) fn check_built(
     kept: &Kept<'_>,
     model: &ModelInput,
@@ -176,7 +183,7 @@ pub(crate) fn check_built(
     why_at: &mut Vec<([f64; 3], Skip)>,
     stop: &AtomicBool,
 ) {
-    let Some(Ok(prepared)) = model.preparation.objects.get(model.index) else {
+    let Ok(prepared) = prepared_of(model).map_err(|reason| not_checked(plan, reason)) else {
         return;
     };
     let alone = IslandSupports {
@@ -192,7 +199,7 @@ pub(crate) fn check_built(
         if stop.load(Ordering::Relaxed) || plan.supports.is_empty() {
             return;
         }
-        let Some(failed) = built_errors(kept, model, prepared, plan, stop) else {
+        let Some(failed) = checked_errors(kept, model, prepared, plan, stop) else {
             return;
         };
         if failed.is_empty() {
@@ -205,6 +212,10 @@ pub(crate) fn check_built(
             why_at.push((supports[k].routed.support.tip_mm, why));
         }
         let Some(mesh) = regrowing.surface.mesh() else {
+            not_checked(
+                plan,
+                "the model's surface for routes has no mesh".to_owned(),
+            );
             return;
         };
         let again: Vec<(usize, Tip)> = gone
@@ -274,6 +285,43 @@ pub(crate) fn check_built(
             }));
         plan.branches = plan.supports.iter().filter(|p| p.joins.is_some()).count();
     }
+}
+
+/// `planned`'s supports built with an error, as [`built_errors`] tells them; `None` when they
+/// cannot be built at all, which `planned` then says ([`Outcome::unchecked`]), unless stopped.
+fn checked_errors(
+    kept: &Kept<'_>,
+    model: &ModelInput,
+    prepared: &ObjectPreparation,
+    planned: &mut Outcome,
+    stop: &AtomicBool,
+) -> Option<BTreeMap<usize, Skip>> {
+    match built_errors(kept, model, prepared, planned, stop) {
+        Ok(failed) => Some(failed),
+        Err(reason) => {
+            if !stop.load(Ordering::Relaxed) {
+                not_checked(planned, format!("the supports cannot be built: {reason}"));
+            }
+            None
+        }
+    }
+}
+
+/// `model`'s preparation, which its supports are built against.
+///
+/// # Errors
+/// Why there is none: the model could not be prepared, or the preparation lacks it.
+fn prepared_of(model: &ModelInput) -> Result<&ObjectPreparation, String> {
+    match model.preparation.objects.get(model.index) {
+        Some(Ok(prepared)) => Ok(prepared),
+        Some(Err(error)) => Err(format!("the model could not be prepared: {error}")),
+        None => Err("the model has no preparation".to_owned()),
+    }
+}
+
+/// Record that the final check of `plan` did not run, and why: the first reason stays.
+pub(crate) fn not_checked(plan: &mut Outcome, reason: String) {
+    plan.unchecked.get_or_insert(reason);
 }
 
 /// Why the final check removed a support from where an island starts at `point`, if it did.

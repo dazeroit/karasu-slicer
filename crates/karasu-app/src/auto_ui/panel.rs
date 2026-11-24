@@ -4,10 +4,10 @@
 //! state.
 use super::{
     plan::{
-        AutoSupports, Cover, Place, CLEARANCE_MM, DENSITY_PCT, LIFT_MM, MINI_DENSITY_PCT, PASSES,
-        SPACING_MM, WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
+        AutoSupports, Cover, NotCounted, Place, CLEARANCE_MM, DENSITY_PCT, LIFT_MM,
+        MINI_DENSITY_PCT, PASSES, SPACING_MM, WIDE_CLOSEST_PCT, WIDE_FROM_MM2,
     },
-    AutoUi, Stage,
+    AutoUi, Stage, Told,
 };
 use crate::{
     appearance::Appearance,
@@ -16,8 +16,8 @@ use crate::{
     islands_ui::{
         panel::{count_row, preset_row, reason},
         plan::{
-            BRANCH_MM, JOIN_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM,
-            MINI_MIN_HEIGHT_MM, PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
+            BRANCH_MM, LEVELS, MERGE_MM, MINI_BRANCHES, MINI_MAX_LENGTH_MM, MINI_MIN_HEIGHT_MM,
+            PER_GROUP, PER_TRUNK, SKIP_UNDER_MM2,
         },
         ANGLE_DEG,
     },
@@ -182,13 +182,6 @@ pub fn supports_fields(
             &mut values.steep_spacing_mm,
             (Unit::Millimetre, values.spacing_mm..=*SPACING_MM.end()),
             defaults.map(|d| d.steep_spacing_mm),
-        );
-        edited |= length_row(
-            ui,
-            (tr!("islands-join"), tr!("islands-join-hint")),
-            &mut values.join_mm,
-            (Unit::Millimetre, JOIN_MM),
-            defaults.map(|d| d.join_mm),
         );
         edited |= count_row(
             ui,
@@ -552,6 +545,40 @@ fn braces_values(
     }
 }
 
+/// The rows of what the counts leave out (TD-171), each only when it has any: the islands in
+/// the place a plan of one place does not cover, those skipped as smaller, and those held by
+/// supports kept; then a final check that did not run, with why on hover.
+fn told_rows(ui: &mut egui::Ui, told: &Told) {
+    let counted: NotCounted = told.not_counted;
+    if counted.elsewhere > 0 {
+        let label = if told.place == Place::Cavity {
+            tr!("auto-islands-outside")
+        } else {
+            tr!("auto-islands-cavity")
+        };
+        fact_row(ui, &label, &counted.elsewhere.to_string());
+    }
+    if counted.smaller > 0 {
+        let label = tr!("auto-islands-smaller");
+        fact_row(ui, &label, &counted.smaller.to_string());
+    }
+    if counted.kept > 0 {
+        fact_row(ui, &tr!("auto-islands-kept"), &counted.kept.to_string())
+            .on_hover_text(tr!("auto-islands-kept-hint"));
+    }
+    if let Some(reason) = &told.unchecked {
+        let row = fact_row(
+            ui,
+            &tr!("auto-final-check"),
+            &tr!("auto-final-check-not-run"),
+        );
+        row.on_hover_text(tr!(
+            "auto-final-check-not-run-hint",
+            reason = reason.as_str()
+        ));
+    }
+}
+
 /// What a plan or Apply reports in the panel.
 struct Facts {
     supports: usize,
@@ -560,6 +587,8 @@ struct Facts {
     branches: usize,
     braces: usize,
     islands: [usize; 2],
+    /// What the counts leave out (TD-171).
+    told: Told,
     overhangs: [usize; 2],
     cover: Cover,
     passes: Option<(u32, usize)>,
@@ -647,6 +676,7 @@ impl AutoUi {
                     branches: o.plan.branches,
                     braces: o.braces.len(),
                     islands: o.islands,
+                    told: Told::of(o, planned.key.values.place),
                     overhangs: o.overhangs,
                     cover: planned.key.values.cover,
                     passes: Some((o.passes, o.added)),
@@ -663,6 +693,7 @@ impl AutoUi {
                     branches: applied.branches,
                     braces: applied.braces,
                     islands: applied.islands,
+                    told: applied.told.clone(),
                     overhangs: applied.overhangs,
                     cover: Cover::All,
                     passes: None,
@@ -686,6 +717,7 @@ impl AutoUi {
                 &tr!("auto-islands-count"),
                 &tr!("auto-of", part = held, whole = wanted),
             );
+            told_rows(ui, &facts.told);
             let overhangs = if facts.cover == Cover::IslandsOnly {
                 tr!("auto-overhangs-not-covered")
             } else {

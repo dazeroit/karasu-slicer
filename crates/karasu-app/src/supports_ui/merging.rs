@@ -76,16 +76,20 @@ fn stems(document: &SupportDocument, scene: &SupportScene) -> Vec<Stem> {
 }
 
 /// `document` with `merged` done: every merged support bent and joined to its main trunk (by
-/// identity, `ids` in the document's order), every main trunk's foot widened; `to_model`
-/// carries the bends into the model's frame.
+/// identity, `ids` in the document's order), no thicker than the trunk where it joins it
+/// (`trunk_mm` tells, by the trunk's identity and the height), every main trunk's foot
+/// widened; `to_model` carries the bends into the model's frame. Returns how many merged
+/// supports were thinned to their trunk (TD-171).
 fn merged_into(
     document: &mut SupportDocument,
     merged: &Merged,
     ids: &[u64],
     to_model: &crate::gizmo::Affine,
-) {
+    trunk_mm: &dyn Fn(u64, f64) -> Option<f64>,
+) -> usize {
+    let mut thinned = 0;
     let Some(to_world) = to_model.inverse() else {
-        return;
+        return 0;
     };
     for m in &merged.merges {
         let (Some(&id), Some(&parent)) = (ids.get(m.stem), ids.get(m.joins.0)) else {
@@ -99,6 +103,7 @@ fn merged_into(
                 parent,
                 z_mm: m.joins.1,
             };
+            thinned += usize::from(no_thicker(s, trunk_mm));
         }
     }
     for &(k, foot) in &merged.wider {
@@ -110,6 +115,26 @@ fn merged_into(
             p.shaft_bottom_diameter_mm = Some(p.shaft_bottom_diameter_mm.unwrap_or(0.0).max(foot));
         }
     }
+    thinned
+}
+
+/// `support`, standing on another, thinned to its trunk where it joins it when thicker
+/// (`trunk_mm` tells the trunk's thickness there). Returns whether it was thinned.
+fn no_thicker(
+    support: &mut karasu_core::supports::ManualSupport,
+    trunk_mm: &dyn Fn(u64, f64) -> Option<f64>,
+) -> bool {
+    let BaseSpec::Support { parent, z_mm } = support.base else {
+        return false;
+    };
+    let Some(trunk) = trunk_mm(parent, z_mm) else {
+        return false;
+    };
+    if super::branches::thickness(&support.parameters, support.kind) <= trunk + 1e-9 {
+        return false;
+    }
+    support.parameters = super::branches::thinned(support.parameters.clone(), trunk, support.kind);
+    true
 }
 
 impl SupportsUi {
@@ -283,13 +308,17 @@ impl SupportsUi {
         if merged.merges.is_empty() {
             return 0;
         }
-        merged_into(&mut document, &merged, &ids, &to_model);
+        // The trunks as built before the merge: the merge only widens a main trunk's foot.
+        let scene = self.scene(index);
+        let trunk_mm = |id: u64, z: f64| scene.and_then(|s| s.shaft_diameter(id, z));
+        let thinned = merged_into(&mut document, &merged, &ids, &to_model, &trunk_mm);
         workspace.set_supports(index, Some(document), None);
         let count = merged.merges.len();
-        self.outbox.push(Message::new(
-            Level::Success,
-            tr!("supports-merged", count = count),
-        ));
+        let mut message = Message::new(Level::Success, tr!("supports-merged", count = count));
+        if thinned > 0 {
+            message = message.detail(tr!("supports-merged-thinned", count = thinned));
+        }
+        self.outbox.push(message);
         count
     }
 
@@ -367,12 +396,19 @@ impl SupportsUi {
         let Some(to_world) = to_model.inverse() else {
             return true;
         };
+        let mut thinned = false;
         if let Some(s) = document.supports.iter_mut().find(|s| s.id == id) {
             trees::end_at(&mut s.bends, to_model.point(bend), |b| to_world.point(b)[2]);
             s.base = BaseSpec::Support {
                 parent: target,
                 z_mm: z,
             };
+            // No thicker than the shaft it joins (TD-171).
+            thinned = no_thicker(s, &|id, z| scene.shaft_diameter(id, z));
+        }
+        if thinned {
+            self.outbox
+                .push(Message::new(Level::Info, tr!("supports-join-thinned")));
         }
         workspace.set_supports(object, Some(document), None);
         self.joining = None;

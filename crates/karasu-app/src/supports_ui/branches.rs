@@ -15,7 +15,9 @@
 //! **No thicker than their trunk** (owner, 2026-10-30): a branch is at most as thick as its
 //! trunk where it joins it. Placed, or given a preset, thicker than that (its shaft, top or
 //! bottom, or its tip's body), it takes its trunk's values, said in a notification, so its
-//! preset is its trunk's; a value changed in the panel past that is brought back to it.
+//! preset is its trunk's; a value changed in the panel past that is brought back to it. A
+//! support Merge trunks or Join a support hangs on a thinner shaft is thinned to it, said too
+//! (TD-171): a wider junction ball on a slanted shaft hangs its bottom in mid-air.
 //!
 //! **Deleted with their trunk** (owner): deleting a support deletes the branches on it, and
 //! theirs, with the braces on any of them.
@@ -43,7 +45,7 @@ pub(super) struct BranchTip {
 
 /// How thick a support of `parameters` is along its path: its shaft, top or bottom, or its tip's
 /// body; a mini support, its diameter.
-fn thickness(parameters: &SupportParameters, kind: SupportKind) -> f64 {
+pub(super) fn thickness(parameters: &SupportParameters, kind: SupportKind) -> f64 {
     if kind == SupportKind::Mini {
         return parameters.mini_diameter_mm;
     }
@@ -56,7 +58,7 @@ fn thickness(parameters: &SupportParameters, kind: SupportKind) -> f64 {
 /// `parameters` at most `trunk_mm` thick (the document's least diameter, 0.1 mm, at least): the
 /// shaft, top and bottom, and the tip's body, its contact no wider than its body; a mini
 /// support's diameter, its ends reaching less deep than its radius (the core's coupling).
-fn thinned(
+pub(super) fn thinned(
     mut parameters: SupportParameters,
     trunk_mm: f64,
     kind: SupportKind,

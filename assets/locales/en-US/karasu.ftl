@@ -1731,7 +1731,7 @@ action-auto-braces = Automatic braces
 action-auto-braces-hint = Shows the braces the panel's values would add between neighbouring supports; Apply adds them, Discard leaves them
 braces-new = New braces
 braces-diameter = Diameter
-braces-diameter-hint = The diameter of the next braces, placed or automatic; with the automatic diameter on, the largest they take. Its default is set in Settings › Supports
+braces-diameter-hint = The diameter of the next braces, placed or automatic; with the automatic diameter on, the largest they take. A brace thicker than a shaft narrows to that shaft where it meets it. Its default is set in Settings › Supports
 braces-auto-diameter = Automatic diameter
 braces-auto-diameter-hint = Each brace is as thick as the thinner of the two shafts where it meets them, up to the largest diameter, and follows them when their values change
 braces-largest-diameter = Largest diameter
@@ -1839,10 +1839,14 @@ islands-search = Search
 islands-angle = Critical angle
 islands-angle-hint = A surface steeper than this from the plate holds itself; its default is set in Settings › Supports
 islands-hide-under = Hide islands under
-islands-hide-under-hint = Smaller islands are left out of the markers, the list and the counts; Support the islands still supports them unless Skip islands under leaves them out
+islands-hide-under-hint = Smaller islands are left out of the markers, the list and the counts, which still say how many of them have no support; Support the islands still supports them unless Skip islands under leaves them out
 islands-hidden = { $count ->
     [one] One island under { $area } mm² hidden
    *[other] { $count } islands under { $area } mm² hidden
+}
+islands-hidden-free = { $count ->
+    [one] One island under { $area } mm² hidden, without a support
+   *[other] { $count } islands under { $area } mm² hidden, { $free } of them without a support
 }
 islands-island = Island
 islands-of = Island { $number } of { $count }
@@ -1877,12 +1881,28 @@ islands-state-free = { $count ->
    *[other] { $count } islands have no support
 }
 islands-state-held = Every island is supported
+islands-state-held-shown = { $hidden ->
+    [one] Every island shown is supported; one hidden has no support
+   *[other] Every island shown is supported; { $hidden } hidden have no support
+}
+islands-state-free-hidden = { $count ->
+    [one] One island shown and { $hidden } hidden have no support
+   *[other] { $count } islands shown and { $hidden } hidden have no support
+}
 islands-found-none = No island: nothing starts in mid-air
 islands-found-held = { $count ->
     [one] One island, supported
    *[other] { $count } islands, every one supported
 }
 islands-found-free = { $count } islands; { $free } without a support
+islands-found-held-shown = { $count ->
+    [one] One island shown, supported
+   *[other] { $count } islands shown, every one supported
+}
+islands-found-all-hidden = { $count ->
+    [one] One island, hidden
+   *[other] { $count } islands, every one hidden
+}
 islands-took = Found in { $seconds } s
 islands-failed = The islands could not be found
 islands-refused = The model cannot be sliced to find its islands
@@ -1903,8 +1923,6 @@ action-support-islands-hint = Shows the supports planned under every island with
 islands-supports = Island supports
 islands-preset = Preset
 islands-preset-hint = What the islands' supports are made with: one of the Manual tool's presets. Its default is set in Settings › Supports
-islands-join = Join islands closer than
-islands-join-hint = Islands this close, across and in height, share one support
 islands-skip-under = Skip islands under
 islands-skip-under-hint = Smaller islands get no support from Support the islands; Support it here still supports them
 islands-foot-on-model = Foot on the model when the plate is out of reach
@@ -1919,6 +1937,7 @@ islands-plan-skipped = { $branches ->
     [0] { $count } supports for { $islands } islands; { $skipped } skipped
    *[other] { $count } supports, { $branches } of them branches, for { $islands } islands; { $skipped } skipped
 }
+islands-plan-unchecked = { $count } supports for { $islands } islands, not checked against the model
 islands-skip-out-of-reach = { $count } with no way down to the plate: turn on "Foot on the model", or support them in the Manual tool
 islands-skip-no-way = { $count } with no way down clear of the model: support them in the Manual tool
 islands-skip-no-surface = { $count } with no underside found under them
@@ -2015,6 +2034,14 @@ auto-branches-count = Branches and merged trunks
 auto-braces-count = Braces
 auto-islands-count = Islands held
 auto-of = { $part } of { $whole }
+auto-islands-cavity = Islands in the cavity, not covered
+auto-islands-outside = Islands outside the cavity, not covered
+auto-islands-smaller = Islands skipped as smaller
+auto-islands-kept = Islands held by supports kept
+auto-islands-kept-hint = Supports this plan keeps, placed by hand or by another tool, stand where these islands start: they are not counted above
+auto-final-check = Final check
+auto-final-check-not-run = Not run
+auto-final-check-not-run-hint = The supports were not built against the model to check them: { $reason }
 auto-overhangs-count = Overhangs covered
 auto-overhangs-covered = { $percent } %
 auto-overhangs-not-covered = Not covered (islands only)
@@ -2145,11 +2172,16 @@ supports-merged = { $count ->
     [one] One trunk merged (Undo takes it back)
    *[other] { $count } trunks merged (Undo takes them back)
 }
+supports-merged-thinned = { $count ->
+    [one] One of them was thicker than the trunk it joins: it is no thicker now
+   *[other] { $count } of them were thicker than the trunks they join: they are no thicker now
+}
 supports-joining = Click the shaft the selected support joins; Escape stops
 supports-joining-hint = It keeps its shaft down to a bend below what hangs from it, then leans into that shaft no steeper than 45°, clear of the model
 supports-join-refused = It cannot join that shaft: none within 45° below what hangs from it, clear of the model
 supports-join-refused-hint = Try a nearer support; a support cannot join itself or one standing on it
 supports-join-already = The selected support already stands on another
+supports-join-thinned = It was thicker than the shaft it joins: it is no thicker now
 
 ## Suction cups in the Drain holes tool (M6.4j, TD-114)
 action-show-cups = Show the suction cups

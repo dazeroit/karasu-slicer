@@ -9,7 +9,9 @@ use karasu_project::{
     pipeline::{Observer, PipelineCache},
     request::SliceRequest,
     support_plan::{
-        auto::{Cover, Place, CLEARANCE_MM, DENSITY_PCT, MINI_DENSITY_PCT},
+        auto::{
+            AutoOutcome, AutoSupports, Cover, Place, CLEARANCE_MM, DENSITY_PCT, MINI_DENSITY_PCT,
+        },
         generate::{generate, given, Generated, Run},
         islands::{Planned, Skip, MINI_BRANCHES, MINI_MAX_LENGTH_MM, MINI_MIN_HEIGHT_MM},
         settings::AutoSettings,
@@ -557,6 +559,9 @@ fn automatic_lines(generated: &Generated, settings: &AutoSettings) -> String {
          passes, {} tips added",
         outcome.passes, outcome.added
     );
+    // The islands the counts above leave out, and a final check that did not run, are said
+    // (TD-171); the lines appear only then.
+    text.push_str(&checked_lines(outcome, values));
     if generated.kept > 0 || generated.replaced > 0 {
         let _ = writeln!(
             text,
@@ -577,6 +582,45 @@ fn automatic_lines(generated: &Generated, settings: &AutoSettings) -> String {
             if left.island { "island" } else { "overhang" },
             why(left.why)
         );
+    }
+    text
+}
+
+/// The summary's lines about what `outcome`'s counts leave out (TD-171): the islands found that
+/// the plan, planned with `values`, neither holds nor leaves, and a final check that did not
+/// run. Empty when there is nothing to say.
+fn checked_lines(outcome: &AutoOutcome, values: &AutoSupports) -> String {
+    let mut text = String::new();
+    let not_counted = outcome.not_counted;
+    if !not_counted.is_empty() {
+        let mut parts = Vec::new();
+        if not_counted.elsewhere > 0 {
+            parts.push(format!(
+                "{} {}",
+                not_counted.elsewhere,
+                match values.place {
+                    Place::Cavity => "outside the cavity",
+                    Place::Outside | Place::Everywhere => "in the cavity",
+                }
+            ));
+        }
+        if not_counted.smaller > 0 {
+            parts.push(format!(
+                "{} smaller than {} mm^2",
+                not_counted.smaller, values.skip_under_mm2
+            ));
+        }
+        if not_counted.kept > 0 {
+            parts.push(format!("{} held by given supports", not_counted.kept));
+        }
+        let _ = writeln!(
+            text,
+            "Automatic supports islands not counted: {}",
+            parts.join(", ")
+        );
+    }
+    if let Some(reason) = &outcome.plan.unchecked {
+        let _ = writeln!(text, "Automatic supports final check: not run: {reason}");
     }
     text
 }
